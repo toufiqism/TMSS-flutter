@@ -12,7 +12,7 @@ import '../../domain/model/user.dart';
 class SessionLocalDataSource {
   SessionLocalDataSource({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage() {
-    _hydrate();
+    unawaited(_hydrate());
   }
 
   static const _sessionKey = 'session_json';
@@ -22,6 +22,12 @@ class SessionLocalDataSource {
   Session? _current;
   bool _hydrated = false;
   final List<Completer<void>> _hydrationWaiters = [];
+
+  /// The token as of right now, for callers that cannot await — specifically the Dio
+  /// auth interceptor, which has to decide synchronously whether to attach a header.
+  /// Null before hydration finishes and after logout, and in both cases sending no
+  /// Authorization header is the correct behaviour.
+  String? get currentToken => _current?.token;
 
   Stream<Session?> get session async* {
     if (!_hydrated) {
@@ -37,8 +43,8 @@ class SessionLocalDataSource {
     try {
       final raw = await _storage.read(key: _sessionKey);
       if (raw != null) {
-        final json = jsonDecode(raw) as Map<String, dynamic>;
-        _current = _sessionFromJson(json);
+        final decoded = jsonDecode(raw);
+        _current = decoded is Map<String, dynamic> ? _sessionFromJson(decoded) : null;
       }
     } catch (_) {
       // Corrupt/unreadable stored session — treat as logged out rather than crash on launch.
@@ -46,22 +52,46 @@ class SessionLocalDataSource {
     } finally {
       _hydrated = true;
       for (final waiter in _hydrationWaiters) {
-        waiter.complete();
+        if (!waiter.isCompleted) waiter.complete();
       }
       _hydrationWaiters.clear();
     }
   }
 
+  /// Persists [session]. The in-memory copy and the stream are updated even if the
+  /// secure write fails, so a Keystore hiccup degrades to a session that works for
+  /// this launch but does not survive a restart — rather than a login that appears to
+  /// fail after the server already authenticated the user.
   Future<void> save(Session session) async {
     _current = session;
-    await _storage.write(key: _sessionKey, value: jsonEncode(_sessionToJson(session)));
-    _controller.add(session);
+    try {
+      await _storage.write(key: _sessionKey, value: jsonEncode(_sessionToJson(session)));
+    } catch (_) {
+      // Intentionally swallowed; see above.
+    }
+    if (!_controller.isClosed) _controller.add(session);
   }
 
+  /// Clears the session. The in-memory copy is dropped first and unconditionally: if
+  /// the secure delete fails, the user must still end up logged out for this process.
   Future<void> clear() async {
     _current = null;
-    await _storage.delete(key: _sessionKey);
-    _controller.add(null);
+    try {
+      await _storage.delete(key: _sessionKey);
+    } catch (_) {
+      // Intentionally swallowed; see above.
+    }
+    if (!_controller.isClosed) _controller.add(null);
+  }
+
+  /// Releases the broadcast controller. Wired to the provider's `onDispose`; without
+  /// it the controller outlived every rebuild of the provider graph.
+  Future<void> dispose() async {
+    for (final waiter in _hydrationWaiters) {
+      if (!waiter.isCompleted) waiter.complete();
+    }
+    _hydrationWaiters.clear();
+    await _controller.close();
   }
 
   Map<String, dynamic> _sessionToJson(Session session) => {
@@ -72,6 +102,7 @@ class SessionLocalDataSource {
         'userEmail': session.user.email,
       };
 
+  /// Throws on a malformed payload, which [_hydrate] catches and treats as logged out.
   Session _sessionFromJson(Map<String, dynamic> json) => Session(
         token: json['token'] as String,
         user: User(

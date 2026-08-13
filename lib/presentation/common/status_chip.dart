@@ -16,6 +16,12 @@ _StatusColors _colorsFor(RequisitionStatus status) => switch (status) {
       RequisitionStatus.approved => const _StatusColors(tmsStatusApprovedGreen, tmsStatusApprovedGreenBg),
       RequisitionStatus.assigned => const _StatusColors(tmsStatusAssignedTeal, tmsStatusAssignedTealBg),
       RequisitionStatus.rejected => const _StatusColors(tmsStatusRejectedRed, tmsStatusRejectedRedBg),
+      // Neither status carries a colour in the redesign — cancelled is a terminal
+      // non-event and unknown means the server sent a value this build predates — so
+      // both read as neutral rather than borrowing another status's semantic colour.
+      RequisitionStatus.cancelled ||
+      RequisitionStatus.unknown =>
+        const _StatusColors(tmsTextMutedAlt, tmsDivider),
     };
 
 class StatusChip extends StatelessWidget {

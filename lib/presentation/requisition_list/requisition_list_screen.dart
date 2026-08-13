@@ -10,6 +10,7 @@ import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/requisition_row.dart';
 import '../common/strings.dart';
+import '../common/synced_text_field.dart';
 import 'requisition_list_notifier.dart';
 import 'requisition_list_state.dart';
 
@@ -71,7 +72,7 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      ref.read(requisitionListNotifierProvider.notifier).cancelRequisition(id);
+      await ref.read(requisitionListNotifierProvider.notifier).cancelRequisition(id);
     }
   }
 
@@ -86,20 +87,28 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
         child: Container(
           color: tmsSurfaceWhite,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: widget.onNewRequisition,
-              style: ElevatedButton.styleFrom(shape: pillShape),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, size: 16),
-                  SizedBox(width: 8),
-                  Text(TmsStrings.requisitionListNewFab),
-                ],
+          // Row(end), not Align(centerRight). Scaffold measures bottomNavigationBar with
+          // *loose* constraints, and an Align without a heightFactor expands to the
+          // largest size those allow — so this bar grew to roughly half the screen and
+          // squeezed body to 154px. The Column above then had no free space left, the
+          // Expanded list resolved to zero height, and the requisitions were built but
+          // never laid out. A Row shrink-wraps vertically to its child.
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton(
+                onPressed: widget.onNewRequisition,
+                style: ElevatedButton.styleFrom(shape: pillShape),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add, size: 16),
+                    SizedBox(width: 8),
+                    Text(TmsStrings.requisitionListNewFab),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -114,41 +123,68 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
             onReset: notifier.resetFilters,
           ),
           Expanded(
-            child: switch (uiState) {
-              RequisitionListUiState(isInitialLoading: true) => const Center(child: CircularProgressIndicator()),
-              RequisitionListUiState(items: [], :final errorMessage) when errorMessage != null => _EmptyOrErrorState(message: errorMessage),
-              RequisitionListUiState(items: []) => const _EmptyOrErrorState(message: TmsStrings.requisitionListEmpty),
-              RequisitionListUiState(:final items, :final isLoadingMore) => ListView.separated(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                  itemCount: items.length + (isLoadingMore ? 1 : 0),
-                  separatorBuilder: (context, index) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    if (index >= items.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
-                      );
-                    }
-                    final requisition = items[index];
-                    return RequisitionRow(
-                      requisition: requisition,
-                      trailingAction: requisition.status == RequisitionStatus.pending
-                          ? InkWell(
-                              onTap: () => _confirmCancel(requisition.id),
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: Text(
-                                  TmsStrings.requisitionListCancel,
-                                  style: tmsTextTheme.bodyMedium?.copyWith(color: tmsDestructiveRed, fontWeight: FontWeight.bold),
+            // The list had no pull-to-refresh at all, which mattered because its only
+            // other refresh trigger was changing a filter — a failed load left the user
+            // with no way back short of restarting the app.
+            child: RefreshIndicator(
+              onRefresh: notifier.refresh,
+              child: switch (uiState) {
+                RequisitionListUiState(isInitialLoading: true) =>
+                  const Center(child: CircularProgressIndicator()),
+                RequisitionListUiState(items: [], :final errorMessage)
+                    when errorMessage != null =>
+                  _EmptyOrErrorState(
+                    message: errorMessage,
+                    onRetry: () => unawaited(notifier.refresh()),
+                  ),
+                RequisitionListUiState(items: []) =>
+                  const _EmptyOrErrorState(message: TmsStrings.requisitionListEmpty),
+                RequisitionListUiState(:final items, :final isLoadingMore) =>
+                  ListView.separated(
+                    controller: _scrollController,
+                    // Without this a short list cannot be over-scrolled, so
+                    // RefreshIndicator never fires on exactly the screens where the
+                    // user most wants it (empty or nearly-empty results).
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    itemCount: items.length + (isLoadingMore ? 1 : 0),
+                    separatorBuilder: (context, index) => const SizedBox(height: 14),
+                    itemBuilder: (context, index) {
+                      if (index >= items.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
+                      final requisition = items[index];
+                      return RequisitionRow(
+                        requisition: requisition,
+                        trailingAction: requisition.status == RequisitionStatus.pending
+                            ? InkWell(
+                                onTap: () => unawaited(_confirmCancel(requisition.id)),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Text(
+                                    TmsStrings.requisitionListCancel,
+                                    style: tmsTextTheme.bodyMedium?.copyWith(
+                                      color: tmsDestructiveRed,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            )
-                          : null,
-                    );
-                  },
-                ),
-            },
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+              },
+            ),
           ),
         ],
       ),
@@ -210,14 +246,16 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextFormField(
-            initialValue: widget.searchQuery,
+          // SyncedTextField, not TextFormField(initialValue:) — tapping Reset clears
+          // searchQuery in the notifier, and the old field kept the typed text on
+          // screen while the list below it showed unfiltered results.
+          SyncedTextField(
+            value: widget.searchQuery,
             onChanged: widget.onSearchQueryChange,
-            decoration: const InputDecoration(
-              hintText: TmsStrings.requisitionListSearchPlaceholder,
-              prefixIcon: Icon(Icons.search, color: tmsTextSubtle),
-              fillColor: tmsSurfaceWhite,
-            ),
+            hintText: TmsStrings.requisitionListSearchPlaceholder,
+            textInputAction: TextInputAction.search,
+            prefixIcon: const Icon(Icons.search, color: tmsTextSubtle),
+            fillColor: tmsSurfaceWhite,
           ),
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -233,7 +271,14 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
                   onTap: () => _pickDate(_DatePickerTarget.end),
                 ),
                 const SizedBox(width: 8),
-                const VerticalDivider(width: 1, color: tmsDivider),
+                // A fixed-height rule, not a VerticalDivider. VerticalDivider builds a
+                // child with `height: double.infinity`, which in a Row with loose
+                // vertical constraints made this filter bar expand to the full height of
+                // the body — leaving the Expanded list below it zero height, so the
+                // requisition rows were built but never laid out and the screen showed
+                // nothing at all. The dashboard's stat panel gets away with
+                // VerticalDivider only because it wraps its Row in IntrinsicHeight.
+                Container(width: 1, height: 24, color: tmsDivider),
                 TextButton(
                   onPressed: () {
                     setState(() => _rangeError = null);
@@ -283,16 +328,47 @@ class _FilterPillChip extends StatelessWidget {
 }
 
 class _EmptyOrErrorState extends StatelessWidget {
-  const _EmptyOrErrorState({required this.message});
+  const _EmptyOrErrorState({required this.message, this.onRetry});
 
   final String message;
 
+  /// Null for the genuinely-empty case: there is nothing to retry when the server
+  /// answered correctly with no rows.
+  final VoidCallback? onRetry;
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(message, textAlign: TextAlign.center, style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt)),
+    // Scrollable even though it holds a single centred block, so that
+    // RefreshIndicator still has something to pull on when the list is empty.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+                  ),
+                  if (onRetry != null) ...[
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: onRetry,
+                      style: ElevatedButton.styleFrom(shape: pillShape),
+                      child: const Text(TmsStrings.requisitionListRetry),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

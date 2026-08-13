@@ -1,0 +1,837 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TMS Requisition API",
+    "version": "0.1.0-draft",
+    "summary": "Vehicle requisition module — list, create, view, edit and cancel.",
+    "description": "Reconstructed from the Postman collection `TMS Requisition API`\n(`_postman_id: 1463e366-27a1-4d3f-a15b-e8af1b665fdc`).\n\n## Accuracy notice — read before implementing\n\nThe source collection contains **no saved response examples**. Every\nresponse body below is therefore inferred from two things only:\n\n1. The collection's test scripts (`body.data.token`, `body.data.id`).\n2. The prose in each request's `description` field.\n\nAny schema, field or status code carrying `x-status: inferred` is an\n**open question for the backend team**, not an agreed contract. Fields\nmarked `x-status: confirmed` were observed directly in the collection.\n\nTreat this document as a review artifact: send it to the API owner,\nget the inferred parts either confirmed or corrected, then bump the\nversion to `1.0.0` and delete this notice.\n\n## Domain invariant\n\nBoth mutating operations (`PUT /requisitions/{id}` and\n`POST /requisitions/{id}/cancel`) are gated by the same two conditions:\n\n    status == \"Pending\"   AND   actor == original creator\n\nNeither is a client-side-only check. A requisition can leave `Pending`\nat any moment because an approver acted on it, so a client holding a\nstale list will get a `409` on an action its UI still shows as legal.\nDesign for that path explicitly.\n",
+    "contact": {
+      "name": "Backend team — TMS",
+      "x-open-questions": [
+        "`X-Requisition-Source` is sent BOTH as an HTTP header and as a body field on create. Which one does the server actually read? Is either required? This spec models the header as authoritative and omits the body duplicate — confirm before relying on it.",
+        "`pick_up_date_time` uses `YYYY-MM-DD HH:mm:ss` with no timezone offset. Which zone does the server interpret it in? Assumed Asia/Dhaka (UTC+06:00) — must be confirmed, a one-hour drift misdispatches a driver.",
+        "The collection declares an unused variable `logistic_requisition_id`, implying a second requisition type (logistic vehicle?) with its own create/update payload. Is there a `req_type` beyond `passenger_vehicle`, and does it share these endpoints?",
+        "No error envelope is documented anywhere. Please supply one sample each of 401, 403, 409 and 422 so the client error mapper can be written against real shapes.",
+        "What is the complete `status` vocabulary and the legal transitions between values? Only `Pending` and a cancelled state are mentioned.",
+        "Does the list response wrap results in pagination metadata, and if so what is the envelope? Assumed Laravel-style — confirm.",
+        "Do tokens expire, and is there a refresh or logout endpoint?"
+      ]
+    }
+  },
+  "servers": [
+    {
+      "url": "{base_url}",
+      "description": "Mirrors the collection's `base_url` variable. The collection default is cleartext HTTP on localhost, which is fine locally but will be blocked by Android's default network security config on API 28+. Staging and production must be HTTPS.",
+      "variables": {
+        "base_url": {
+          "default": "http://localhost/api"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Session establishment. The API resolves the acting user from the token."
+    },
+    {
+      "name": "Requisitions",
+      "description": "Vehicle requisition lifecycle."
+    }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "login",
+        "summary": "Exchange credentials for a bearer token",
+        "description": "Returns a token that every other operation sends as\n`Authorization: Bearer <token>`. The API identifies the acting user\nfrom this token — no user id is passed on any other request.\n",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/user": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "getAuthenticatedUser",
+        "summary": "Get the account behind the current token",
+        "description": "Returns the authenticated user's account info, resolved from the bearer token. Useful as a cheap token-validity probe on app start.",
+        "responses": {
+          "200": {
+            "description": "Current user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/requisitions": {
+      "get": {
+        "tags": [
+          "Requisitions"
+        ],
+        "operationId": "listRequisitions",
+        "summary": "List the caller's requisitions",
+        "description": "Lists requisitions created by the authenticated user, optionally filtered by a date range. Scoping is implicit — there is no user/owner query parameter.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PerPage"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/FromDate"
+          },
+          {
+            "$ref": "#/components/parameters/ToDate"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of requisitions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequisitionListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Requisitions"
+        ],
+        "operationId": "createRequisition",
+        "summary": "Create a requisition",
+        "description": "Creates a requisition owned by the authenticated user. The new resource starts in `Pending`, which is the only status from which it can later be edited or cancelled.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequisitionSource"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequisitionWriteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequisitionDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/requisitions/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/RequisitionId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Requisitions"
+        ],
+        "operationId": "getRequisition",
+        "summary": "View one requisition in full",
+        "description": "Returns full detail — assigned driver and vehicle, plus the audit log — for a single requisition. Ownership is enforced: a caller who is not the creator receives `403`, not `404`.",
+        "responses": {
+          "200": {
+            "description": "The requisition.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequisitionDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotTheCreator"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Requisitions"
+        ],
+        "operationId": "updateRequisition",
+        "summary": "Update a requisition (Pending only, creator only)",
+        "description": "Full replacement of the mutable fields.\n\nThree constraints, all server-enforced:\n\n- `req_type` **must match the requisition's existing type exactly**.\n  This endpoint cannot convert a requisition from one type to\n  another; sending a different value is an error, not a conversion.\n- The requisition's status must still be `Pending`.\n- The caller must be the original creator.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequisitionWriteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequisitionDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotTheCreator"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/NotPending"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/requisitions/{id}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/RequisitionId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Requisitions"
+        ],
+        "operationId": "cancelRequisition",
+        "summary": "Cancel a requisition (Pending only, creator only)",
+        "description": "Transitions a `Pending` requisition to cancelled. Takes no body. Returns `409` if the requisition has already been cancelled or has otherwise moved out of `Pending` — which is the expected outcome when a client acts on a stale list, so treat it as a normal UI path rather than an unexpected failure.",
+        "responses": {
+          "200": {
+            "description": "Cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequisitionDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotTheCreator"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/NotPending"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Token obtained from `POST /login`. Expiry and refresh semantics are undocumented — see `info.contact.x-open-questions`."
+      }
+    },
+    "parameters": {
+      "RequisitionId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Server-assigned requisition identifier.",
+        "schema": {
+          "$ref": "#/components/schemas/RequisitionId"
+        }
+      },
+      "PerPage": {
+        "name": "per_page",
+        "in": "query",
+        "required": false,
+        "description": "Page size. Server default unknown.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        },
+        "example": 10
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "example": 1
+      },
+      "FromDate": {
+        "name": "fdate",
+        "in": "query",
+        "required": false,
+        "description": "Inclusive start of the filter range. Optional — the server defaults to one month ago. Note this is a bare date, whereas `pick_up_date_time` in request bodies is a date-time; the two formats are not interchangeable.",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "example": "2026-06-01"
+      },
+      "ToDate": {
+        "name": "tdate",
+        "in": "query",
+        "required": false,
+        "description": "Inclusive end of the filter range. Optional — the server defaults to today.",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "example": "2026-07-23"
+      },
+      "RequisitionSource": {
+        "name": "X-Requisition-Source",
+        "in": "header",
+        "required": false,
+        "description": "Identifies the client application originating the requisition. The collection also sends an identically-named field inside the request body; this spec treats the header as authoritative and omits the body copy. Confirm with the backend team before relying on either — see `info.contact.x-open-questions`.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "workopolo",
+        "x-status": "partially-confirmed"
+      }
+    },
+    "schemas": {
+      "RequisitionId": {
+        "description": "Type is inferred. The Postman test script assigns `body.data.id` straight into a collection variable without coercion, so it could be an integer or a string. Confirm before choosing a client-side type — parsing an id as `Int` that later becomes a UUID is a breaking change.",
+        "oneOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "x-status": "inferred"
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "user_name",
+          "password"
+        ],
+        "properties": {
+          "user_name": {
+            "type": "string",
+            "description": "An email address in the observed sample, though the field is not named `email` — confirm whether other identifier formats are accepted.",
+            "examples": [
+              "someone@example.com"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "x-status": "confirmed",
+        "x-security-note": "The source collection hard-codes a real corporate address and the password `123456` in this request body. Rotate that credential and move secrets into a Postman environment with secret-typed variables."
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "Bearer token for all subsequent requests."
+              }
+            }
+          }
+        },
+        "description": "Only the `data.token` path is confirmed — the test script reads exactly that. Sibling fields such as expiry or the user object may also be present.",
+        "x-status": "inferred"
+      },
+      "UserResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Field set entirely unknown — the collection never inspects this response. Request a sample payload.",
+            "additionalProperties": true
+          }
+        },
+        "x-status": "inferred"
+      },
+      "ReqType": {
+        "type": "string",
+        "description": "Only `passenger_vehicle` is observed. The collection's unused `logistic_requisition_id` variable suggests at least one further type exists; it is deliberately NOT listed here because that would assert something unverified. Confirm the full vocabulary.",
+        "enum": [
+          "passenger_vehicle"
+        ],
+        "x-status": "incomplete"
+      },
+      "RequisitionFor": {
+        "type": "string",
+        "description": "Free-text on the wire, but behaves as a closed vocabulary. Only `Own User` observed — capitalisation appears load-bearing.",
+        "enum": [
+          "Own User"
+        ],
+        "x-status": "incomplete"
+      },
+      "RequisitionForUser": {
+        "type": "string",
+        "description": "Only `Internal User` observed. An `External User` counterpart is plausible but unverified.",
+        "enum": [
+          "Internal User"
+        ],
+        "x-status": "incomplete"
+      },
+      "UsedType": {
+        "type": "string",
+        "description": "Journey shape. Two values observed. Note the literal ampersand and spacing in `Pickup & Drop` — it is an exact-match string, so it must be URL-encoded in query contexts and never reconstructed from parts. A `Pickup`-only counterpart is plausible but unverified.",
+        "enum": [
+          "Pickup & Drop",
+          "Drop"
+        ],
+        "x-status": "incomplete"
+      },
+      "RequisitionStatus": {
+        "type": "string",
+        "description": "Only `Pending` is named in the collection, plus an unnamed cancelled state. The real vocabulary and its transitions are unknown — this is the single most important gap, because the entire edit/cancel permission model hangs off it.",
+        "examples": [
+          "Pending"
+        ],
+        "x-status": "incomplete"
+      },
+      "LocalDateTime": {
+        "type": "string",
+        "description": "`YYYY-MM-DD HH:mm:ss` — a space separator and no timezone offset, so this is NOT RFC 3339 and `format: date-time` would be wrong. Assumed to be Asia/Dhaka (UTC+06:00) wall-clock time; pin that explicitly client-side rather than letting the device locale decide.",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+        "examples": [
+          "2026-07-25 09:30:00"
+        ],
+        "x-status": "partially-confirmed"
+      },
+      "RequisitionWriteRequest": {
+        "type": "object",
+        "description": "Shared body for create and update. Update is a full replacement, and on update `req_type` must equal the requisition's existing type. Required-vs-optional below is inferred from the sample payloads — every field appears in both samples, so the split is a guess. Ask which fields the server actually validates as required.",
+        "required": [
+          "req_type",
+          "requisition_for",
+          "requisition_for_user",
+          "used_type",
+          "purpose",
+          "pickup_location",
+          "pick_up_date_time"
+        ],
+        "properties": {
+          "req_type": {
+            "$ref": "#/components/schemas/ReqType"
+          },
+          "requisition_for": {
+            "$ref": "#/components/schemas/RequisitionFor"
+          },
+          "requisition_for_user": {
+            "$ref": "#/components/schemas/RequisitionForUser"
+          },
+          "used_type": {
+            "$ref": "#/components/schemas/UsedType"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "Free-text reason for the trip.",
+            "examples": [
+              "Client meeting at Gulshan office"
+            ]
+          },
+          "customer_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present in both samples. Whether it is required, and whether it is conditional on `requisition_for_user` being external, is unknown.",
+            "examples": [
+              "Bangla Trac Ltd."
+            ]
+          },
+          "pickup_location": {
+            "type": "string",
+            "description": "Free-text address, not a coordinate pair. If this module ever needs to feed dispatch or ETA logic it will need geocoding on top — worth raising early.",
+            "examples": [
+              "Head Office, Tejgaon"
+            ]
+          },
+          "drop_location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Likely conditional on `used_type` — a pickup-only journey plausibly has no drop. Confirm the conditional-required rule.",
+            "examples": [
+              "Gulshan-2, Dhaka"
+            ]
+          },
+          "pick_up_date_time": {
+            "$ref": "#/components/schemas/LocalDateTime"
+          },
+          "no_of_person": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "Passenger count. Upper bound, if any, is unknown.",
+            "examples": [
+              3
+            ]
+          },
+          "remarks": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-text note for the fleet team.",
+            "examples": [
+              "Please arrange an AC vehicle"
+            ]
+          }
+        },
+        "x-status": "partially-confirmed"
+      },
+      "Requisition": {
+        "type": "object",
+        "description": "Read model. Only `id` is confirmed; the rest is projected from the write model plus the endpoint descriptions, which mention status, driver, vehicle and an audit log. Request a real sample before writing client models against this.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RequisitionId"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequisitionStatus"
+          },
+          "req_type": {
+            "$ref": "#/components/schemas/ReqType"
+          },
+          "requisition_for": {
+            "$ref": "#/components/schemas/RequisitionFor"
+          },
+          "requisition_for_user": {
+            "$ref": "#/components/schemas/RequisitionForUser"
+          },
+          "used_type": {
+            "$ref": "#/components/schemas/UsedType"
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pickup_location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "drop_location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pick_up_date_time": {
+            "$ref": "#/components/schemas/LocalDateTime"
+          },
+          "no_of_person": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "remarks": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "driver": {
+            "description": "Populated once a driver is assigned. Field set unknown.",
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "vehicle": {
+            "description": "Populated once a vehicle is assigned. Field set unknown.",
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "audit_log": {
+            "description": "Mentioned in the detail endpoint description. Entry shape unknown — presumably actor, action and timestamp.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true,
+        "x-status": "inferred"
+      },
+      "RequisitionDetailResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Requisition"
+          }
+        },
+        "description": "The `data` envelope is confirmed for create (the test script reads `body.data.id`) and assumed identical for view, update and cancel.",
+        "x-status": "partially-confirmed"
+      },
+      "RequisitionListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Requisition"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "description": "Hypothesis: the backend is Laravel and this is a standard paginated resource collection — the `per_page` parameter name, the `data` envelope and the 422 validation convention all point that way. The collection never inspects this response, so nothing here is verified.",
+        "x-status": "inferred"
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "description": "Shape unverified. Do not build a paging component against this until confirmed.",
+        "properties": {
+          "current_page": {
+            "type": "integer"
+          },
+          "last_page": {
+            "type": "integer"
+          },
+          "per_page": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true,
+        "x-status": "inferred"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "No error payload appears anywhere in the collection. This is a placeholder following the common Laravel convention. It is the highest-value thing to get confirmed, because the client cannot distinguish recoverable from fatal errors without it.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "errors": {
+            "description": "Field-keyed validation messages, if the convention holds.",
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalProperties": true,
+        "x-status": "inferred"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, malformed or expired bearer token. Client action: clear the stored session and route to login.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "x-status": "inferred"
+      },
+      "NotTheCreator": {
+        "description": "The caller is authenticated but is not the requisition's creator. Explicitly documented for the detail endpoint and assumed to apply to update and cancel too. Client action: this is terminal — do not retry, and surface it as a permission message rather than a generic failure.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "x-status": "partially-confirmed"
+      },
+      "NotFound": {
+        "description": "No requisition with that id. Not documented in the collection.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "x-status": "inferred"
+      },
+      "NotPending": {
+        "description": "The requisition is no longer `Pending`, so it can be neither edited nor cancelled. Documented for cancel; assumed to apply to update. Client action: this usually means the local copy is stale — refetch the requisition and re-render available actions rather than showing a generic error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "x-status": "partially-confirmed"
+      },
+      "ValidationFailed": {
+        "description": "Request body or query parameters failed validation. Client action: map `errors` onto the offending form fields.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "x-status": "inferred"
+      }
+    }
+  }
+}

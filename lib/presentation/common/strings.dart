@@ -87,4 +87,12 @@ class TmsStrings {
   static const newRequisitionErrorNumberInvalid = 'Enter a valid number of persons';
   static const newRequisitionErrorSelectEmployee = 'Select at least one employee';
   static const newRequisitionSubmitFailed = 'Could not submit requisition. Please try again.';
+  static const newRequisitionEmployeeSearchFailed = 'Could not search employees';
+
+  // Capabilities the API contract does not define. Shown in place of the control
+  // rather than letting the user submit a payload the backend cannot accept.
+  static const unsupportedEmployeePicker =
+      'Naming specific passengers is not supported yet — add them to the purpose or remarks.';
+
+  static const requisitionListRetry = 'Retry';
 }

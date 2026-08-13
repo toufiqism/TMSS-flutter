@@ -13,7 +13,10 @@ abstract class PassengerFormState with _$PassengerFormState {
     DateTime? pickupDateTime,
     @Default('') String pickupLocation,
     @Default('') String dropLocation,
-    @Default(UsedType.pickup) UsedType usedType,
+    // pickupAndDrop, not pickup: `UsedType.pickup` is not in the contract's enum and
+    // so is absent from UsedType.selectable — defaulting to it would seed the dropdown
+    // with a value its own option list does not contain.
+    @Default(UsedType.pickupAndDrop) UsedType usedType,
     @Default('') String customerName,
     @Default('') String numberOfPersons,
     @Default(RequiredFor.ownUser) RequiredFor requiredFor,
@@ -33,7 +36,9 @@ abstract class LogisticsFormState with _$LogisticsFormState {
     @Default(VehicleType.coverVan) VehicleType vehicleType,
     @Default('') String customerName,
     @Default('') String userDepartment,
-    @Default(LoadingCapacity.ton1To5) LoadingCapacity loadingCapacity,
+    // ton2, not the old ton1To5: `1-5 Ton` is rejected by the server's `in:` rule,
+    // so the previous default made every untouched logistics form fail validation.
+    @Default(LoadingCapacity.ton2) LoadingCapacity loadingCapacity,
     @Default('') String goodsWeight,
     @Default('') String storeName,
     @Default('') String goodsDetails,
@@ -50,6 +55,9 @@ abstract class RequisitionCreateUiState with _$RequisitionCreateUiState {
     @Default('') String employeeSearchQuery,
     @Default(<Employee>[]) List<Employee> employeeSearchResults,
     @Default(false) bool isSearchingEmployees,
+    /// Surfaced under the employee picker. Without it a failed lookup is
+    /// indistinguishable from "this search genuinely matched nobody".
+    String? employeeSearchError,
     @Default(false) bool isSubmitting,
     @Default(<String, String>{}) Map<String, String> fieldErrors,
     String? submitError,

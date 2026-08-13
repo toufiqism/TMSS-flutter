@@ -100,6 +100,9 @@ class _DashboardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      // Without this the dashboard cannot be over-scrolled when its content is
+      // shorter than the viewport, and the enclosing RefreshIndicator never fires.
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
       children: [
         _HeroCard(onRequisitionNow: onRequisitionNow),

@@ -18,6 +18,9 @@ void main() {
     mockLoginUseCase = MockLoginUseCase();
     container = ProviderContainer(overrides: [loginUseCaseProvider.overrideWithValue(mockLoginUseCase)]);
     addTearDown(container.dispose);
+    // isAutoDispose: hold a subscription so the notifier survives across awaits, the
+    // same way the mounted LoginScreen does.
+    container.listen(loginNotifierProvider, (_, _) {}, fireImmediately: true);
   });
 
   const session = Session(
@@ -64,6 +67,60 @@ void main() {
     final state = container.read(loginNotifierProvider);
     expect(state.isLoading, isFalse);
     expect(state.errorMessage, 'Username/Password is invalid!');
+  });
+
+  test('submit under maintenance surfaces the maintenance message', () async {
+    when(() => mockLoginUseCase(any(), any()))
+        .thenAnswer((_) async => const ApiResult.maintenance('Under maintenance', 503));
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('tofiq.akbar@btracsl.com');
+    notifier.onPasswordChange('demo1234');
+
+    await notifier.submit();
+
+    final state = container.read(loginNotifierProvider);
+    expect(state.isLoading, isFalse);
+    expect(state.errorMessage, 'Under maintenance');
+  });
+
+  test('a logout result on login is shown inline, not swallowed', () async {
+    when(() => mockLoginUseCase(any(), any()))
+        .thenAnswer((_) async => const ApiResult.logout('Session expired', 401));
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('tofiq.akbar@btracsl.com');
+    notifier.onPasswordChange('demo1234');
+
+    await notifier.submit();
+
+    expect(container.read(loginNotifierProvider).errorMessage, 'Session expired');
+  });
+
+  test('the password is dropped from state once login succeeds', () async {
+    // It must not linger in memory, nor repopulate the field if the user is bounced
+    // back to this screen.
+    when(() => mockLoginUseCase(any(), any()))
+        .thenAnswer((_) async => const ApiResult.success(session));
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('tofiq.akbar@btracsl.com');
+    notifier.onPasswordChange('demo1234');
+
+    await notifier.submit();
+
+    expect(container.read(loginNotifierProvider).password, isEmpty);
+  });
+
+  test('a second submit while one is in flight is ignored', () async {
+    when(() => mockLoginUseCase(any(), any())).thenAnswer((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return const ApiResult.success(session);
+    });
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('tofiq.akbar@btracsl.com');
+    notifier.onPasswordChange('demo1234');
+
+    await Future.wait([notifier.submit(), notifier.submit()]);
+
+    verify(() => mockLoginUseCase(any(), any())).called(1);
   });
 
   test('submit while offline surfaces the offline message', () async {

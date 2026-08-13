@@ -1,0 +1,155 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:tmss/core/api_result.dart';
+import 'package:tmss/data/local/session_local_data_source.dart';
+import 'package:tmss/data/remote/tmss_api_client.dart';
+import 'package:tmss/data/repository/remote_auth_repository.dart';
+import 'package:tmss/domain/model/user.dart';
+
+class MockTmssApiClient extends Mock implements TmssApiClient {}
+
+class MockSessionLocalDataSource extends Mock implements SessionLocalDataSource {}
+
+class FakeSession extends Fake implements Session {}
+
+Response<dynamic> _response(int status, [dynamic body]) => Response<dynamic>(
+      requestOptions: RequestOptions(path: '/login'),
+      statusCode: status,
+      data: body,
+    );
+
+/// The real `POST /login` body, captured from the live server.
+Map<String, dynamic> _loginBody({String token = 'abc123'}) => {
+      'success': true,
+      'message': 'Login successful',
+      'data': {
+        'token': token,
+        'expires_at': '2027-08-14 00:32:59',
+        'name': 'Md. Tofiq Akbar',
+        'designation': 'Senior Engineer',
+        'phone': '01700000000',
+        'company_name': 'B-Trac Solutions Limited',
+      },
+    };
+
+void main() {
+  late MockTmssApiClient api;
+  late MockSessionLocalDataSource storage;
+  late RemoteAuthRepository repository;
+
+  setUpAll(() => registerFallbackValue(FakeSession()));
+
+  setUp(() {
+    api = MockTmssApiClient();
+    storage = MockSessionLocalDataSource();
+    repository = RemoteAuthRepository(api, storage);
+    when(() => storage.save(any())).thenAnswer((_) async {});
+    when(storage.clear).thenAnswer((_) async {});
+    when(api.logout).thenAnswer((_) async => _response(200, {'success': true}));
+  });
+
+  void stubLogin(Response<dynamic> response) {
+    when(() => api.login(
+          userName: any(named: 'userName'),
+          password: any(named: 'password'),
+        )).thenAnswer((_) async => response);
+  }
+
+  test('login builds the whole session from one call', () async {
+    // The contract implied a second GET /user was needed for the account. It is not:
+    // the login response carries name and designation.
+    stubLogin(_response(200, _loginBody()));
+
+    final result = await repository.login('tofiq.akbar@btracsl.com', 'pw');
+
+    final session = (result as ApiSuccess<Session>).response;
+    expect(session.token, 'abc123');
+    expect(session.user.name, 'Md. Tofiq Akbar');
+    expect(session.user.designation, 'Senior Engineer');
+    expect(session.user.email, 'tofiq.akbar@btracsl.com');
+    verify(() => storage.save(any())).called(1);
+    verifyNever(() => api.getAuthenticatedUser(bearerToken: any(named: 'bearerToken')));
+  });
+
+  test('a login response without a name falls back to one derived from the email', () async {
+    stubLogin(_response(200, {
+      'success': true,
+      'data': {'token': 'abc123'},
+    }));
+
+    final result = await repository.login('tofiq.akbar@btracsl.com', 'pw');
+
+    expect((result as ApiSuccess<Session>).response.user.name, 'Tofiq Akbar');
+  });
+
+  test('401 on login is bad credentials, not an expired session', () async {
+    // Mapping it to `logout` would bounce the user to the screen they are already on.
+    stubLogin(_response(401, {
+      'success': false,
+      'message': 'Invalid credentials',
+      'errors': null,
+    }));
+
+    final result = await repository.login('someone@example.com', 'wrong');
+
+    expect(result, isA<ApiError<Session>>());
+    expect((result as ApiError<Session>).message, 'Invalid credentials');
+    verifyNever(() => storage.save(any()));
+  });
+
+  test('a 200 with no token is a contract mismatch, not a wrong password', () async {
+    stubLogin(_response(200, {'success': true, 'data': <String, dynamic>{}}));
+
+    final result = await repository.login('someone@example.com', 'pw');
+
+    expect(result, isA<ApiError<Session>>());
+    verifyNever(() => storage.save(any()));
+  });
+
+  test('offline propagates as offline', () async {
+    when(() => api.login(
+          userName: any(named: 'userName'),
+          password: any(named: 'password'),
+        )).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/login'),
+        type: DioExceptionType.connectionError,
+      ),
+    );
+
+    expect(await repository.login('a@b.com', 'pw'), isA<ApiOffline<Session>>());
+  });
+
+  test('maintenance propagates as maintenance', () async {
+    stubLogin(_response(503));
+
+    expect(await repository.login('a@b.com', 'pw'), isA<ApiMaintenance<Session>>());
+  });
+
+  group('logout', () {
+    test('revokes server-side before clearing locally', () async {
+      // Tokens last a year, so a purely local sign-out would leave a working token
+      // behind for anyone who captured it.
+      await repository.logout();
+
+      verify(api.logout).called(1);
+      verify(storage.clear).called(1);
+    });
+
+    test('still clears locally when the revoke call fails', () async {
+      when(api.logout).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/logout'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+
+      await repository.logout();
+
+      // Leaving the user signed in because the network hiccuped would be worse than a
+      // token that outlives the session.
+      verify(storage.clear).called(1);
+    });
+  });
+}

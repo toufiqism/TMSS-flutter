@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required in the main manifest, not just src/debug: the Flutter template only
+         declares it for debug/profile, so a release build would have no network access
+         at all once the app talks to https://tms.carcopolo.com/bt/api. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="tmss"
+        android:label="TMS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

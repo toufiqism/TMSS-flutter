@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/api_capabilities.dart';
 import '../../domain/model/employee.dart';
 import '../../domain/model/requisition.dart';
 import '../../theme/colors.dart';
@@ -10,6 +11,7 @@ import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/date_time_field.dart';
 import '../common/strings.dart';
+import '../common/synced_text_field.dart';
 import 'form_controls.dart';
 import 'requisition_create_notifier.dart';
 import 'requisition_create_state.dart';
@@ -90,9 +92,11 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: SizedBox(
               width: double.infinity,
-              height: 52,
               child: ElevatedButton(
-                onPressed: uiState.isSubmitting ? null : notifier.submit,
+                // minimumSize, not a fixed height, so the label survives large text scales.
+                style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                onPressed:
+                    uiState.isSubmitting ? null : () => unawaited(notifier.submit()),
                 child: uiState.isSubmitting
                     ? const SizedBox(
                         width: 20,
@@ -120,53 +124,86 @@ class _PillSegmentedToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(color: tmsSurfaceWhite, borderRadius: pillBorderRadius, border: Border.all(color: tmsBorder, width: 1.5)),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SegmentPill(
-              label: TmsStrings.newRequisitionTogglePassenger,
-              selected: selected == RequisitionFormType.passenger,
-              onTap: () => onSelect(RequisitionFormType.passenger),
-            ),
+    // Logistics is live: the server accepts `req_type: logistic_support`. This kept a
+    // disabled branch while that was unconfirmed; the flag remains so the segment can
+    // be switched off again from one place if the backend ever withdraws it.
+    const logisticsEnabled = ApiCapabilities.logisticsRequisitions;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: tmsSurfaceWhite,
+            borderRadius: pillBorderRadius,
+            border: Border.all(color: tmsBorder, width: 1.5),
           ),
-          Expanded(
-            child: _SegmentPill(
-              label: TmsStrings.newRequisitionToggleLogistics,
-              selected: selected == RequisitionFormType.logistics,
-              onTap: () => onSelect(RequisitionFormType.logistics),
-            ),
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              Expanded(
+                child: _SegmentPill(
+                  label: TmsStrings.newRequisitionTogglePassenger,
+                  selected: selected == RequisitionFormType.passenger,
+                  onTap: () => onSelect(RequisitionFormType.passenger),
+                ),
+              ),
+              Expanded(
+                child: _SegmentPill(
+                  label: TmsStrings.newRequisitionToggleLogistics,
+                  selected: selected == RequisitionFormType.logistics,
+                  enabled: logisticsEnabled,
+                  onTap: logisticsEnabled
+                      ? () => onSelect(RequisitionFormType.logistics)
+                      : null,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class _SegmentPill extends StatelessWidget {
-  const _SegmentPill({required this.label, required this.selected, required this.onTap});
+  const _SegmentPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.enabled = true,
+  });
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: pillBorderRadius,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        decoration: BoxDecoration(color: selected ? tmsGreen : Colors.transparent, borderRadius: pillBorderRadius),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: tmsTextTheme.bodyMedium?.copyWith(
-            color: selected ? tmsSurfaceWhite : tmsTextMutedAlt,
-            fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-            fontSize: 13.5,
+    return Semantics(
+      enabled: enabled,
+      selected: selected,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: pillBorderRadius,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: selected ? tmsGreen : Colors.transparent,
+            borderRadius: pillBorderRadius,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: tmsTextTheme.bodyMedium?.copyWith(
+              color: selected
+                  ? tmsSurfaceWhite
+                  : (enabled ? tmsTextMutedAlt : tmsPlaceholder),
+              fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+              fontSize: 13.5,
+            ),
           ),
         ),
       ),
@@ -256,7 +293,20 @@ class _PassengerFormFields extends StatelessWidget {
           labelFor: (v) => v.label,
           onSelect: notifier.onRequiredForChange,
         ),
-        if (form.requiredFor == RequiredFor.someoneElse) ...[
+        // "Someone Else" is a valid value, but there is still no wire field for *who*
+        // — and no directory endpoint to pick them from. So the choice is offered and
+        // the picker is not.
+        if (form.requiredFor == RequiredFor.someoneElse &&
+            !ApiCapabilities.employeeDirectory)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              TmsStrings.unsupportedEmployeePicker,
+              style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+            ),
+          ),
+        if (ApiCapabilities.employeeDirectory &&
+            form.requiredFor == RequiredFor.someoneElse) ...[
           spacing,
           Text(TmsStrings.newRequisitionFieldUserType, style: tmsTextTheme.bodySmall),
           const SizedBox(height: 8),
@@ -273,6 +323,7 @@ class _PassengerFormFields extends StatelessWidget {
             selected: form.selectedEmployees,
             isSearching: uiState.isSearchingEmployees,
             error: errors[RequisitionFormField.employees],
+            searchError: uiState.employeeSearchError,
             onQueryChange: notifier.onEmployeeSearchQueryChange,
             onToggle: notifier.toggleEmployeeSelection,
           ),
@@ -415,12 +466,13 @@ class _TmsTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      initialValue: value,
+    return SyncedTextField(
+      value: value,
       onChanged: onChanged,
       maxLines: singleLine ? 1 : 3,
       keyboardType: keyboardType,
-      decoration: InputDecoration(hintText: label, errorText: error),
+      hintText: label,
+      errorText: error,
     );
   }
 }
@@ -432,6 +484,7 @@ class _EmployeePicker extends StatefulWidget {
     required this.selected,
     required this.isSearching,
     required this.error,
+    required this.searchError,
     required this.onQueryChange,
     required this.onToggle,
   });
@@ -441,6 +494,10 @@ class _EmployeePicker extends StatefulWidget {
   final List<Employee> selected;
   final bool isSearching;
   final String? error;
+
+  /// A failed lookup, as opposed to [error]'s "you must pick someone". Without this
+  /// the two are indistinguishable: both leave an empty result list on screen.
+  final String? searchError;
   final ValueChanged<String> onQueryChange;
   final ValueChanged<Employee> onToggle;
 
@@ -469,22 +526,20 @@ class _EmployeePickerState extends State<_EmployeePicker> {
               ],
             ),
           ),
-        TextFormField(
-          initialValue: widget.query,
+        SyncedTextField(
+          value: widget.query,
           onChanged: (value) {
             widget.onQueryChange(value);
             setState(() => _expanded = true);
           },
-          decoration: InputDecoration(
-            hintText: TmsStrings.newRequisitionFieldSelectEmployees,
-            errorText: widget.error,
-            suffixIcon: widget.isSearching
-                ? const Padding(
-                    padding: EdgeInsets.all(14),
-                    child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                  )
-                : null,
-          ),
+          hintText: TmsStrings.newRequisitionFieldSelectEmployees,
+          errorText: widget.error ?? widget.searchError,
+          suffixIcon: widget.isSearching
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              : null,
         ),
         if (_expanded && widget.results.isNotEmpty)
           Container(

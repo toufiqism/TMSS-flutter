@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../di/providers.dart';
 import '../common/strings.dart';
+import '../dashboard/dashboard_notifier.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../login/login_screen.dart';
 import '../requisition_create/requisition_create_screen.dart';
+import '../requisition_list/requisition_list_notifier.dart';
 import '../requisition_list/requisition_list_screen.dart';
 import '../../theme/typography.dart';
 import 'app_shell.dart';
@@ -17,7 +21,54 @@ import 'route_paths.dart';
 /// `key(isAuthenticated) { TmssNavHost(...) }` rebuild-on-auth-change trick.
 class _SessionRefreshListenable extends ChangeNotifier {
   _SessionRefreshListenable(Ref ref) {
-    ref.listen(sessionStreamProvider, (previous, next) => notifyListeners());
+    ref.listen(sessionStreamProvider, (previous, next) {
+      if (previous?.value != null && next.value == null) {
+        _resetFeatureState(ref);
+      }
+      notifyListeners();
+    });
+  }
+}
+
+/// Discards per-feature state when the session ends.
+///
+/// The dashboard and list notifiers are deliberately kept alive, which means `build()`
+/// — and therefore their initial load — runs exactly once per notifier instance. That
+/// is right while a session lasts and wrong across sessions: after an expiry the
+/// dashboard holds a `DashboardError` from the 401 that ended it, and signing back in
+/// returns the user to that stale error with no way to clear it but restarting the app.
+///
+/// `ref.invalidate` is safe *here specifically*, unlike the refresh-after-create path
+/// (see [_refreshRequisitionViews]): the session going null redirects to login, which
+/// unmounts both screens and cancels their event subscriptions, so there is nobody left
+/// listening to the stream that invalidation closes.
+void _resetFeatureState(Ref ref) {
+  if (ref.exists(dashboardNotifierProvider)) {
+    ref.invalidate(dashboardNotifierProvider);
+  }
+  if (ref.exists(requisitionListNotifierProvider)) {
+    ref.invalidate(requisitionListNotifierProvider);
+  }
+}
+
+/// Resyncs the two screens that show requisition data after one is created.
+///
+/// Both notifiers are deliberately kept alive so they survive the trip to the create
+/// screen and back, which also means neither notices the new row on its own — before
+/// this the new requisition was invisible until the app restarted.
+///
+/// Refresh by calling a method, never `ref.invalidate`: invalidation re-runs `build()`
+/// and closes the notifier's event stream out from under any screen still listening to
+/// it (see `NotifierLifecycle`). `ref.exists` keeps this from *creating* a notifier
+/// that was never used — a user who goes dashboard → create → back has no list
+/// notifier yet, and spinning one up here would fire a request for a screen nobody
+/// has opened.
+void _refreshRequisitionViews(Ref ref) {
+  if (ref.exists(requisitionListNotifierProvider)) {
+    unawaited(ref.read(requisitionListNotifierProvider.notifier).refresh());
+  }
+  if (ref.exists(dashboardNotifierProvider)) {
+    unawaited(ref.read(dashboardNotifierProvider.notifier).refresh());
   }
 }
 
@@ -84,7 +135,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.newRequisition,
         builder: (context, state) => RequisitionCreateScreen(
           onBack: () => context.pop(),
-          onSubmitted: () => context.pop(),
+          onSubmitted: () {
+            context.pop();
+            _refreshRequisitionViews(ref);
+          },
         ),
       ),
     ],

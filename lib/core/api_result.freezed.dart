@@ -128,11 +128,11 @@ return offline(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( T response)?  success,TResult Function( String? message,  int? errorCode)?  error,TResult Function( String message,  int code)?  logout,TResult Function( String message,  int code)?  maintenance,TResult Function( String message)?  offline,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( T response)?  success,TResult Function( String? message,  int? errorCode,  Map<String, String>? fieldErrors)?  error,TResult Function( String message,  int code)?  logout,TResult Function( String message,  int code)?  maintenance,TResult Function( String message)?  offline,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ApiSuccess() when success != null:
 return success(_that.response);case ApiError() when error != null:
-return error(_that.message,_that.errorCode);case ApiLogout() when logout != null:
+return error(_that.message,_that.errorCode,_that.fieldErrors);case ApiLogout() when logout != null:
 return logout(_that.message,_that.code);case ApiMaintenance() when maintenance != null:
 return maintenance(_that.message,_that.code);case ApiOffline() when offline != null:
 return offline(_that.message);case _:
@@ -153,11 +153,11 @@ return offline(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( T response)  success,required TResult Function( String? message,  int? errorCode)  error,required TResult Function( String message,  int code)  logout,required TResult Function( String message,  int code)  maintenance,required TResult Function( String message)  offline,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( T response)  success,required TResult Function( String? message,  int? errorCode,  Map<String, String>? fieldErrors)  error,required TResult Function( String message,  int code)  logout,required TResult Function( String message,  int code)  maintenance,required TResult Function( String message)  offline,}) {final _that = this;
 switch (_that) {
 case ApiSuccess():
 return success(_that.response);case ApiError():
-return error(_that.message,_that.errorCode);case ApiLogout():
+return error(_that.message,_that.errorCode,_that.fieldErrors);case ApiLogout():
 return logout(_that.message,_that.code);case ApiMaintenance():
 return maintenance(_that.message,_that.code);case ApiOffline():
 return offline(_that.message);}
@@ -174,11 +174,11 @@ return offline(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( T response)?  success,TResult? Function( String? message,  int? errorCode)?  error,TResult? Function( String message,  int code)?  logout,TResult? Function( String message,  int code)?  maintenance,TResult? Function( String message)?  offline,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( T response)?  success,TResult? Function( String? message,  int? errorCode,  Map<String, String>? fieldErrors)?  error,TResult? Function( String message,  int code)?  logout,TResult? Function( String message,  int code)?  maintenance,TResult? Function( String message)?  offline,}) {final _that = this;
 switch (_that) {
 case ApiSuccess() when success != null:
 return success(_that.response);case ApiError() when error != null:
-return error(_that.message,_that.errorCode);case ApiLogout() when logout != null:
+return error(_that.message,_that.errorCode,_that.fieldErrors);case ApiLogout() when logout != null:
 return logout(_that.message,_that.code);case ApiMaintenance() when maintenance != null:
 return maintenance(_that.message,_that.code);case ApiOffline() when offline != null:
 return offline(_that.message);case _:
@@ -259,11 +259,20 @@ as T,
 
 
 class ApiError<T> implements ApiResult<T> {
-  const ApiError(this.message, [this.errorCode]);
+  const ApiError(this.message, [this.errorCode, final  Map<String, String>? fieldErrors]): _fieldErrors = fieldErrors;
   
 
  final  String? message;
  final  int? errorCode;
+ final  Map<String, String>? _fieldErrors;
+ Map<String, String>? get fieldErrors {
+  final value = _fieldErrors;
+  if (value == null) return null;
+  if (_fieldErrors is EqualUnmodifiableMapView) return _fieldErrors;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 
 /// Create a copy of ApiResult
 /// with the given fields replaced by the non-null parameter values.
@@ -275,16 +284,16 @@ $ApiErrorCopyWith<T, ApiError<T>> get copyWith => _$ApiErrorCopyWithImpl<T, ApiE
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ApiError<T>&&(identical(other.message, message) || other.message == message)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ApiError<T>&&(identical(other.message, message) || other.message == message)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&const DeepCollectionEquality().equals(other._fieldErrors, _fieldErrors));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,message,errorCode);
+int get hashCode => Object.hash(runtimeType,message,errorCode,const DeepCollectionEquality().hash(_fieldErrors));
 
 @override
 String toString() {
-  return 'ApiResult<$T>.error(message: $message, errorCode: $errorCode)';
+  return 'ApiResult<$T>.error(message: $message, errorCode: $errorCode, fieldErrors: $fieldErrors)';
 }
 
 
@@ -295,7 +304,7 @@ abstract mixin class $ApiErrorCopyWith<T,$Res> implements $ApiResultCopyWith<T, 
   factory $ApiErrorCopyWith(ApiError<T> value, $Res Function(ApiError<T>) _then) = _$ApiErrorCopyWithImpl;
 @useResult
 $Res call({
- String? message, int? errorCode
+ String? message, int? errorCode, Map<String, String>? fieldErrors
 });
 
 
@@ -312,11 +321,12 @@ class _$ApiErrorCopyWithImpl<T,$Res>
 
 /// Create a copy of ApiResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = freezed,Object? errorCode = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? message = freezed,Object? errorCode = freezed,Object? fieldErrors = freezed,}) {
   return _then(ApiError<T>(
 freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String?,freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,freezed == fieldErrors ? _self._fieldErrors : fieldErrors // ignore: cast_nullable_to_non_nullable
+as Map<String, String>?,
   ));
 }
 

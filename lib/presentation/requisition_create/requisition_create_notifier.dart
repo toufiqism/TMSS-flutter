@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_result.dart';
+import '../../core/notifier_lifecycle.dart';
 import '../../di/providers.dart';
+import '../../domain/api_capabilities.dart';
 import '../../domain/model/employee.dart';
 import '../../domain/model/requisition.dart';
 import '../common/strings.dart';
@@ -11,21 +13,28 @@ import 'requisition_create_state.dart';
 
 const _employeeSearchDebounce = Duration(milliseconds: 300);
 
+/// `isAutoDispose: true`: without it the notifier is kept alive by Riverpod 3's
+/// default, so submitting a requisition, popping back, and re-opening this screen
+/// would redisplay the previous submission's form still fully filled in.
 final requisitionCreateNotifierProvider =
-    NotifierProvider<RequisitionCreateNotifier, RequisitionCreateUiState>(RequisitionCreateNotifier.new);
+    NotifierProvider<RequisitionCreateNotifier, RequisitionCreateUiState>(
+  RequisitionCreateNotifier.new,
+  isAutoDispose: true,
+);
 
-class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState> {
-  final StreamController<RequisitionCreateEvent> _events = StreamController<RequisitionCreateEvent>.broadcast();
-  Stream<RequisitionCreateEvent> get events => _events.stream;
-
+class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
+    with NotifierLifecycle<RequisitionCreateUiState, RequisitionCreateEvent> {
   Timer? _employeeSearchTimer;
+
+  /// Monotonic counter guarding the debounced employee search. Every keystroke bumps
+  /// it; a search that returns after a newer keystroke has landed is dropped rather
+  /// than overwriting fresher results.
+  int _employeeSearchToken = 0;
 
   @override
   RequisitionCreateUiState build() {
-    ref.onDispose(() {
-      _events.close();
-      _employeeSearchTimer?.cancel();
-    });
+    registerLifecycle();
+    ref.onDispose(() => _employeeSearchTimer?.cancel());
     return const RequisitionCreateUiState();
   }
 
@@ -61,35 +70,64 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState> {
     _updatePassenger(RequisitionFormField.employees, (form) {
       final current = form.selectedEmployees;
       final isSelected = current.any((e) => e.id == employee.id);
-      final updated = isSelected ? current.where((e) => e.id != employee.id).toList() : [...current, employee];
+      final updated = isSelected
+          ? current.where((e) => e.id != employee.id).toList()
+          : [...current, employee];
       return form.copyWith(selectedEmployees: updated);
     });
   }
 
-  Future<void> onEmployeeSearchQueryChange(String query) async {
+  /// Debounced by rescheduling a timer, *not* by awaiting a Completer that the next
+  /// keystroke cancels — that older shape stranded one suspended async frame per
+  /// keystroke, since a cancelled Timer never completes its Completer and the
+  /// awaiting frame is never resumed.
+  void onEmployeeSearchQueryChange(String query) {
     state = state.copyWith(employeeSearchQuery: query);
     _employeeSearchTimer?.cancel();
-    final completer = Completer<void>();
-    _employeeSearchTimer = Timer(_employeeSearchDebounce, () => completer.complete());
-    await completer.future;
-
-    state = state.copyWith(isSearchingEmployees: true);
-    final searchEmployeesUseCase = ref.read(searchEmployeesUseCaseProvider);
-    final sessionExpirationHandler = ref.read(sessionExpirationHandlerProvider);
-    final result = await searchEmployeesUseCase(query);
-    await result.when(
-      success: (results) async {
-        state = state.copyWith(employeeSearchResults: results, isSearchingEmployees: false);
-      },
-      logout: (message, _) async {
-        await sessionExpirationHandler.handle();
-        state = state.copyWith(isSearchingEmployees: false);
-        _events.add(RequisitionCreateSessionExpired(message));
-      },
-      error: (message, code) async => state = state.copyWith(isSearchingEmployees: false),
-      offline: (message) async => state = state.copyWith(isSearchingEmployees: false),
-      maintenance: (message, code) async => state = state.copyWith(isSearchingEmployees: false),
+    _employeeSearchTimer = Timer(
+      _employeeSearchDebounce,
+      () => unawaited(_runEmployeeSearch(query)),
     );
+  }
+
+  Future<void> _runEmployeeSearch(String query) async {
+    if (isDisposed) return;
+    final token = ++_employeeSearchToken;
+    setStateIfAlive(state.copyWith(isSearchingEmployees: true, employeeSearchError: null));
+
+    final searchEmployeesUseCase = ref.read(searchEmployeesUseCaseProvider);
+    final result = await searchEmployeesUseCase(query);
+    if (isDisposed || token != _employeeSearchToken) return;
+
+    switch (result) {
+      case ApiSuccess<List<Employee>>(:final response):
+        setStateIfAlive(state.copyWith(
+          employeeSearchResults: response,
+          isSearchingEmployees: false,
+          employeeSearchError: null,
+        ));
+      // Previously these three branches only cleared the spinner, leaving the user
+      // staring at an empty result list with no idea the lookup had failed.
+      case ApiError<List<Employee>>(:final message):
+        _onEmployeeSearchFailed(message ?? TmsStrings.newRequisitionEmployeeSearchFailed);
+      case ApiOffline<List<Employee>>(:final message):
+        _onEmployeeSearchFailed(message);
+      case ApiMaintenance<List<Employee>>(:final message):
+        _onEmployeeSearchFailed(message);
+      case ApiLogout<List<Employee>>(:final message):
+        await ref.read(sessionExpirationHandlerProvider).handle();
+        if (isDisposed) return;
+        setStateIfAlive(state.copyWith(isSearchingEmployees: false));
+        emitEvent(RequisitionCreateSessionExpired(message));
+    }
+  }
+
+  void _onEmployeeSearchFailed(String message) {
+    setStateIfAlive(state.copyWith(
+      isSearchingEmployees: false,
+      employeeSearchResults: const [],
+      employeeSearchError: message,
+    ));
   }
 
   // --- Logistics form field updates ---
@@ -114,6 +152,7 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState> {
 
   Future<void> submit() async {
     final s = state;
+    if (s.isSubmitting) return;
     final errors = s.formType == RequisitionFormType.passenger
         ? _validatePassenger(s.passengerForm)
         : _validateLogistics(s.logisticsForm);
@@ -125,28 +164,52 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState> {
     final request = _buildRequest(s);
     state = state.copyWith(isSubmitting: true, submitError: null, fieldErrors: const {});
     final submitRequisitionUseCase = ref.read(submitRequisitionUseCaseProvider);
-    final sessionExpirationHandler = ref.read(sessionExpirationHandlerProvider);
     final result = await submitRequisitionUseCase(request);
-    await result.when(
-      success: (_) async {
-        state = state.copyWith(isSubmitting: false);
-        _events.add(const RequisitionSubmitted());
-      },
-      error: (message, _) async {
-        state = state.copyWith(isSubmitting: false, submitError: message ?? TmsStrings.newRequisitionSubmitFailed);
-      },
-      offline: (message) async {
-        state = state.copyWith(isSubmitting: false, submitError: message);
-      },
-      maintenance: (message, _) async {
-        state = state.copyWith(isSubmitting: false, submitError: message);
-      },
-      logout: (message, _) async {
-        await sessionExpirationHandler.handle();
-        state = state.copyWith(isSubmitting: false);
-        _events.add(RequisitionCreateSessionExpired(message));
-      },
-    );
+    if (isDisposed) return;
+
+    switch (result) {
+      case ApiSuccess<Requisition>():
+        setStateIfAlive(state.copyWith(isSubmitting: false));
+        emitEvent(const RequisitionSubmitted());
+      case ApiError<Requisition>(:final message, :final fieldErrors):
+        // A 422 carries field-keyed messages; pin them to the offending inputs
+        // instead of dumping one opaque banner at the top of the form.
+        setStateIfAlive(state.copyWith(
+          isSubmitting: false,
+          submitError: message ?? TmsStrings.newRequisitionSubmitFailed,
+          fieldErrors: _mapWireFieldErrors(fieldErrors),
+        ));
+      case ApiOffline<Requisition>(:final message):
+        setStateIfAlive(state.copyWith(isSubmitting: false, submitError: message));
+      case ApiMaintenance<Requisition>(:final message):
+        setStateIfAlive(state.copyWith(isSubmitting: false, submitError: message));
+      case ApiLogout<Requisition>(:final message):
+        await ref.read(sessionExpirationHandlerProvider).handle();
+        if (isDisposed) return;
+        setStateIfAlive(state.copyWith(isSubmitting: false));
+        emitEvent(RequisitionCreateSessionExpired(message));
+    }
+  }
+
+  /// Translates the API's snake_case field keys onto this form's field ids. Keys that
+  /// do not correspond to a visible input are dropped — they still reach the user
+  /// through the summary [RequisitionCreateUiState.submitError].
+  Map<String, String> _mapWireFieldErrors(Map<String, String>? wireErrors) {
+    if (wireErrors == null || wireErrors.isEmpty) return const {};
+    const wireToField = <String, String>{
+      'pick_up_date_time': RequisitionFormField.pickupDateTime,
+      'pickup_location': RequisitionFormField.pickupLocation,
+      'drop_location': RequisitionFormField.dropLocation,
+      'customer_name': RequisitionFormField.customerName,
+      'no_of_person': RequisitionFormField.numberOfPersons,
+      'purpose': RequisitionFormField.purpose,
+    };
+    final mapped = <String, String>{};
+    for (final entry in wireErrors.entries) {
+      final field = wireToField[entry.key];
+      if (field != null) mapped[field] = entry.value;
+    }
+    return mapped;
   }
 
   NewRequisitionRequest _buildRequest(RequisitionCreateUiState s) {
@@ -196,7 +259,12 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState> {
       errors[RequisitionFormField.numberOfPersons] = TmsStrings.newRequisitionErrorNumberInvalid;
     }
     if (form.purpose.trim().isEmpty) errors[RequisitionFormField.purpose] = required;
-    if (form.requiredFor == RequiredFor.someoneElse && form.selectedEmployees.isEmpty) {
+    // Only demanded while the picker is actually shown. There is no directory endpoint
+    // and no wire field for employee ids, so requiring a selection the user cannot make
+    // would make "Someone Else" unsubmittable — and the server accepts it without one.
+    if (ApiCapabilities.employeeDirectory &&
+        form.requiredFor == RequiredFor.someoneElse &&
+        form.selectedEmployees.isEmpty) {
       errors[RequisitionFormField.employees] = TmsStrings.newRequisitionErrorSelectEmployee;
     }
     return errors;

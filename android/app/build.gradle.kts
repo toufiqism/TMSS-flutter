@@ -6,7 +6,11 @@ plugins {
 
 android {
     namespace = "com.banglatrac.tmss"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned rather than inherited from flutter.compileSdkVersion: flutter_secure_storage
+    // ships AAR metadata requiring compileSdk 37, and the Flutter SDK's default is lower,
+    // which fails :app:checkDebugAarMetadata. Raising compileSdk only widens the APIs
+    // available at compile time — minSdk and targetSdk below are unaffected.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

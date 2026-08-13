@@ -69,6 +69,17 @@ void main() {
     expect(state.message, 'No internet connection available');
   });
 
+  test('initial load under maintenance surfaces DashboardError', () async {
+    when(() => mockUseCase())
+        .thenAnswer((_) async => const ApiResult.maintenance('Under maintenance', 503));
+    container.read(dashboardNotifierProvider.notifier);
+
+    await Future<void>.delayed(Duration.zero);
+
+    final state = container.read(dashboardNotifierProvider) as DashboardError;
+    expect(state.message, 'Under maintenance');
+  });
+
   test('refresh failure after a successful load keeps the stale summary and emits RefreshFailed', () async {
     when(() => mockUseCase()).thenAnswer((_) async => const ApiResult.success(summary));
     final notifier = container.read(dashboardNotifierProvider.notifier);

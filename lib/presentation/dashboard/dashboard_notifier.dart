@@ -3,26 +3,31 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_result.dart';
+import '../../core/notifier_lifecycle.dart';
 import '../../di/providers.dart';
+import '../../domain/model/requisition.dart';
 import '../common/strings.dart';
 import 'dashboard_state.dart';
 
-final dashboardNotifierProvider = NotifierProvider<DashboardNotifier, DashboardUiState>(DashboardNotifier.new);
+/// Deliberately kept alive: the dashboard is the post-login landing screen and is
+/// re-entered constantly via the drawer, so re-fetching on every visit would be
+/// wasteful. Freshness is handled by [DashboardNotifier.load] being called
+/// explicitly after a requisition is created, plus pull-to-refresh.
+final dashboardNotifierProvider =
+    NotifierProvider<DashboardNotifier, DashboardUiState>(DashboardNotifier.new);
 
-class DashboardNotifier extends Notifier<DashboardUiState> {
-  final StreamController<DashboardEvent> _events = StreamController<DashboardEvent>.broadcast();
-  Stream<DashboardEvent> get events => _events.stream;
-
+class DashboardNotifier extends Notifier<DashboardUiState>
+    with NotifierLifecycle<DashboardUiState, DashboardEvent> {
   @override
   DashboardUiState build() {
-    ref.onDispose(_events.close);
-    Future.microtask(load);
+    registerLifecycle();
+    unawaited(Future.microtask(load));
     return const DashboardUiState.loading();
   }
 
   /// Full-screen loading spinner: initial load and error-state retry.
   Future<void> load() async {
-    state = const DashboardUiState.loading();
+    setStateIfAlive(const DashboardUiState.loading());
     await _fetch();
   }
 
@@ -30,7 +35,7 @@ class DashboardNotifier extends Notifier<DashboardUiState> {
   Future<void> refresh() async {
     final current = state;
     if (current is DashboardSuccess) {
-      state = current.copyWith(isRefreshing: true);
+      setStateIfAlive(current.copyWith(isRefreshing: true));
     }
     await _fetch();
   }
@@ -39,44 +44,40 @@ class DashboardNotifier extends Notifier<DashboardUiState> {
     final hadDataBeforeFetch = state is DashboardSuccess;
     final getDashboardSummaryUseCase = ref.read(getDashboardSummaryUseCaseProvider);
     final result = await getDashboardSummaryUseCase();
-    final sessionExpirationHandler = ref.read(sessionExpirationHandlerProvider);
+    if (isDisposed) return;
 
-    await result.when(
-      success: (summary) async {
-        state = DashboardUiState.success(summary);
-      },
-      error: (message, _) async {
-        await _onFetchFailed(hadDataBeforeFetch, message ?? TmsStrings.dashboardErrorGeneric);
-      },
-      offline: (message) async {
-        await _onFetchFailed(hadDataBeforeFetch, message);
-      },
-      maintenance: (message, _) async {
-        await _onFetchFailed(hadDataBeforeFetch, message);
-      },
-      logout: (message, _) async {
-        await sessionExpirationHandler.handle();
+    switch (result) {
+      case ApiSuccess<DashboardSummary>(:final response):
+        setStateIfAlive(DashboardUiState.success(response));
+      case ApiError<DashboardSummary>(:final message):
+        _onFetchFailed(hadDataBeforeFetch, message ?? TmsStrings.dashboardErrorGeneric);
+      case ApiOffline<DashboardSummary>(:final message):
+        _onFetchFailed(hadDataBeforeFetch, message);
+      case ApiMaintenance<DashboardSummary>(:final message):
+        _onFetchFailed(hadDataBeforeFetch, message);
+      case ApiLogout<DashboardSummary>(:final message):
+        await ref.read(sessionExpirationHandlerProvider).handle();
+        if (isDisposed) return;
         _clearRefreshingFlag();
-        _events.add(DashboardSessionExpired(message));
-      },
-    );
+        emitEvent(DashboardSessionExpired(message));
+    }
   }
 
-  Future<void> _onFetchFailed(bool hadDataBeforeFetch, String message) async {
+  void _onFetchFailed(bool hadDataBeforeFetch, String message) {
     if (hadDataBeforeFetch) {
       // Refresh failed but we still have a summary on screen — keep it, don't blow the
       // whole dashboard away for a transient error. Surface it as a one-shot message instead.
       _clearRefreshingFlag();
-      _events.add(DashboardRefreshFailed(message));
+      emitEvent(DashboardRefreshFailed(message));
     } else {
-      state = DashboardUiState.error(message);
+      setStateIfAlive(DashboardUiState.error(message));
     }
   }
 
   void _clearRefreshingFlag() {
     final current = state;
     if (current is DashboardSuccess) {
-      state = current.copyWith(isRefreshing: false);
+      setStateIfAlive(current.copyWith(isRefreshing: false));
     }
   }
 }
