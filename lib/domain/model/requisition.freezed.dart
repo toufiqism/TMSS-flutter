@@ -12,6 +12,804 @@ part of 'requisition.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
+mixin _$AuditLogEntry {
+
+ String get id; RequisitionStatus get status; String? get remarks; String? get actorName; String? get actorCode; DateTime? get at;
+/// Create a copy of AuditLogEntry
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AuditLogEntryCopyWith<AuditLogEntry> get copyWith => _$AuditLogEntryCopyWithImpl<AuditLogEntry>(this as AuditLogEntry, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuditLogEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.status, status) || other.status == status)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.actorName, actorName) || other.actorName == actorName)&&(identical(other.actorCode, actorCode) || other.actorCode == actorCode)&&(identical(other.at, at) || other.at == at));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,status,remarks,actorName,actorCode,at);
+
+@override
+String toString() {
+  return 'AuditLogEntry(id: $id, status: $status, remarks: $remarks, actorName: $actorName, actorCode: $actorCode, at: $at)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AuditLogEntryCopyWith<$Res>  {
+  factory $AuditLogEntryCopyWith(AuditLogEntry value, $Res Function(AuditLogEntry) _then) = _$AuditLogEntryCopyWithImpl;
+@useResult
+$Res call({
+ String id, RequisitionStatus status, String? remarks, String? actorName, String? actorCode, DateTime? at
+});
+
+
+
+
+}
+/// @nodoc
+class _$AuditLogEntryCopyWithImpl<$Res>
+    implements $AuditLogEntryCopyWith<$Res> {
+  _$AuditLogEntryCopyWithImpl(this._self, this._then);
+
+  final AuditLogEntry _self;
+  final $Res Function(AuditLogEntry) _then;
+
+/// Create a copy of AuditLogEntry
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? status = null,Object? remarks = freezed,Object? actorName = freezed,Object? actorCode = freezed,Object? at = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as RequisitionStatus,remarks: freezed == remarks ? _self.remarks : remarks // ignore: cast_nullable_to_non_nullable
+as String?,actorName: freezed == actorName ? _self.actorName : actorName // ignore: cast_nullable_to_non_nullable
+as String?,actorCode: freezed == actorCode ? _self.actorCode : actorCode // ignore: cast_nullable_to_non_nullable
+as String?,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
+as DateTime?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [AuditLogEntry].
+extension AuditLogEntryPatterns on AuditLogEntry {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AuditLogEntry value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AuditLogEntry() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AuditLogEntry value)  $default,){
+final _that = this;
+switch (_that) {
+case _AuditLogEntry():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AuditLogEntry value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AuditLogEntry() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  RequisitionStatus status,  String? remarks,  String? actorName,  String? actorCode,  DateTime? at)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AuditLogEntry() when $default != null:
+return $default(_that.id,_that.status,_that.remarks,_that.actorName,_that.actorCode,_that.at);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  RequisitionStatus status,  String? remarks,  String? actorName,  String? actorCode,  DateTime? at)  $default,) {final _that = this;
+switch (_that) {
+case _AuditLogEntry():
+return $default(_that.id,_that.status,_that.remarks,_that.actorName,_that.actorCode,_that.at);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  RequisitionStatus status,  String? remarks,  String? actorName,  String? actorCode,  DateTime? at)?  $default,) {final _that = this;
+switch (_that) {
+case _AuditLogEntry() when $default != null:
+return $default(_that.id,_that.status,_that.remarks,_that.actorName,_that.actorCode,_that.at);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _AuditLogEntry implements AuditLogEntry {
+  const _AuditLogEntry({required this.id, required this.status, this.remarks, this.actorName, this.actorCode, this.at});
+  
+
+@override final  String id;
+@override final  RequisitionStatus status;
+@override final  String? remarks;
+@override final  String? actorName;
+@override final  String? actorCode;
+@override final  DateTime? at;
+
+/// Create a copy of AuditLogEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AuditLogEntryCopyWith<_AuditLogEntry> get copyWith => __$AuditLogEntryCopyWithImpl<_AuditLogEntry>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuditLogEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.status, status) || other.status == status)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.actorName, actorName) || other.actorName == actorName)&&(identical(other.actorCode, actorCode) || other.actorCode == actorCode)&&(identical(other.at, at) || other.at == at));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,status,remarks,actorName,actorCode,at);
+
+@override
+String toString() {
+  return 'AuditLogEntry(id: $id, status: $status, remarks: $remarks, actorName: $actorName, actorCode: $actorCode, at: $at)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AuditLogEntryCopyWith<$Res> implements $AuditLogEntryCopyWith<$Res> {
+  factory _$AuditLogEntryCopyWith(_AuditLogEntry value, $Res Function(_AuditLogEntry) _then) = __$AuditLogEntryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, RequisitionStatus status, String? remarks, String? actorName, String? actorCode, DateTime? at
+});
+
+
+
+
+}
+/// @nodoc
+class __$AuditLogEntryCopyWithImpl<$Res>
+    implements _$AuditLogEntryCopyWith<$Res> {
+  __$AuditLogEntryCopyWithImpl(this._self, this._then);
+
+  final _AuditLogEntry _self;
+  final $Res Function(_AuditLogEntry) _then;
+
+/// Create a copy of AuditLogEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? status = null,Object? remarks = freezed,Object? actorName = freezed,Object? actorCode = freezed,Object? at = freezed,}) {
+  return _then(_AuditLogEntry(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as RequisitionStatus,remarks: freezed == remarks ? _self.remarks : remarks // ignore: cast_nullable_to_non_nullable
+as String?,actorName: freezed == actorName ? _self.actorName : actorName // ignore: cast_nullable_to_non_nullable
+as String?,actorCode: freezed == actorCode ? _self.actorCode : actorCode // ignore: cast_nullable_to_non_nullable
+as String?,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
+as DateTime?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+mixin _$AssignedDriver {
+
+ String? get name; String? get phone; String? get identifier;
+/// Create a copy of AssignedDriver
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AssignedDriverCopyWith<AssignedDriver> get copyWith => _$AssignedDriverCopyWithImpl<AssignedDriver>(this as AssignedDriver, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AssignedDriver&&(identical(other.name, name) || other.name == name)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.identifier, identifier) || other.identifier == identifier));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,name,phone,identifier);
+
+@override
+String toString() {
+  return 'AssignedDriver(name: $name, phone: $phone, identifier: $identifier)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AssignedDriverCopyWith<$Res>  {
+  factory $AssignedDriverCopyWith(AssignedDriver value, $Res Function(AssignedDriver) _then) = _$AssignedDriverCopyWithImpl;
+@useResult
+$Res call({
+ String? name, String? phone, String? identifier
+});
+
+
+
+
+}
+/// @nodoc
+class _$AssignedDriverCopyWithImpl<$Res>
+    implements $AssignedDriverCopyWith<$Res> {
+  _$AssignedDriverCopyWithImpl(this._self, this._then);
+
+  final AssignedDriver _self;
+  final $Res Function(AssignedDriver) _then;
+
+/// Create a copy of AssignedDriver
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? name = freezed,Object? phone = freezed,Object? identifier = freezed,}) {
+  return _then(_self.copyWith(
+name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
+as String?,identifier: freezed == identifier ? _self.identifier : identifier // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [AssignedDriver].
+extension AssignedDriverPatterns on AssignedDriver {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AssignedDriver value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AssignedDriver() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AssignedDriver value)  $default,){
+final _that = this;
+switch (_that) {
+case _AssignedDriver():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AssignedDriver value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AssignedDriver() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? name,  String? phone,  String? identifier)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AssignedDriver() when $default != null:
+return $default(_that.name,_that.phone,_that.identifier);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? name,  String? phone,  String? identifier)  $default,) {final _that = this;
+switch (_that) {
+case _AssignedDriver():
+return $default(_that.name,_that.phone,_that.identifier);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? name,  String? phone,  String? identifier)?  $default,) {final _that = this;
+switch (_that) {
+case _AssignedDriver() when $default != null:
+return $default(_that.name,_that.phone,_that.identifier);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _AssignedDriver extends AssignedDriver {
+  const _AssignedDriver({this.name, this.phone, this.identifier}): super._();
+  
+
+@override final  String? name;
+@override final  String? phone;
+@override final  String? identifier;
+
+/// Create a copy of AssignedDriver
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AssignedDriverCopyWith<_AssignedDriver> get copyWith => __$AssignedDriverCopyWithImpl<_AssignedDriver>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AssignedDriver&&(identical(other.name, name) || other.name == name)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.identifier, identifier) || other.identifier == identifier));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,name,phone,identifier);
+
+@override
+String toString() {
+  return 'AssignedDriver(name: $name, phone: $phone, identifier: $identifier)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AssignedDriverCopyWith<$Res> implements $AssignedDriverCopyWith<$Res> {
+  factory _$AssignedDriverCopyWith(_AssignedDriver value, $Res Function(_AssignedDriver) _then) = __$AssignedDriverCopyWithImpl;
+@override @useResult
+$Res call({
+ String? name, String? phone, String? identifier
+});
+
+
+
+
+}
+/// @nodoc
+class __$AssignedDriverCopyWithImpl<$Res>
+    implements _$AssignedDriverCopyWith<$Res> {
+  __$AssignedDriverCopyWithImpl(this._self, this._then);
+
+  final _AssignedDriver _self;
+  final $Res Function(_AssignedDriver) _then;
+
+/// Create a copy of AssignedDriver
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? name = freezed,Object? phone = freezed,Object? identifier = freezed,}) {
+  return _then(_AssignedDriver(
+name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
+as String?,identifier: freezed == identifier ? _self.identifier : identifier // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+mixin _$AssignedVehicle {
+
+ String? get registrationNumber; String? get model; String? get type;
+/// Create a copy of AssignedVehicle
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AssignedVehicleCopyWith<AssignedVehicle> get copyWith => _$AssignedVehicleCopyWithImpl<AssignedVehicle>(this as AssignedVehicle, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AssignedVehicle&&(identical(other.registrationNumber, registrationNumber) || other.registrationNumber == registrationNumber)&&(identical(other.model, model) || other.model == model)&&(identical(other.type, type) || other.type == type));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,registrationNumber,model,type);
+
+@override
+String toString() {
+  return 'AssignedVehicle(registrationNumber: $registrationNumber, model: $model, type: $type)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AssignedVehicleCopyWith<$Res>  {
+  factory $AssignedVehicleCopyWith(AssignedVehicle value, $Res Function(AssignedVehicle) _then) = _$AssignedVehicleCopyWithImpl;
+@useResult
+$Res call({
+ String? registrationNumber, String? model, String? type
+});
+
+
+
+
+}
+/// @nodoc
+class _$AssignedVehicleCopyWithImpl<$Res>
+    implements $AssignedVehicleCopyWith<$Res> {
+  _$AssignedVehicleCopyWithImpl(this._self, this._then);
+
+  final AssignedVehicle _self;
+  final $Res Function(AssignedVehicle) _then;
+
+/// Create a copy of AssignedVehicle
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? registrationNumber = freezed,Object? model = freezed,Object? type = freezed,}) {
+  return _then(_self.copyWith(
+registrationNumber: freezed == registrationNumber ? _self.registrationNumber : registrationNumber // ignore: cast_nullable_to_non_nullable
+as String?,model: freezed == model ? _self.model : model // ignore: cast_nullable_to_non_nullable
+as String?,type: freezed == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [AssignedVehicle].
+extension AssignedVehiclePatterns on AssignedVehicle {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AssignedVehicle value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AssignedVehicle() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AssignedVehicle value)  $default,){
+final _that = this;
+switch (_that) {
+case _AssignedVehicle():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AssignedVehicle value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AssignedVehicle() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? registrationNumber,  String? model,  String? type)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AssignedVehicle() when $default != null:
+return $default(_that.registrationNumber,_that.model,_that.type);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? registrationNumber,  String? model,  String? type)  $default,) {final _that = this;
+switch (_that) {
+case _AssignedVehicle():
+return $default(_that.registrationNumber,_that.model,_that.type);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? registrationNumber,  String? model,  String? type)?  $default,) {final _that = this;
+switch (_that) {
+case _AssignedVehicle() when $default != null:
+return $default(_that.registrationNumber,_that.model,_that.type);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _AssignedVehicle extends AssignedVehicle {
+  const _AssignedVehicle({this.registrationNumber, this.model, this.type}): super._();
+  
+
+@override final  String? registrationNumber;
+@override final  String? model;
+@override final  String? type;
+
+/// Create a copy of AssignedVehicle
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AssignedVehicleCopyWith<_AssignedVehicle> get copyWith => __$AssignedVehicleCopyWithImpl<_AssignedVehicle>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AssignedVehicle&&(identical(other.registrationNumber, registrationNumber) || other.registrationNumber == registrationNumber)&&(identical(other.model, model) || other.model == model)&&(identical(other.type, type) || other.type == type));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,registrationNumber,model,type);
+
+@override
+String toString() {
+  return 'AssignedVehicle(registrationNumber: $registrationNumber, model: $model, type: $type)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AssignedVehicleCopyWith<$Res> implements $AssignedVehicleCopyWith<$Res> {
+  factory _$AssignedVehicleCopyWith(_AssignedVehicle value, $Res Function(_AssignedVehicle) _then) = __$AssignedVehicleCopyWithImpl;
+@override @useResult
+$Res call({
+ String? registrationNumber, String? model, String? type
+});
+
+
+
+
+}
+/// @nodoc
+class __$AssignedVehicleCopyWithImpl<$Res>
+    implements _$AssignedVehicleCopyWith<$Res> {
+  __$AssignedVehicleCopyWithImpl(this._self, this._then);
+
+  final _AssignedVehicle _self;
+  final $Res Function(_AssignedVehicle) _then;
+
+/// Create a copy of AssignedVehicle
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? registrationNumber = freezed,Object? model = freezed,Object? type = freezed,}) {
+  return _then(_AssignedVehicle(
+registrationNumber: freezed == registrationNumber ? _self.registrationNumber : registrationNumber // ignore: cast_nullable_to_non_nullable
+as String?,model: freezed == model ? _self.model : model // ignore: cast_nullable_to_non_nullable
+as String?,type: freezed == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$RequisitionDetails {
 
  String get customerName;
@@ -367,7 +1165,7 @@ as String,
 /// @nodoc
 mixin _$Requisition {
 
- String get id; DateTime get pickupDateTime; String get pickupLocation; String get dropLocation; String? get remarks; RequisitionStatus get status; RequisitionDetails get details; DateTime get createdAt;
+ String get id; DateTime get pickupDateTime; String get pickupLocation; String get dropLocation; String? get remarks; RequisitionStatus get status; RequisitionDetails get details; DateTime get createdAt; DateTime? get endDateTime; String? get departmentName; String? get companyName; AssignedDriver? get driver; AssignedVehicle? get vehicle; List<AuditLogEntry> get auditLog;
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -378,16 +1176,16 @@ $RequisitionCopyWith<Requisition> get copyWith => _$RequisitionCopyWithImpl<Requ
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.endDateTime, endDateTime) || other.endDateTime == endDateTime)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName)&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.driver, driver) || other.driver == driver)&&(identical(other.vehicle, vehicle) || other.vehicle == vehicle)&&const DeepCollectionEquality().equals(other.auditLog, auditLog));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt);
+int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt,endDateTime,departmentName,companyName,driver,vehicle,const DeepCollectionEquality().hash(auditLog));
 
 @override
 String toString() {
-  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt)';
+  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt, endDateTime: $endDateTime, departmentName: $departmentName, companyName: $companyName, driver: $driver, vehicle: $vehicle, auditLog: $auditLog)';
 }
 
 
@@ -398,11 +1196,11 @@ abstract mixin class $RequisitionCopyWith<$Res>  {
   factory $RequisitionCopyWith(Requisition value, $Res Function(Requisition) _then) = _$RequisitionCopyWithImpl;
 @useResult
 $Res call({
- String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt
+ String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt, DateTime? endDateTime, String? departmentName, String? companyName, AssignedDriver? driver, AssignedVehicle? vehicle, List<AuditLogEntry> auditLog
 });
 
 
-$RequisitionDetailsCopyWith<$Res> get details;
+$RequisitionDetailsCopyWith<$Res> get details;$AssignedDriverCopyWith<$Res>? get driver;$AssignedVehicleCopyWith<$Res>? get vehicle;
 
 }
 /// @nodoc
@@ -415,7 +1213,7 @@ class _$RequisitionCopyWithImpl<$Res>
 
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,Object? endDateTime = freezed,Object? departmentName = freezed,Object? companyName = freezed,Object? driver = freezed,Object? vehicle = freezed,Object? auditLog = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,pickupDateTime: null == pickupDateTime ? _self.pickupDateTime : pickupDateTime // ignore: cast_nullable_to_non_nullable
@@ -425,7 +1223,13 @@ as String,remarks: freezed == remarks ? _self.remarks : remarks // ignore: cast_
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as RequisitionStatus,details: null == details ? _self.details : details // ignore: cast_nullable_to_non_nullable
 as RequisitionDetails,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,endDateTime: freezed == endDateTime ? _self.endDateTime : endDateTime // ignore: cast_nullable_to_non_nullable
+as DateTime?,departmentName: freezed == departmentName ? _self.departmentName : departmentName // ignore: cast_nullable_to_non_nullable
+as String?,companyName: freezed == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
+as String?,driver: freezed == driver ? _self.driver : driver // ignore: cast_nullable_to_non_nullable
+as AssignedDriver?,vehicle: freezed == vehicle ? _self.vehicle : vehicle // ignore: cast_nullable_to_non_nullable
+as AssignedVehicle?,auditLog: null == auditLog ? _self.auditLog : auditLog // ignore: cast_nullable_to_non_nullable
+as List<AuditLogEntry>,
   ));
 }
 /// Create a copy of Requisition
@@ -436,6 +1240,30 @@ $RequisitionDetailsCopyWith<$Res> get details {
   
   return $RequisitionDetailsCopyWith<$Res>(_self.details, (value) {
     return _then(_self.copyWith(details: value));
+  });
+}/// Create a copy of Requisition
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$AssignedDriverCopyWith<$Res>? get driver {
+    if (_self.driver == null) {
+    return null;
+  }
+
+  return $AssignedDriverCopyWith<$Res>(_self.driver!, (value) {
+    return _then(_self.copyWith(driver: value));
+  });
+}/// Create a copy of Requisition
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$AssignedVehicleCopyWith<$Res>? get vehicle {
+    if (_self.vehicle == null) {
+    return null;
+  }
+
+  return $AssignedVehicleCopyWith<$Res>(_self.vehicle!, (value) {
+    return _then(_self.copyWith(vehicle: value));
   });
 }
 }
@@ -519,10 +1347,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Requisition() when $default != null:
-return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt);case _:
+return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.driver,_that.vehicle,_that.auditLog);case _:
   return orElse();
 
 }
@@ -540,10 +1368,10 @@ return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLoc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)  $default,) {final _that = this;
 switch (_that) {
 case _Requisition():
-return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt);case _:
+return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.driver,_that.vehicle,_that.auditLog);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -560,10 +1388,10 @@ return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLoc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)?  $default,) {final _that = this;
 switch (_that) {
 case _Requisition() when $default != null:
-return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt);case _:
+return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.driver,_that.vehicle,_that.auditLog);case _:
   return null;
 
 }
@@ -575,7 +1403,7 @@ return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLoc
 
 
 class _Requisition extends Requisition {
-  const _Requisition({required this.id, required this.pickupDateTime, required this.pickupLocation, required this.dropLocation, this.remarks, required this.status, required this.details, required this.createdAt}): super._();
+  const _Requisition({required this.id, required this.pickupDateTime, required this.pickupLocation, required this.dropLocation, this.remarks, required this.status, required this.details, required this.createdAt, this.endDateTime, this.departmentName, this.companyName, this.driver, this.vehicle, final  List<AuditLogEntry> auditLog = const <AuditLogEntry>[]}): _auditLog = auditLog,super._();
   
 
 @override final  String id;
@@ -586,6 +1414,18 @@ class _Requisition extends Requisition {
 @override final  RequisitionStatus status;
 @override final  RequisitionDetails details;
 @override final  DateTime createdAt;
+@override final  DateTime? endDateTime;
+@override final  String? departmentName;
+@override final  String? companyName;
+@override final  AssignedDriver? driver;
+@override final  AssignedVehicle? vehicle;
+ final  List<AuditLogEntry> _auditLog;
+@override@JsonKey() List<AuditLogEntry> get auditLog {
+  if (_auditLog is EqualUnmodifiableListView) return _auditLog;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_auditLog);
+}
+
 
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
@@ -597,16 +1437,16 @@ _$RequisitionCopyWith<_Requisition> get copyWith => __$RequisitionCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.endDateTime, endDateTime) || other.endDateTime == endDateTime)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName)&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.driver, driver) || other.driver == driver)&&(identical(other.vehicle, vehicle) || other.vehicle == vehicle)&&const DeepCollectionEquality().equals(other._auditLog, _auditLog));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt);
+int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt,endDateTime,departmentName,companyName,driver,vehicle,const DeepCollectionEquality().hash(_auditLog));
 
 @override
 String toString() {
-  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt)';
+  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt, endDateTime: $endDateTime, departmentName: $departmentName, companyName: $companyName, driver: $driver, vehicle: $vehicle, auditLog: $auditLog)';
 }
 
 
@@ -617,11 +1457,11 @@ abstract mixin class _$RequisitionCopyWith<$Res> implements $RequisitionCopyWith
   factory _$RequisitionCopyWith(_Requisition value, $Res Function(_Requisition) _then) = __$RequisitionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt
+ String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt, DateTime? endDateTime, String? departmentName, String? companyName, AssignedDriver? driver, AssignedVehicle? vehicle, List<AuditLogEntry> auditLog
 });
 
 
-@override $RequisitionDetailsCopyWith<$Res> get details;
+@override $RequisitionDetailsCopyWith<$Res> get details;@override $AssignedDriverCopyWith<$Res>? get driver;@override $AssignedVehicleCopyWith<$Res>? get vehicle;
 
 }
 /// @nodoc
@@ -634,7 +1474,7 @@ class __$RequisitionCopyWithImpl<$Res>
 
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,Object? endDateTime = freezed,Object? departmentName = freezed,Object? companyName = freezed,Object? driver = freezed,Object? vehicle = freezed,Object? auditLog = null,}) {
   return _then(_Requisition(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,pickupDateTime: null == pickupDateTime ? _self.pickupDateTime : pickupDateTime // ignore: cast_nullable_to_non_nullable
@@ -644,7 +1484,13 @@ as String,remarks: freezed == remarks ? _self.remarks : remarks // ignore: cast_
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as RequisitionStatus,details: null == details ? _self.details : details // ignore: cast_nullable_to_non_nullable
 as RequisitionDetails,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,endDateTime: freezed == endDateTime ? _self.endDateTime : endDateTime // ignore: cast_nullable_to_non_nullable
+as DateTime?,departmentName: freezed == departmentName ? _self.departmentName : departmentName // ignore: cast_nullable_to_non_nullable
+as String?,companyName: freezed == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
+as String?,driver: freezed == driver ? _self.driver : driver // ignore: cast_nullable_to_non_nullable
+as AssignedDriver?,vehicle: freezed == vehicle ? _self.vehicle : vehicle // ignore: cast_nullable_to_non_nullable
+as AssignedVehicle?,auditLog: null == auditLog ? _self._auditLog : auditLog // ignore: cast_nullable_to_non_nullable
+as List<AuditLogEntry>,
   ));
 }
 
@@ -656,6 +1502,30 @@ $RequisitionDetailsCopyWith<$Res> get details {
   
   return $RequisitionDetailsCopyWith<$Res>(_self.details, (value) {
     return _then(_self.copyWith(details: value));
+  });
+}/// Create a copy of Requisition
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$AssignedDriverCopyWith<$Res>? get driver {
+    if (_self.driver == null) {
+    return null;
+  }
+
+  return $AssignedDriverCopyWith<$Res>(_self.driver!, (value) {
+    return _then(_self.copyWith(driver: value));
+  });
+}/// Create a copy of Requisition
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$AssignedVehicleCopyWith<$Res>? get vehicle {
+    if (_self.vehicle == null) {
+    return null;
+  }
+
+  return $AssignedVehicleCopyWith<$Res>(_self.vehicle!, (value) {
+    return _then(_self.copyWith(vehicle: value));
   });
 }
 }

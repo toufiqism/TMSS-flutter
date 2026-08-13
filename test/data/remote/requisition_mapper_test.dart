@@ -92,6 +92,121 @@ void main() {
     });
   });
 
+  group('detail-only fields', () {
+    test('parses the audit log, including its UTC timestamps', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2836,
+        'start_time': '2026-08-20 10:00:00',
+        'audit_logs': [
+          {
+            'id': 5124,
+            'requisition_status': 'Pending',
+            'remarks': 'Requisition Created',
+            'created_by_name': 'Md. Tofiq Akbar',
+            'created_by_id_no': '2-765',
+            'created_at': '2026-08-13 18:34:51',
+          },
+        ],
+      });
+
+      final entry = requisition!.auditLog.single;
+      expect(entry.id, '5124');
+      expect(entry.status, RequisitionStatus.pending);
+      expect(entry.remarks, 'Requisition Created');
+      expect(entry.actorName, 'Md. Tofiq Akbar');
+      expect(entry.actorCode, '2-765');
+      // created_at is UTC on this API, unlike start_time.
+      expect(entry.at!.toUtc(), DateTime.utc(2026, 8, 13, 18, 34, 51));
+    });
+
+    test('drops audit entries with no id instead of failing the whole requisition', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'audit_logs': [
+          {'requisition_status': 'Pending'},
+          {'id': 2, 'requisition_status': 'Approved'},
+        ],
+      });
+
+      expect(requisition!.auditLog, hasLength(1));
+      expect(requisition.auditLog.single.status, RequisitionStatus.approved);
+    });
+
+    test('null driver and vehicle mean unassigned, not a broken row', () {
+      // Both were null on every requisition observed; this is the normal pending case.
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'driver': null,
+        'vehicle': null,
+      });
+
+      expect(requisition!.driver, isNull);
+      expect(requisition.vehicle, isNull);
+      expect(requisition.hasAssignment, isFalse);
+    });
+
+    test('reads driver and vehicle across the plausible key spellings', () {
+      // The server's field names for these are unverified, so the mapper tries several.
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'driver': {'driver_name': 'Karim Mia', 'mobile': '01700000000'},
+        'vehicle': {'registration_no': 'DHAKA-METRO-GA-1234', 'model': 'Hiace'},
+      });
+
+      expect(requisition!.driver!.name, 'Karim Mia');
+      expect(requisition.driver!.phone, '01700000000');
+      expect(requisition.vehicle!.registrationNumber, 'DHAKA-METRO-GA-1234');
+      expect(requisition.vehicle!.model, 'Hiace');
+      expect(requisition.hasAssignment, isTrue);
+    });
+
+    test('an object with no recognisable keys is treated as unassigned', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'driver': {'totally_unexpected': 'x'},
+      });
+
+      expect(requisition!.driver, isNull, reason: 'nothing usable parsed');
+    });
+
+    test('department, company and end time come through', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'department_name': 'Android Applications',
+        'company_name': 'B-Trac Solutions Limited',
+        'end_time': '2026-08-20 14:00:00',
+      });
+
+      expect(requisition!.departmentName, 'Android Applications');
+      expect(requisition.companyName, 'B-Trac Solutions Limited');
+      expect(requisition.endDateTime!.toUtc(), DateTime.utc(2026, 8, 20, 8));
+    });
+
+    test('list rows carry no detail fields, which stays distinguishable from empty', () {
+      final requisition = RequisitionMapper.fromJson({'id': 1});
+
+      expect(requisition!.departmentName, isNull);
+      expect(requisition.endDateTime, isNull);
+      expect(requisition.auditLog, isEmpty);
+    });
+  });
+
+  group('canBeModified', () {
+    test('mirrors the server rule: pending only', () {
+      Requisition withStatus(RequisitionStatus status) => RequisitionMapper.fromJson({
+            'id': 1,
+            'status': status == RequisitionStatus.unknown ? 'Whatever' : status.label,
+          })!;
+
+      expect(withStatus(RequisitionStatus.pending).canBeModified, isTrue);
+      expect(withStatus(RequisitionStatus.approved).canBeModified, isFalse);
+      expect(withStatus(RequisitionStatus.assigned).canBeModified, isFalse);
+      expect(withStatus(RequisitionStatus.rejected).canBeModified, isFalse);
+      expect(withStatus(RequisitionStatus.unknown).canBeModified, isFalse,
+          reason: 'an unrecognised status must never be treated as cancellable');
+    });
+  });
+
   group('status parsing', () {
     test('ignores case, spacing and separators, since the vocabulary is unconfirmed', () {
       expect(RequisitionStatus.fromWire('pending'), RequisitionStatus.pending);

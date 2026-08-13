@@ -44,6 +44,63 @@ class RequisitionMapper {
       status: RequisitionStatus.fromWire(json.stringOrNull('status')),
       details: isLogistics ? _logisticsDetails(json) : _passengerDetails(json),
       createdAt: createdAt,
+      // Detail-only. Absent from list rows, which is why these are nullable rather than
+      // defaulted — "the list didn't return it" and "the server has no value" must stay
+      // distinguishable.
+      endDateTime: WireDateTime.parse(json.stringOrNull('end_time')),
+      departmentName: json.stringOrNull('department_name'),
+      companyName: json.stringOrNull('company_name'),
+      driver: _driver(json.mapOrNull('driver')),
+      vehicle: _vehicle(json.mapOrNull('vehicle')),
+      auditLog: json
+          .objectListOrEmpty('audit_logs')
+          .map(_auditEntry)
+          .nonNulls
+          .toList(),
+    );
+  }
+
+  /// Field names here are guesses over an unverified shape (see [AssignedDriver]), so
+  /// each reads a list of plausible keys and yields null rather than failing.
+  static AssignedDriver? _driver(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    final driver = AssignedDriver(
+      name: json.stringFrom(['name', 'driver_name', 'full_name']),
+      phone: json.stringFrom(['phone', 'mobile', 'contact_no', 'phone_no']),
+      identifier: json.stringFrom(['id_no', 'employee_id', 'driver_id', 'code']),
+    );
+    return driver.hasAnything ? driver : null;
+  }
+
+  static AssignedVehicle? _vehicle(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    final vehicle = AssignedVehicle(
+      registrationNumber: json.stringFrom([
+        'registration_no',
+        'registration_number',
+        'reg_no',
+        'vehicle_no',
+        'number',
+      ]),
+      model: json.stringFrom(['model', 'vehicle_model', 'name']),
+      type: json.stringFrom(['type', 'vehicle_type', 'category']),
+    );
+    return vehicle.hasAnything ? vehicle : null;
+  }
+
+  /// Entries without an id are dropped: they cannot be keyed in a list and carry no
+  /// more information than the row already shows.
+  static AuditLogEntry? _auditEntry(Map<String, dynamic> json) {
+    final id = json.idOrNull('id');
+    if (id == null) return null;
+    return AuditLogEntry(
+      id: id,
+      status: RequisitionStatus.fromWire(json.stringOrNull('requisition_status')),
+      remarks: json.stringOrNull('remarks'),
+      actorName: json.stringFrom(['created_by_name', 'actor_name', 'user_name']),
+      actorCode: json.stringFrom(['created_by_id_no', 'created_by_code']),
+      // Same UTC treatment as the requisition's own created_at.
+      at: WireDateTime.parseUtc(json.stringOrNull('created_at')),
     );
   }
 

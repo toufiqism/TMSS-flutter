@@ -13,10 +13,16 @@ import 'dashboard_notifier.dart';
 import 'dashboard_state.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key, required this.onViewAllRequisitions, required this.onRequisitionNow});
+  const DashboardScreen({
+    super.key,
+    required this.onViewAllRequisitions,
+    required this.onRequisitionNow,
+    required this.onOpenRequisition,
+  });
 
   final VoidCallback onViewAllRequisitions;
   final VoidCallback onRequisitionNow;
+  final ValueChanged<Requisition> onOpenRequisition;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -62,6 +68,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               summary: summary,
               onViewAllRequisitions: widget.onViewAllRequisitions,
               onRequisitionNow: widget.onRequisitionNow,
+              onOpenRequisition: widget.onOpenRequisition,
             ),
           ),
       },
@@ -91,11 +98,17 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _DashboardContent extends StatelessWidget {
-  const _DashboardContent({required this.summary, required this.onViewAllRequisitions, required this.onRequisitionNow});
+  const _DashboardContent({
+    required this.summary,
+    required this.onViewAllRequisitions,
+    required this.onRequisitionNow,
+    required this.onOpenRequisition,
+  });
 
   final DashboardSummary summary;
   final VoidCallback onViewAllRequisitions;
   final VoidCallback onRequisitionNow;
+  final ValueChanged<Requisition> onOpenRequisition;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +147,10 @@ class _DashboardContent extends StatelessWidget {
         else
           for (final requisition in summary.recentRequisitions) ...[
             const SizedBox(height: 14),
-            RequisitionRow(requisition: requisition),
+            RequisitionRow(
+              requisition: requisition,
+              onTap: () => onOpenRequisition(requisition),
+            ),
           ],
       ],
     );

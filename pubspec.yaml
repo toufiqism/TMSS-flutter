@@ -36,6 +36,9 @@ dependencies:
   dio: ^5.11.0
   freezed_annotation: ^3.1.0
   flutter_secure_storage: ^11.0.0
+  # Non-sensitive local flag only (see SessionLocalDataSource): it is wiped on
+  # uninstall, which is precisely what the Keychain is not.
+  shared_preferences: ^2.5.5
   intl: ^0.20.3
 
 dev_dependencies:

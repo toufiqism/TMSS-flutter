@@ -68,8 +68,26 @@ void main() {
     expect(session.user.name, 'Md. Tofiq Akbar');
     expect(session.user.designation, 'Senior Engineer');
     expect(session.user.email, 'tofiq.akbar@btracsl.com');
+    // expires_at is Dhaka wall-clock, like start_time and unlike created_at.
+    expect(session.expiresAt!.toUtc(), DateTime.utc(2027, 8, 13, 18, 32, 59));
+    expect(session.isExpired, isFalse);
     verify(() => storage.save(any())).called(1);
     verifyNever(() => api.getAuthenticatedUser(bearerToken: any(named: 'bearerToken')));
+  });
+
+  test('a login response with no expires_at yields an unknown, not expired, session', () async {
+    // The client must not invent an expiry: "unknown" keeps the session usable and lets
+    // a 401 be the thing that ends it.
+    stubLogin(_response(200, {
+      'success': true,
+      'data': {'token': 'abc123', 'name': 'Md. Tofiq Akbar'},
+    }));
+
+    final result = await repository.login('tofiq.akbar@btracsl.com', 'pw');
+
+    final session = (result as ApiSuccess<Session>).response;
+    expect(session.expiresAt, isNull);
+    expect(session.isExpired, isFalse);
   });
 
   test('a login response without a name falls back to one derived from the email', () async {

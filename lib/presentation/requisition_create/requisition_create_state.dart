@@ -48,6 +48,8 @@ abstract class LogisticsFormState with _$LogisticsFormState {
 
 @freezed
 abstract class RequisitionCreateUiState with _$RequisitionCreateUiState {
+  const RequisitionCreateUiState._();
+
   const factory RequisitionCreateUiState({
     @Default(RequisitionFormType.passenger) RequisitionFormType formType,
     @Default(PassengerFormState()) PassengerFormState passengerForm,
@@ -61,7 +63,16 @@ abstract class RequisitionCreateUiState with _$RequisitionCreateUiState {
     @Default(false) bool isSubmitting,
     @Default(<String, String>{}) Map<String, String> fieldErrors,
     String? submitError,
+
+    /// Set when this screen is editing an existing requisition rather than creating one.
+    ///
+    /// Drives three things: the submit call becomes a PUT, the copy changes, and the
+    /// Passenger/Logistics toggle locks — the server rejects a `req_type` that differs
+    /// from the stored one, so switching type mid-edit could only ever 422.
+    String? editingRequisitionId,
   }) = _RequisitionCreateUiState;
+
+  bool get isEditing => editingRequisitionId != null;
 }
 
 sealed class RequisitionCreateEvent {
@@ -69,7 +80,16 @@ sealed class RequisitionCreateEvent {
 }
 
 class RequisitionSubmitted extends RequisitionCreateEvent {
-  const RequisitionSubmitted();
+  const RequisitionSubmitted({this.wasEdit = false});
+
+  /// Lets the caller word the confirmation correctly and decide where to return to.
+  final bool wasEdit;
+}
+
+/// A save the server will never accept — the requisition is no longer `Pending`.
+class RequisitionEditRejected extends RequisitionCreateEvent {
+  const RequisitionEditRejected(this.message);
+  final String message;
 }
 
 class RequisitionCreateSessionExpired extends RequisitionCreateEvent {

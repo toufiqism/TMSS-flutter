@@ -77,13 +77,22 @@ final dioProvider = Provider<Dio>((ref) {
 });
 
 /// Masks credential-bearing values in debug log lines.
+///
+/// `replaceAllMapped`, not `replaceAll`: Dart's `replaceAll` takes a literal
+/// replacement and does **not** expand `$1`, so the group-reference form silently wrote
+/// the characters `$1` into the log and destroyed the surrounding context instead of
+/// masking just the secret.
 String _redactSecrets(String line) {
-  return line
-      .replaceAll(RegExp(r'(password:\s*)[^,}\s]+'), r'$1********')
-      .replaceAll(RegExp(r'("password"\s*:\s*")[^"]*'), r'$1********')
-      .replaceAll(RegExp(r'(token:\s*)[^,}\s]+'), r'$1********')
-      .replaceAll(RegExp(r'("token"\s*:\s*")[^"]*'), r'$1********')
-      .replaceAll(RegExp(r'(Bearer\s+)\S+'), r'$1********');
+  String mask(RegExp pattern, String input) =>
+      input.replaceAllMapped(pattern, (m) => '${m.group(1)}********');
+
+  var result = line;
+  result = mask(RegExp(r'(password:\s*)[^,}\s]+'), result);
+  result = mask(RegExp(r'("password"\s*:\s*")[^"]*'), result);
+  result = mask(RegExp(r'(token:\s*)[^,}\s]+'), result);
+  result = mask(RegExp(r'("token"\s*:\s*")[^"]*'), result);
+  result = mask(RegExp(r'(Bearer\s+)\S+'), result);
+  return result;
 }
 
 final tmssApiClientProvider = Provider<TmssApiClient>((ref) {

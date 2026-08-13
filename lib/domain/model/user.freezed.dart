@@ -280,7 +280,12 @@ as String,
 /// @nodoc
 mixin _$Session {
 
- String get token; User get user;
+ String get token; User get user;/// When the bearer token stops being accepted.
+///
+/// The login response carries `expires_at` (roughly a year out). Null means the
+/// server did not say — treated as "no known expiry" rather than "expired", because
+/// guessing the token is dead would sign a working user out for no reason.
+ DateTime? get expiresAt;
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -291,16 +296,16 @@ $SessionCopyWith<Session> get copyWith => _$SessionCopyWithImpl<Session>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Session&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Session&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user)&&(identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,token,user);
+int get hashCode => Object.hash(runtimeType,token,user,expiresAt);
 
 @override
 String toString() {
-  return 'Session(token: $token, user: $user)';
+  return 'Session(token: $token, user: $user, expiresAt: $expiresAt)';
 }
 
 
@@ -311,7 +316,7 @@ abstract mixin class $SessionCopyWith<$Res>  {
   factory $SessionCopyWith(Session value, $Res Function(Session) _then) = _$SessionCopyWithImpl;
 @useResult
 $Res call({
- String token, User user
+ String token, User user, DateTime? expiresAt
 });
 
 
@@ -328,11 +333,12 @@ class _$SessionCopyWithImpl<$Res>
 
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? token = null,Object? user = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? token = null,Object? user = null,Object? expiresAt = freezed,}) {
   return _then(_self.copyWith(
 token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as User,
+as User,expiresAt: freezed == expiresAt ? _self.expiresAt : expiresAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 /// Create a copy of Session
@@ -426,10 +432,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String token,  User user)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String token,  User user,  DateTime? expiresAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Session() when $default != null:
-return $default(_that.token,_that.user);case _:
+return $default(_that.token,_that.user,_that.expiresAt);case _:
   return orElse();
 
 }
@@ -447,10 +453,10 @@ return $default(_that.token,_that.user);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String token,  User user)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String token,  User user,  DateTime? expiresAt)  $default,) {final _that = this;
 switch (_that) {
 case _Session():
-return $default(_that.token,_that.user);case _:
+return $default(_that.token,_that.user,_that.expiresAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -467,10 +473,10 @@ return $default(_that.token,_that.user);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String token,  User user)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String token,  User user,  DateTime? expiresAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Session() when $default != null:
-return $default(_that.token,_that.user);case _:
+return $default(_that.token,_that.user,_that.expiresAt);case _:
   return null;
 
 }
@@ -481,12 +487,18 @@ return $default(_that.token,_that.user);case _:
 /// @nodoc
 
 
-class _Session implements Session {
-  const _Session({required this.token, required this.user});
+class _Session extends Session {
+  const _Session({required this.token, required this.user, this.expiresAt}): super._();
   
 
 @override final  String token;
 @override final  User user;
+/// When the bearer token stops being accepted.
+///
+/// The login response carries `expires_at` (roughly a year out). Null means the
+/// server did not say — treated as "no known expiry" rather than "expired", because
+/// guessing the token is dead would sign a working user out for no reason.
+@override final  DateTime? expiresAt;
 
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
@@ -498,16 +510,16 @@ _$SessionCopyWith<_Session> get copyWith => __$SessionCopyWithImpl<_Session>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Session&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Session&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user)&&(identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,token,user);
+int get hashCode => Object.hash(runtimeType,token,user,expiresAt);
 
 @override
 String toString() {
-  return 'Session(token: $token, user: $user)';
+  return 'Session(token: $token, user: $user, expiresAt: $expiresAt)';
 }
 
 
@@ -518,7 +530,7 @@ abstract mixin class _$SessionCopyWith<$Res> implements $SessionCopyWith<$Res> {
   factory _$SessionCopyWith(_Session value, $Res Function(_Session) _then) = __$SessionCopyWithImpl;
 @override @useResult
 $Res call({
- String token, User user
+ String token, User user, DateTime? expiresAt
 });
 
 
@@ -535,11 +547,12 @@ class __$SessionCopyWithImpl<$Res>
 
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? token = null,Object? user = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? token = null,Object? user = null,Object? expiresAt = freezed,}) {
   return _then(_Session(
 token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as User,
+as User,expiresAt: freezed == expiresAt ? _self.expiresAt : expiresAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

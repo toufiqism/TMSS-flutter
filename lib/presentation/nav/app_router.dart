@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../di/providers.dart';
 import '../common/strings.dart';
+import '../../domain/model/requisition.dart';
 import '../dashboard/dashboard_notifier.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../requisition_detail/requisition_detail_screen.dart';
 import '../login/login_screen.dart';
 import '../requisition_create/requisition_create_screen.dart';
 import '../requisition_list/requisition_list_notifier.dart';
@@ -72,6 +74,31 @@ void _refreshRequisitionViews(Ref ref) {
   }
 }
 
+/// Shown for the fraction of a frame it takes to bounce a payload-less `/edit` deep
+/// link over to the detail screen, which knows how to load the requisition itself.
+class _MissingEditPayload extends StatefulWidget {
+  const _MissingEditPayload({required this.onRedirect});
+
+  final VoidCallback onRedirect;
+
+  @override
+  State<_MissingEditPayload> createState() => _MissingEditPayloadState();
+}
+
+class _MissingEditPayloadState extends State<_MissingEditPayload> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onRedirect();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
+}
+
 final goRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = _SessionRefreshListenable(ref);
   ref.onDispose(refreshListenable.dispose);
@@ -121,16 +148,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => DashboardScreen(
               onViewAllRequisitions: () => context.go(RoutePaths.requisitionList),
               onRequisitionNow: () => context.push(RoutePaths.newRequisition),
+              onOpenRequisition: (requisition) =>
+                  context.push(RoutePaths.detailFor(requisition.id)),
             ),
           ),
           GoRoute(
             path: RoutePaths.requisitionList,
             builder: (context, state) => RequisitionListScreen(
               onNewRequisition: () => context.push(RoutePaths.newRequisition),
+              onOpenRequisition: (requisition) =>
+                  context.push(RoutePaths.detailFor(requisition.id)),
             ),
           ),
         ],
       ),
+      // Declared before requisitionDetail on purpose: `/requisitions/:id` would
+      // otherwise match the literal "new" and shadow this route entirely.
       GoRoute(
         path: RoutePaths.newRequisition,
         builder: (context, state) => RequisitionCreateScreen(
@@ -140,6 +173,49 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _refreshRequisitionViews(ref);
           },
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.requisitionDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RequisitionDetailScreen(
+            requisitionId: id,
+            onBack: () => context.pop(),
+            onEdit: (requisition) =>
+                context.push(RoutePaths.editFor(id), extra: requisition),
+            onClosed: () {
+              // The requisition is gone (cancelled or deleted). Close the screen and
+              // resync the views behind it rather than leaving a dead row on the list.
+              if (context.canPop()) context.pop();
+              _refreshRequisitionViews(ref);
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.requisitionEdit,
+        builder: (context, state) {
+          // The requisition travels as `extra` rather than being refetched: the detail
+          // screen has just loaded it, and a second GET would only add a spinner and a
+          // failure mode between tapping Edit and seeing the form.
+          final existing = state.extra;
+          if (existing is! Requisition) {
+            // Deep-linked straight to /edit with no payload. Nothing to seed, so send
+            // the user to the detail screen, which can fetch it properly.
+            return _MissingEditPayload(
+              onRedirect: () =>
+                  context.pushReplacement(RoutePaths.detailFor(state.pathParameters['id']!)),
+            );
+          }
+          return RequisitionCreateScreen(
+            existing: existing,
+            onBack: () => context.pop(),
+            onSubmitted: () {
+              context.pop();
+              _refreshRequisitionViews(ref);
+            },
+          );
+        },
       ),
     ],
   );

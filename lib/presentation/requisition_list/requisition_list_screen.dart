@@ -17,9 +17,14 @@ import 'requisition_list_state.dart';
 final _chipDateFormatter = DateFormat('dd MMM');
 
 class RequisitionListScreen extends ConsumerStatefulWidget {
-  const RequisitionListScreen({super.key, required this.onNewRequisition});
+  const RequisitionListScreen({
+    super.key,
+    required this.onNewRequisition,
+    required this.onOpenRequisition,
+  });
 
   final VoidCallback onNewRequisition;
+  final ValueChanged<Requisition> onOpenRequisition;
 
   @override
   ConsumerState<RequisitionListScreen> createState() => _RequisitionListScreenState();
@@ -165,6 +170,7 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                       final requisition = items[index];
                       return RequisitionRow(
                         requisition: requisition,
+                        onTap: () => widget.onOpenRequisition(requisition),
                         trailingAction: requisition.status == RequisitionStatus.pending
                             ? InkWell(
                                 onTap: () => unawaited(_confirmCancel(requisition.id)),

@@ -5,6 +5,7 @@ import '../../domain/repository/auth_repository.dart';
 import '../local/session_local_data_source.dart';
 import '../remote/dto/json_reader.dart';
 import '../remote/dto/user_mapper.dart';
+import '../remote/dto/wire_date_time.dart';
 import '../remote/safe_api_call.dart';
 import '../remote/tmss_api_client.dart';
 
@@ -43,6 +44,10 @@ class RemoteAuthRepository implements AuthRepository {
         final session = Session(
           token: token,
           user: UserMapper.fromLoginData(response, username: username),
+          // Dhaka wall-clock, not UTC — `expires_at` tracks the same clock as
+          // `start_time`, unlike `created_at`. Verified against a live login: the token
+          // minted at 00:32 Dhaka reported expires_at 00:32:59 a year on.
+          expiresAt: WireDateTime.parse(response.stringOrNull('expires_at')),
         );
         await _sessionLocalDataSource.save(session);
         return ApiResult.success(session);

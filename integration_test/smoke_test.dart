@@ -190,6 +190,75 @@ void main() {
     );
     await binding.takeScreenshot('05b-requisition-list-settled');
 
+    // --- detail ----------------------------------------------------------------
+    if (find.byType(Card).evaluate().isNotEmpty) {
+      await tester.tap(find.byType(Card).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      // The app bar title, not a section header: _Section uppercases its titles, so
+      // find.text('Trip') never matches the rendered 'TRIP'.
+      await waitFor(tester, find.text(TmsStrings.requisitionDetailTitle),
+          label: 'detail screen');
+      await tester.pump(const Duration(seconds: 1));
+      await binding.takeScreenshot('09-detail');
+
+      expect(find.text(TmsStrings.requisitionDetailPickup), findsOneWidget);
+      expect(find.text(TmsStrings.requisitionDetailDepartment), findsOneWidget);
+
+      // Activity sits below the fold and the ListView builds lazily, so it does not
+      // exist in the tree until it is scrolled into view.
+      await tester.scrollUntilVisible(
+        find.text(TmsStrings.requisitionDetailSectionActivity.toUpperCase()),
+        240,
+        scrollable: find.byType(Scrollable).last,
+        maxScrolls: 20,
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await binding.takeScreenshot('10-detail-activity');
+      expect(find.text(TmsStrings.requisitionDetailSectionActivity.toUpperCase()),
+          findsOneWidget,
+          reason: 'every requisition has at least a creation entry');
+
+      // Actions are gated on status, so assert whichever case this row actually is.
+      // Both branches matter: the server refuses edit and cancel outside Pending, and
+      // it accepts them inside it.
+      final isPending = find.text(TmsStrings.requisitionDetailEdit).evaluate().isNotEmpty;
+      if (isPending) {
+        expect(find.text(TmsStrings.requisitionDetailNotEditable), findsNothing);
+
+        await tester.tap(find.text(TmsStrings.requisitionDetailEdit));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 800));
+        await waitFor(tester, find.text(TmsStrings.editRequisitionSave),
+            label: 'edit form');
+        await binding.takeScreenshot('11-edit-seeded');
+
+        // The form must arrive pre-filled, and the type toggle must be locked because
+        // req_type cannot change after creation.
+        expect(find.text(TmsStrings.editRequisitionTypeLocked), findsOneWidget);
+        final prefilled = find
+            .byType(TextField)
+            .evaluate()
+            .map((e) => (e.widget as TextField).controller?.text ?? '')
+            .where((t) => t.isNotEmpty);
+        expect(prefilled, isNotEmpty, reason: 'the form should be seeded, not blank');
+
+        await tester.tap(find.byIcon(Icons.arrow_back).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+      } else {
+        expect(find.text(TmsStrings.requisitionDetailNotEditable), findsOneWidget);
+      }
+
+      // Not tester.pageBack(): the detail screen supplies its own leading IconButton
+      // rather than a Material/Cupertino BackButton, which is what pageBack looks for.
+      await tester.tap(find.byIcon(Icons.arrow_back).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await waitFor(tester, find.text(TmsStrings.requisitionListNewFab),
+          label: 'back on the list');
+    }
+
     // --- new requisition -------------------------------------------------------
     await tester.tap(find.text(TmsStrings.requisitionListNewFab));
     await tester.pump();

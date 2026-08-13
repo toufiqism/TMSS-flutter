@@ -43,6 +43,17 @@ redirects instead of this envelope.
 `Cancelled`). `Approved` / `Assigned` / `Rejected` are expected but unobserved on this
 account.
 
+**Detail response** adds fields the list omits: `end_time`, `department_name`,
+`company_name`, `driver`, `vehicle`, and `audit_logs[]`. The audit-log entry shape is
+confirmed — `{id, requisition_status, remarks, created_by_name, created_by_id_no,
+created_at}`, with `created_at` in UTC like the requisition's own. `driver` and `vehicle`
+are **not** confirmed; see the open questions below.
+
+**`PUT`** is a full replacement carrying exactly the `POST` body — no `id`, no partial
+patch, no `X-Requisition-Source`. `req_type` must equal the stored value, which is why
+the edit form locks its type toggle. Verified live for both passenger and logistics,
+including that the change lands and the type is preserved.
+
 **Required fields**, read off the server's own 422:
 
 - passenger: `req_type`, `requisition_for`, `requisition_for_user`, `used_type`,
@@ -93,5 +104,7 @@ that, results reflect the first slice only.
 3. `GET /user` returns `remember_token` in plaintext. That looks unintended and is worth
    a look regardless of this client.
 4. Should `vehicle_type` be stored for logistics? The form collects it; the API ignores it.
-5. `PUT /requisitions/{id}` is implemented in the client but has no UI and is untested
-   against the server.
+5. Field names for the `driver` and `vehicle` objects on the detail response. Both were
+   null on every requisition observed, so the mapper reads a list of plausible keys and
+   the UI renders only what parses. This needs one genuinely assigned requisition to
+   confirm — until then, the Assignment section is unverified against real data.

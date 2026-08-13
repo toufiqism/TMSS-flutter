@@ -95,4 +95,32 @@ class TmsStrings {
       'Naming specific passengers is not supported yet — add them to the purpose or remarks.';
 
   static const requisitionListRetry = 'Retry';
+
+  static const requisitionDetailTitle = 'Requisition Details';
+  static const requisitionDetailEdit = 'Edit';
+  static const requisitionDetailCancelled = 'Requisition cancelled';
+  static const requisitionDetailSectionTrip = 'Trip';
+  static const requisitionDetailSectionPassenger = 'Passenger Details';
+  static const requisitionDetailSectionLogistics = 'Logistics Details';
+  static const requisitionDetailSectionRequester = 'Requester';
+  static const requisitionDetailSectionAssignment = 'Assignment';
+  static const requisitionDetailSectionActivity = 'Activity';
+  static const requisitionDetailPickup = 'Pickup';
+  static const requisitionDetailDrop = 'Drop';
+  static const requisitionDetailPickupAt = 'Pickup at';
+  static const requisitionDetailEndsAt = 'Ends at';
+  static const requisitionDetailRaisedOn = 'Raised on';
+  static const requisitionDetailDepartment = 'Department';
+  static const requisitionDetailCompany = 'Company';
+  static const requisitionDetailDriver = 'Driver';
+  static const requisitionDetailVehicle = 'Vehicle';
+  static const requisitionDetailNotAssigned = 'No driver or vehicle assigned yet';
+  static const requisitionDetailNoActivity = 'No activity recorded';
+  static const requisitionDetailNotEditable =
+      'Only pending requisitions can be edited or cancelled.';
+
+  static const editRequisitionTitle = 'Edit Requisition';
+  static const editRequisitionSave = 'Save Changes';
+  static const editRequisitionTypeLocked =
+      'The requisition type cannot be changed after it is created.';
 }

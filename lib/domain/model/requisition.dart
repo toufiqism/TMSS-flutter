@@ -136,6 +136,50 @@ enum LoadingCapacity {
   }
 }
 
+/// One entry in a requisition's history. Shape confirmed against a live response:
+/// `{id, requisition_status, remarks, created_by_name, created_by_id_no, created_at}`.
+@freezed
+abstract class AuditLogEntry with _$AuditLogEntry {
+  const factory AuditLogEntry({
+    required String id,
+    required RequisitionStatus status,
+    String? remarks,
+    String? actorName,
+    String? actorCode,
+    DateTime? at,
+  }) = _AuditLogEntry;
+}
+
+/// Driver assigned by dispatch, present only once a requisition leaves `Pending`.
+///
+/// The server's field names for this object are **unverified** — it was null on every
+/// requisition observed so far, and the API contract records the field set as unknown.
+/// Every field is therefore nullable and parsed by trying plausible keys; the UI renders
+/// only what it actually found rather than asserting a shape nobody has confirmed.
+@freezed
+abstract class AssignedDriver with _$AssignedDriver {
+  const AssignedDriver._();
+
+  const factory AssignedDriver({String? name, String? phone, String? identifier}) =
+      _AssignedDriver;
+
+  bool get hasAnything => name != null || phone != null || identifier != null;
+}
+
+/// Vehicle assigned by dispatch. Same caveat as [AssignedDriver] — field names unverified.
+@freezed
+abstract class AssignedVehicle with _$AssignedVehicle {
+  const AssignedVehicle._();
+
+  const factory AssignedVehicle({
+    String? registrationNumber,
+    String? model,
+    String? type,
+  }) = _AssignedVehicle;
+
+  bool get hasAnything => registrationNumber != null || model != null || type != null;
+}
+
 @freezed
 sealed class RequisitionDetails with _$RequisitionDetails {
   const factory RequisitionDetails.passenger({
@@ -172,7 +216,26 @@ abstract class Requisition with _$Requisition {
     required RequisitionStatus status,
     required RequisitionDetails details,
     required DateTime createdAt,
+    // Everything below is returned by GET /requisitions/{id} but not by the list, so it
+    // is absent on rows built from a list response rather than meaningfully empty.
+    DateTime? endDateTime,
+    String? departmentName,
+    String? companyName,
+    AssignedDriver? driver,
+    AssignedVehicle? vehicle,
+    @Default(<AuditLogEntry>[]) List<AuditLogEntry> auditLog,
   }) = _Requisition;
+
+  /// Whether the server will accept an edit or a cancel.
+  ///
+  /// Mirrors the rule the API enforces — `status == Pending` **and** caller is the
+  /// creator. The client can only check the first half; ownership is implicit because
+  /// the list is already scoped to the authenticated user, and a 403 covers the rest.
+  bool get canBeModified => status == RequisitionStatus.pending;
+
+  /// True once dispatch has attached either a driver or a vehicle.
+  bool get hasAssignment =>
+      (driver?.hasAnything ?? false) || (vehicle?.hasAnything ?? false);
 
   RequisitionType get type => switch (details) {
         PassengerDetails() => RequisitionType.passenger,

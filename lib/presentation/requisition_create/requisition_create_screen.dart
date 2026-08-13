@@ -17,10 +17,21 @@ import 'requisition_create_notifier.dart';
 import 'requisition_create_state.dart';
 
 class RequisitionCreateScreen extends ConsumerStatefulWidget {
-  const RequisitionCreateScreen({super.key, required this.onBack, required this.onSubmitted});
+  const RequisitionCreateScreen({
+    super.key,
+    required this.onBack,
+    required this.onSubmitted,
+    this.existing,
+  });
 
   final VoidCallback onBack;
   final VoidCallback onSubmitted;
+
+  /// Non-null puts the screen in edit mode: the form is seeded from this requisition,
+  /// submit becomes a PUT, and the type toggle locks. The whole point of reusing this
+  /// screen is that create and edit cannot drift apart — same widgets, same validation,
+  /// same field-error wiring.
+  final Requisition? existing;
 
   @override
   ConsumerState<RequisitionCreateScreen> createState() => _RequisitionCreateScreenState();
@@ -33,15 +44,24 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _eventSub = ref.read(requisitionCreateNotifierProvider.notifier).events.listen((event) {
+      if (!mounted) return;
+      final notifier = ref.read(requisitionCreateNotifierProvider.notifier);
+      _eventSub = notifier.events.listen((event) {
         if (!mounted) return;
         switch (event) {
           case RequisitionSubmitted():
             widget.onSubmitted();
+          case RequisitionEditRejected(:final message):
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            // Nothing here can succeed any more; hand control back so the detail
+            // underneath can refetch and show what the requisition actually is now.
+            widget.onBack();
           case RequisitionCreateSessionExpired(:final message):
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         }
       });
+      final existing = widget.existing;
+      if (existing != null) notifier.seedFrom(existing);
     });
   }
 
@@ -58,7 +78,12 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(TmsStrings.newRequisitionTitle, style: tmsTextTheme.titleMedium),
+        title: Text(
+          uiState.isEditing
+              ? TmsStrings.editRequisitionTitle
+              : TmsStrings.newRequisitionTitle,
+          style: tmsTextTheme.titleMedium,
+        ),
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: tmsTextDark), onPressed: widget.onBack),
       ),
       backgroundColor: tmsPageBackground,
@@ -66,7 +91,13 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
         children: [
           Padding(
             padding: const EdgeInsets.all(20),
-            child: _PillSegmentedToggle(selected: uiState.formType, onSelect: notifier.switchFormType),
+            child: _PillSegmentedToggle(
+              selected: uiState.formType,
+              onSelect: notifier.switchFormType,
+              // req_type is immutable server-side, so the choice is fixed once the
+              // requisition exists.
+              locked: uiState.isEditing,
+            ),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -104,7 +135,9 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
                         child: CircularProgressIndicator(strokeWidth: 2, color: tmsSurfaceWhite),
                       )
                     : Text(
-                        TmsStrings.newRequisitionSubmit,
+                        uiState.isEditing
+                            ? TmsStrings.editRequisitionSave
+                            : TmsStrings.newRequisitionSubmit,
                         style: tmsTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 15, color: tmsSurfaceWhite),
                       ),
               ),
@@ -117,10 +150,17 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
 }
 
 class _PillSegmentedToggle extends StatelessWidget {
-  const _PillSegmentedToggle({required this.selected, required this.onSelect});
+  const _PillSegmentedToggle({
+    required this.selected,
+    required this.onSelect,
+    this.locked = false,
+  });
 
   final RequisitionFormType selected;
   final ValueChanged<RequisitionFormType> onSelect;
+
+  /// Editing an existing requisition. Both segments become inert.
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -145,15 +185,16 @@ class _PillSegmentedToggle extends StatelessWidget {
                 child: _SegmentPill(
                   label: TmsStrings.newRequisitionTogglePassenger,
                   selected: selected == RequisitionFormType.passenger,
-                  onTap: () => onSelect(RequisitionFormType.passenger),
+                  enabled: !locked,
+                  onTap: locked ? null : () => onSelect(RequisitionFormType.passenger),
                 ),
               ),
               Expanded(
                 child: _SegmentPill(
                   label: TmsStrings.newRequisitionToggleLogistics,
                   selected: selected == RequisitionFormType.logistics,
-                  enabled: logisticsEnabled,
-                  onTap: logisticsEnabled
+                  enabled: logisticsEnabled && !locked,
+                  onTap: logisticsEnabled && !locked
                       ? () => onSelect(RequisitionFormType.logistics)
                       : null,
                 ),
@@ -161,6 +202,14 @@ class _PillSegmentedToggle extends StatelessWidget {
             ],
           ),
         ),
+        if (locked)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              TmsStrings.editRequisitionTypeLocked,
+              style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+            ),
+          ),
       ],
     );
   }

@@ -7,10 +7,13 @@ import 'package:tmss/di/providers.dart';
 import 'package:tmss/domain/model/requisition.dart';
 import 'package:tmss/domain/usecase/search_employees_use_case.dart';
 import 'package:tmss/domain/usecase/submit_requisition_use_case.dart';
+import 'package:tmss/domain/usecase/update_requisition_use_case.dart';
 import 'package:tmss/presentation/requisition_create/requisition_create_notifier.dart';
 import 'package:tmss/presentation/requisition_create/requisition_create_state.dart';
 
 class MockSubmitRequisitionUseCase extends Mock implements SubmitRequisitionUseCase {}
+
+class MockUpdateRequisitionUseCase extends Mock implements UpdateRequisitionUseCase {}
 
 class MockSearchEmployeesUseCase extends Mock implements SearchEmployeesUseCase {}
 
@@ -18,6 +21,7 @@ class MockSessionExpirationHandler extends Mock implements SessionExpirationHand
 
 void main() {
   late MockSubmitRequisitionUseCase mockSubmit;
+  late MockUpdateRequisitionUseCase mockUpdate;
   late MockSearchEmployeesUseCase mockSearch;
   late MockSessionExpirationHandler mockSessionExpirationHandler;
   late ProviderContainer container;
@@ -37,11 +41,13 @@ void main() {
 
   setUp(() {
     mockSubmit = MockSubmitRequisitionUseCase();
+    mockUpdate = MockUpdateRequisitionUseCase();
     mockSearch = MockSearchEmployeesUseCase();
     mockSessionExpirationHandler = MockSessionExpirationHandler();
     when(() => mockSessionExpirationHandler.handle()).thenAnswer((_) async {});
     container = ProviderContainer(overrides: [
       submitRequisitionUseCaseProvider.overrideWithValue(mockSubmit),
+      updateRequisitionUseCaseProvider.overrideWithValue(mockUpdate),
       searchEmployeesUseCaseProvider.overrideWithValue(mockSearch),
       sessionExpirationHandlerProvider.overrideWithValue(mockSessionExpirationHandler),
     ]);
@@ -236,6 +242,125 @@ void main() {
     verify(() => mockSearch('raf')).called(1);
     verifyNever(() => mockSearch('r'));
     verifyNever(() => mockSearch('ra'));
+  });
+
+  group('edit mode', () {
+    Requisition existingPassenger() => Requisition(
+          id: '2836',
+          pickupDateTime: DateTime(2026, 8, 20, 10),
+          pickupLocation: 'Head Office',
+          dropLocation: 'Gulshan',
+          remarks: 'Bring an AC vehicle',
+          status: RequisitionStatus.pending,
+          details: const RequisitionDetails.passenger(
+            usedType: UsedType.drop,
+            customerName: 'Bangla Trac',
+            numberOfPersons: 3,
+            requiredFor: RequiredFor.ownUser,
+            userType: RequisitionUserType.internal,
+            purpose: 'Client meeting',
+          ),
+          createdAt: DateTime(2026, 8, 14),
+        );
+
+    test('seedFrom fills the form from the requisition', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.seedFrom(existingPassenger());
+
+      final state = container.read(requisitionCreateNotifierProvider);
+      expect(state.isEditing, isTrue);
+      expect(state.editingRequisitionId, '2836');
+      expect(state.formType, RequisitionFormType.passenger);
+      expect(state.passengerForm.pickupLocation, 'Head Office');
+      expect(state.passengerForm.dropLocation, 'Gulshan');
+      expect(state.passengerForm.numberOfPersons, '3');
+      expect(state.passengerForm.usedType, UsedType.drop);
+      expect(state.passengerForm.purpose, 'Client meeting');
+      expect(state.passengerForm.remarks, 'Bring an AC vehicle');
+    });
+
+    test('seeding a logistics requisition selects the logistics form', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.seedFrom(
+        existingPassenger().copyWith(
+          details: const RequisitionDetails.logistics(
+            vehicleType: VehicleType.coverVan,
+            customerName: 'Bangla Trac',
+            userDepartment: 'Operations',
+            loadingCapacity: LoadingCapacity.ton5,
+            goodsWeight: '4 Ton',
+            storeName: 'Central',
+            goodsDetails: 'Pallets',
+          ),
+        ),
+      );
+
+      final state = container.read(requisitionCreateNotifierProvider);
+      expect(state.formType, RequisitionFormType.logistics);
+      expect(state.logisticsForm.loadingCapacity, LoadingCapacity.ton5);
+      expect(state.logisticsForm.storeName, 'Central');
+    });
+
+    test('switchFormType is inert while editing, so the loaded form is not wiped', () async {
+      // req_type is immutable server-side; switching would also reset both forms and
+      // silently discard everything that was loaded.
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      notifier.seedFrom(existingPassenger());
+
+      notifier.switchFormType(RequisitionFormType.logistics);
+
+      final state = container.read(requisitionCreateNotifierProvider);
+      expect(state.formType, RequisitionFormType.passenger);
+      expect(state.passengerForm.pickupLocation, 'Head Office');
+    });
+
+    test('submit calls update, not create, and preserves the id', () async {
+      when(() => mockUpdate(any(), any()))
+          .thenAnswer((_) async => ApiResult.success(createdRequisition()));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      notifier.seedFrom(existingPassenger());
+
+      final events = <RequisitionCreateEvent>[];
+      final sub = notifier.events.listen(events.add);
+      await notifier.submit();
+      await Future<void>.delayed(Duration.zero);
+
+      verify(() => mockUpdate('2836', any())).called(1);
+      verifyNever(() => mockSubmit(any()));
+      expect(events.single, isA<RequisitionSubmitted>());
+      expect((events.single as RequisitionSubmitted).wasEdit, isTrue);
+      await sub.cancel();
+    });
+
+    test('a 409 on save gives up rather than letting the user retry forever', () async {
+      // The requisition left Pending while the form was open; no retry can succeed.
+      when(() => mockUpdate(any(), any()))
+          .thenAnswer((_) async => const ApiResult.error('Not pending', 409));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      notifier.seedFrom(existingPassenger());
+
+      final events = <RequisitionCreateEvent>[];
+      final sub = notifier.events.listen(events.add);
+      await notifier.submit();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(events.single, isA<RequisitionEditRejected>());
+      expect(container.read(requisitionCreateNotifierProvider).isSubmitting, isFalse);
+      await sub.cancel();
+    });
+
+    test('validation still applies when editing', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      notifier.seedFrom(existingPassenger());
+      notifier.onPassengerPickupLocationChange('');
+
+      await notifier.submit();
+
+      expect(container.read(requisitionCreateNotifierProvider).fieldErrors, isNotEmpty);
+      verifyNever(() => mockUpdate(any(), any()));
+    });
   });
 
   test('switchFormType resets both forms and clears errors', () async {

@@ -108,6 +108,32 @@ void main(List<String> args) async {
 
     final fetched = await repository.getRequisition(row.id);
     check('detail fetch parses (${row.type.name})', fetched is ApiSuccess<Requisition>);
+    if (fetched is ApiSuccess<Requisition>) {
+      final detail = fetched.response;
+      // Detail carries fields the list does not; the audit log is the one whose shape
+      // is actually confirmed, and every requisition has at least its creation entry.
+      check('detail carries an audit log (${row.type.name})', detail.auditLog.isNotEmpty,
+          '${detail.auditLog.length} entries');
+      check('detail carries the requester department (${row.type.name})',
+          detail.departmentName != null, '${detail.departmentName}');
+    }
+
+    // --- PUT ---------------------------------------------------------------------
+    final edited = await repository.updateRequisition(
+      row.id,
+      _editedRequest(row),
+    );
+    check('update accepted (${row.type.name})', edited is ApiSuccess<Requisition>,
+        edited is ApiError<Requisition>
+            ? '${edited.message} ${edited.fieldErrors ?? ''}'
+            : '');
+    if (edited is ApiSuccess<Requisition>) {
+      check('update actually changed the row (${row.type.name})',
+          edited.response.dropLocation == 'Test Updated',
+          'drop=${edited.response.dropLocation}');
+      check('update preserved the requisition type (${row.type.name})',
+          edited.response.type == row.type);
+    }
 
     final cancelled = await repository.cancelRequisition(row.id);
     check('cancel succeeds (${row.type.name})', cancelled is ApiSuccess<void>);
@@ -127,6 +153,39 @@ void main(List<String> args) async {
 
   stdout.writeln(failures == 0 ? '\nall checks passed' : '\n$failures check(s) failed');
   exit(failures == 0 ? 0 : 1);
+}
+
+/// Rebuilds a write request from an existing requisition with one field changed, so a
+/// successful PUT is distinguishable from a no-op.
+NewRequisitionRequest _editedRequest(Requisition row) {
+  final details = row.details;
+  return switch (details) {
+    PassengerDetails() => NewRequisitionRequest.passenger(
+        pickupDateTime: row.pickupDateTime,
+        pickupLocation: row.pickupLocation,
+        dropLocation: 'Test Updated',
+        remarks: row.remarks,
+        usedType: details.usedType,
+        customerName: details.customerName,
+        numberOfPersons: details.numberOfPersons,
+        requiredFor: details.requiredFor,
+        userType: details.userType,
+        purpose: details.purpose,
+      ),
+    LogisticsDetails() => NewRequisitionRequest.logistics(
+        pickupDateTime: row.pickupDateTime,
+        pickupLocation: row.pickupLocation,
+        dropLocation: 'Test Updated',
+        remarks: row.remarks,
+        vehicleType: details.vehicleType,
+        customerName: details.customerName,
+        userDepartment: details.userDepartment,
+        loadingCapacity: details.loadingCapacity,
+        goodsWeight: details.goodsWeight,
+        storeName: details.storeName,
+        goodsDetails: details.goodsDetails,
+      ),
+  };
 }
 
 String? _arg(List<String> args, String name) {

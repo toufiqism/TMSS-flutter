@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_result.dart';
+import '../../core/network_messages.dart';
 import '../../core/notifier_lifecycle.dart';
 import '../../di/providers.dart';
 import '../../domain/api_capabilities.dart';
@@ -12,6 +13,7 @@ import '../common/strings.dart';
 import 'requisition_create_state.dart';
 
 const _employeeSearchDebounce = Duration(milliseconds: 300);
+const _httpConflict = 409;
 
 /// `isAutoDispose: true`: without it the notifier is kept alive by Riverpod 3's
 /// default, so submitting a requisition, popping back, and re-opening this screen
@@ -38,7 +40,58 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
     return const RequisitionCreateUiState();
   }
 
+  /// Loads an existing requisition into the form for editing.
+  ///
+  /// Called once, from the edit screen's first frame. The requisition's own type
+  /// decides which form is shown and is then frozen: `PUT` rejects a `req_type` that
+  /// differs from the stored one, so the toggle is locked for the rest of the session.
+  void seedFrom(Requisition requisition) {
+    if (state.isEditing) return;
+
+    final details = requisition.details;
+    state = switch (details) {
+      PassengerDetails() => state.copyWith(
+          editingRequisitionId: requisition.id,
+          formType: RequisitionFormType.passenger,
+          passengerForm: PassengerFormState(
+            pickupDateTime: requisition.pickupDateTime,
+            pickupLocation: requisition.pickupLocation,
+            dropLocation: requisition.dropLocation,
+            usedType: details.usedType,
+            customerName: details.customerName,
+            numberOfPersons: '${details.numberOfPersons}',
+            requiredFor: details.requiredFor,
+            userType: details.userType ?? RequisitionUserType.internal,
+            purpose: details.purpose,
+            remarks: requisition.remarks ?? '',
+          ),
+        ),
+      LogisticsDetails() => state.copyWith(
+          editingRequisitionId: requisition.id,
+          formType: RequisitionFormType.logistics,
+          logisticsForm: LogisticsFormState(
+            pickupDateTime: requisition.pickupDateTime,
+            pickupLocation: requisition.pickupLocation,
+            dropLocation: requisition.dropLocation,
+            // vehicleType has no wire field; the stored value is whatever the mapper
+            // defaulted to, and it is not sent back either way.
+            vehicleType: details.vehicleType,
+            customerName: details.customerName,
+            userDepartment: details.userDepartment,
+            loadingCapacity: details.loadingCapacity,
+            goodsWeight: details.goodsWeight,
+            storeName: details.storeName,
+            goodsDetails: details.goodsDetails,
+            remarks: requisition.remarks ?? '',
+          ),
+        ),
+    };
+  }
+
   void switchFormType(RequisitionFormType type) {
+    // Guarded rather than merely hidden in the UI: this resets both forms, so reaching
+    // it while editing would silently discard the loaded requisition.
+    if (state.isEditing) return;
     state = state.copyWith(
       formType: type,
       passengerForm: const PassengerFormState(),
@@ -163,14 +216,25 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
 
     final request = _buildRequest(s);
     state = state.copyWith(isSubmitting: true, submitError: null, fieldErrors: const {});
-    final submitRequisitionUseCase = ref.read(submitRequisitionUseCaseProvider);
-    final result = await submitRequisitionUseCase(request);
+    final editingId = s.editingRequisitionId;
+    // Same payload either way — PUT is a full replacement with exactly the create body,
+    // so one builder serves both and the two cannot drift apart.
+    final result = editingId == null
+        ? await ref.read(submitRequisitionUseCaseProvider)(request)
+        : await ref.read(updateRequisitionUseCaseProvider)(editingId, request);
     if (isDisposed) return;
 
     switch (result) {
       case ApiSuccess<Requisition>():
         setStateIfAlive(state.copyWith(isSubmitting: false));
-        emitEvent(const RequisitionSubmitted());
+        emitEvent(RequisitionSubmitted(wasEdit: s.isEditing));
+      case ApiError<Requisition>(:final message, :final errorCode)
+          when errorCode == _httpConflict:
+        // The requisition left `Pending` while this form was open. The edit can never
+        // succeed now, so the screen closes and the detail behind it resyncs rather
+        // than leaving the user retrying a save the server will keep refusing.
+        setStateIfAlive(state.copyWith(isSubmitting: false));
+        emitEvent(RequisitionEditRejected(message ?? NetworkMessages.stale));
       case ApiError<Requisition>(:final message, :final fieldErrors):
         // A 422 carries field-keyed messages; pin them to the offending inputs
         // instead of dumping one opaque banner at the top of the form.

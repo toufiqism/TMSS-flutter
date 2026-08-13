@@ -97,9 +97,20 @@ flutter drive --driver=test_driver/integration_test.dart \
   --dart-define=TMS_USER=<email> --dart-define=TMS_PASS=<password>
 ```
 
-On iOS the session lives in the Keychain, which **survives app uninstall** — so a
-reinstall can start signed in with a stale token. `xcrun simctl keychain <device> reset`
-clears it when you need a genuinely clean run.
+### Session storage
+
+The session (token, profile, expiry) is one JSON blob in flutter_secure_storage —
+Keychain on iOS, Keystore-backed on Android. Two behaviours worth knowing:
+
+- iOS Keychain items **survive app uninstall**, so a reinstall would otherwise resurrect
+  a dead session. The data source detects a fresh install via a marker in
+  `shared_preferences` (which *is* wiped on uninstall) and clears the orphaned entry.
+- The token's `expires_at` is stored and honoured: an expired session is dropped at
+  launch rather than being sent and bounced by a 401.
+
+iOS accessibility is pinned to `first_unlock_this_device` — readable after the first
+unlock following a reboot, and never synced to iCloud Keychain, so a corporate session
+does not travel to the user's other devices.
 
 ## Testing
 
