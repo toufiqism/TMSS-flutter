@@ -1,0 +1,79 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:tmss/core/api_result.dart';
+import 'package:tmss/di/providers.dart';
+import 'package:tmss/domain/model/user.dart';
+import 'package:tmss/domain/usecase/login_use_case.dart';
+import 'package:tmss/presentation/login/login_notifier.dart';
+import 'package:tmss/presentation/login/login_state.dart';
+
+class MockLoginUseCase extends Mock implements LoginUseCase {}
+
+void main() {
+  late MockLoginUseCase mockLoginUseCase;
+  late ProviderContainer container;
+
+  setUp(() {
+    mockLoginUseCase = MockLoginUseCase();
+    container = ProviderContainer(overrides: [loginUseCaseProvider.overrideWithValue(mockLoginUseCase)]);
+    addTearDown(container.dispose);
+  });
+
+  const session = Session(
+    token: 'abc',
+    user: User(id: '1', name: 'Md. Tofiq Akbar', designation: 'Senior Engineer', email: 'tofiq.akbar@btracsl.com'),
+  );
+
+  test('submit with blank fields sets a validation error without calling the use case', () async {
+    final notifier = container.read(loginNotifierProvider.notifier);
+
+    await notifier.submit();
+
+    expect(container.read(loginNotifierProvider).errorMessage, isNotNull);
+    verifyNever(() => mockLoginUseCase(any(), any()));
+  });
+
+  test('submit with valid credentials succeeds and emits NavigateToDashboard', () async {
+    when(() => mockLoginUseCase(any(), any())).thenAnswer((_) async => const ApiResult.success(session));
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('tofiq.akbar@btracsl.com');
+    notifier.onPasswordChange('demo1234');
+
+    final events = <LoginEvent>[];
+    final sub = notifier.events.listen(events.add);
+
+    await notifier.submit();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(container.read(loginNotifierProvider).isLoading, isFalse);
+    expect(container.read(loginNotifierProvider).errorMessage, isNull);
+    expect(events, [isA<NavigateToDashboard>()]);
+    await sub.cancel();
+  });
+
+  test('submit with invalid credentials surfaces the error message', () async {
+    when(() => mockLoginUseCase(any(), any()))
+        .thenAnswer((_) async => const ApiResult.error('Username/Password is invalid!'));
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('wrong@example.com');
+    notifier.onPasswordChange('wrong');
+
+    await notifier.submit();
+
+    final state = container.read(loginNotifierProvider);
+    expect(state.isLoading, isFalse);
+    expect(state.errorMessage, 'Username/Password is invalid!');
+  });
+
+  test('submit while offline surfaces the offline message', () async {
+    when(() => mockLoginUseCase(any(), any())).thenAnswer((_) async => const ApiResult.offline());
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onUsernameChange('tofiq.akbar@btracsl.com');
+    notifier.onPasswordChange('demo1234');
+
+    await notifier.submit();
+
+    expect(container.read(loginNotifierProvider).errorMessage, 'No internet connection available');
+  });
+}

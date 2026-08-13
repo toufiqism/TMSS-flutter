@@ -1,0 +1,517 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../domain/model/employee.dart';
+import '../../domain/model/requisition.dart';
+import '../../theme/colors.dart';
+import '../../theme/shapes.dart';
+import '../../theme/typography.dart';
+import '../common/date_time_field.dart';
+import '../common/strings.dart';
+import 'form_controls.dart';
+import 'requisition_create_notifier.dart';
+import 'requisition_create_state.dart';
+
+class RequisitionCreateScreen extends ConsumerStatefulWidget {
+  const RequisitionCreateScreen({super.key, required this.onBack, required this.onSubmitted});
+
+  final VoidCallback onBack;
+  final VoidCallback onSubmitted;
+
+  @override
+  ConsumerState<RequisitionCreateScreen> createState() => _RequisitionCreateScreenState();
+}
+
+class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScreen> {
+  StreamSubscription<RequisitionCreateEvent>? _eventSub;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _eventSub = ref.read(requisitionCreateNotifierProvider.notifier).events.listen((event) {
+        if (!mounted) return;
+        switch (event) {
+          case RequisitionSubmitted():
+            widget.onSubmitted();
+          case RequisitionCreateSessionExpired(:final message):
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final uiState = ref.watch(requisitionCreateNotifierProvider);
+    final notifier = ref.read(requisitionCreateNotifierProvider.notifier);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(TmsStrings.newRequisitionTitle, style: tmsTextTheme.titleMedium),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: tmsTextDark), onPressed: widget.onBack),
+      ),
+      backgroundColor: tmsPageBackground,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: _PillSegmentedToggle(selected: uiState.formType, onSelect: notifier.switchFormType),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (uiState.submitError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(uiState.submitError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    ),
+                  if (uiState.formType == RequisitionFormType.passenger)
+                    _PassengerFormFields(uiState: uiState, notifier: notifier)
+                  else
+                    _LogisticsFormFields(uiState: uiState, notifier: notifier),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: uiState.isSubmitting ? null : notifier.submit,
+                child: uiState.isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: tmsSurfaceWhite),
+                      )
+                    : Text(
+                        TmsStrings.newRequisitionSubmit,
+                        style: tmsTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 15, color: tmsSurfaceWhite),
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PillSegmentedToggle extends StatelessWidget {
+  const _PillSegmentedToggle({required this.selected, required this.onSelect});
+
+  final RequisitionFormType selected;
+  final ValueChanged<RequisitionFormType> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: tmsSurfaceWhite, borderRadius: pillBorderRadius, border: Border.all(color: tmsBorder, width: 1.5)),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SegmentPill(
+              label: TmsStrings.newRequisitionTogglePassenger,
+              selected: selected == RequisitionFormType.passenger,
+              onTap: () => onSelect(RequisitionFormType.passenger),
+            ),
+          ),
+          Expanded(
+            child: _SegmentPill(
+              label: TmsStrings.newRequisitionToggleLogistics,
+              selected: selected == RequisitionFormType.logistics,
+              onTap: () => onSelect(RequisitionFormType.logistics),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SegmentPill extends StatelessWidget {
+  const _SegmentPill({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: pillBorderRadius,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(color: selected ? tmsGreen : Colors.transparent, borderRadius: pillBorderRadius),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: tmsTextTheme.bodyMedium?.copyWith(
+            color: selected ? tmsSurfaceWhite : tmsTextMutedAlt,
+            fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 13.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 22, bottom: 8),
+      child: Text(text.toUpperCase(), style: tmsTextTheme.labelMedium?.copyWith(color: tmsGreen)),
+    );
+  }
+}
+
+class _PassengerFormFields extends StatelessWidget {
+  const _PassengerFormFields({required this.uiState, required this.notifier});
+
+  final RequisitionCreateUiState uiState;
+  final RequisitionCreateNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    final form = uiState.passengerForm;
+    final errors = uiState.fieldErrors;
+    const spacing = SizedBox(height: 12);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(TmsStrings.newRequisitionSectionTripDetails),
+        DateTimeField(
+          label: TmsStrings.newRequisitionFieldPickupDatetime,
+          value: form.pickupDateTime,
+          onChanged: notifier.onPassengerPickupDateTimeChange,
+          isError: errors.containsKey(RequisitionFormField.pickupDateTime),
+          errorText: errors[RequisitionFormField.pickupDateTime],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldPickupLocation,
+          value: form.pickupLocation,
+          onChanged: notifier.onPassengerPickupLocationChange,
+          error: errors[RequisitionFormField.pickupLocation],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldDropLocation,
+          value: form.dropLocation,
+          onChanged: notifier.onPassengerDropLocationChange,
+          error: errors[RequisitionFormField.dropLocation],
+        ),
+        spacing,
+        DropdownField<UsedType>(
+          label: TmsStrings.newRequisitionFieldUsedType,
+          options: UsedType.values,
+          selected: form.usedType,
+          labelFor: (v) => v.label,
+          onSelect: notifier.onUsedTypeChange,
+        ),
+        const _SectionHeader(TmsStrings.newRequisitionSectionPassengerDetails),
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldCustomerName,
+          value: form.customerName,
+          onChanged: notifier.onPassengerCustomerNameChange,
+          error: errors[RequisitionFormField.customerName],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldNumberOfPersons,
+          value: form.numberOfPersons,
+          onChanged: notifier.onNumberOfPersonsChange,
+          error: errors[RequisitionFormField.numberOfPersons],
+          keyboardType: TextInputType.number,
+        ),
+        spacing,
+        DropdownField<RequiredFor>(
+          label: TmsStrings.newRequisitionFieldRequiredFor,
+          options: RequiredFor.values,
+          selected: form.requiredFor,
+          labelFor: (v) => v.label,
+          onSelect: notifier.onRequiredForChange,
+        ),
+        if (form.requiredFor == RequiredFor.someoneElse) ...[
+          spacing,
+          Text(TmsStrings.newRequisitionFieldUserType, style: tmsTextTheme.bodySmall),
+          const SizedBox(height: 8),
+          RadioRow<RequisitionUserType>(
+            options: RequisitionUserType.values,
+            selected: form.userType,
+            labelFor: (v) => v.label,
+            onSelect: notifier.onUserTypeChange,
+          ),
+          spacing,
+          _EmployeePicker(
+            query: uiState.employeeSearchQuery,
+            results: uiState.employeeSearchResults,
+            selected: form.selectedEmployees,
+            isSearching: uiState.isSearchingEmployees,
+            error: errors[RequisitionFormField.employees],
+            onQueryChange: notifier.onEmployeeSearchQueryChange,
+            onToggle: notifier.toggleEmployeeSelection,
+          ),
+        ],
+        const _SectionHeader(TmsStrings.newRequisitionSectionPurpose),
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldPurpose,
+          value: form.purpose,
+          onChanged: notifier.onPurposeChange,
+          error: errors[RequisitionFormField.purpose],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldRemarks,
+          value: form.remarks,
+          onChanged: notifier.onPassengerRemarksChange,
+          singleLine: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _LogisticsFormFields extends StatelessWidget {
+  const _LogisticsFormFields({required this.uiState, required this.notifier});
+
+  final RequisitionCreateUiState uiState;
+  final RequisitionCreateNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    final form = uiState.logisticsForm;
+    final errors = uiState.fieldErrors;
+    const spacing = SizedBox(height: 12);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(TmsStrings.newRequisitionSectionVehicleDetails),
+        RadioRow<VehicleType>(
+          options: VehicleType.values,
+          selected: form.vehicleType,
+          labelFor: (v) => v.label,
+          onSelect: notifier.onVehicleTypeChange,
+        ),
+        spacing,
+        DropdownField<LoadingCapacity>(
+          label: TmsStrings.newRequisitionFieldLoadingCapacity,
+          options: LoadingCapacity.values,
+          selected: form.loadingCapacity,
+          labelFor: (v) => v.label,
+          onSelect: notifier.onLoadingCapacityChange,
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldGoodsWeight,
+          value: form.goodsWeight,
+          onChanged: notifier.onGoodsWeightChange,
+          error: errors[RequisitionFormField.goodsWeight],
+        ),
+        const _SectionHeader(TmsStrings.newRequisitionSectionTripDetails),
+        DateTimeField(
+          label: TmsStrings.newRequisitionFieldPickupDatetime,
+          value: form.pickupDateTime,
+          onChanged: notifier.onLogisticsPickupDateTimeChange,
+          isError: errors.containsKey(RequisitionFormField.pickupDateTime),
+          errorText: errors[RequisitionFormField.pickupDateTime],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldPickupLocation,
+          value: form.pickupLocation,
+          onChanged: notifier.onLogisticsPickupLocationChange,
+          error: errors[RequisitionFormField.pickupLocation],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldDropLocation,
+          value: form.dropLocation,
+          onChanged: notifier.onLogisticsDropLocationChange,
+          error: errors[RequisitionFormField.dropLocation],
+        ),
+        const _SectionHeader(TmsStrings.newRequisitionSectionRequesterDetails),
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldCustomerName,
+          value: form.customerName,
+          onChanged: notifier.onLogisticsCustomerNameChange,
+          error: errors[RequisitionFormField.customerName],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldUserDepartment,
+          value: form.userDepartment,
+          onChanged: notifier.onUserDepartmentChange,
+          error: errors[RequisitionFormField.userDepartment],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldStoreName,
+          value: form.storeName,
+          onChanged: notifier.onStoreNameChange,
+          error: errors[RequisitionFormField.storeName],
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldGoodsDetails,
+          value: form.goodsDetails,
+          onChanged: notifier.onGoodsDetailsChange,
+          error: errors[RequisitionFormField.goodsDetails],
+          singleLine: false,
+        ),
+        spacing,
+        _TmsTextField(
+          label: TmsStrings.newRequisitionFieldRemarks,
+          value: form.remarks,
+          onChanged: notifier.onLogisticsRemarksChange,
+          singleLine: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _TmsTextField extends StatelessWidget {
+  const _TmsTextField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.error,
+    this.singleLine = true,
+    this.keyboardType = TextInputType.text,
+  });
+
+  final String label;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final String? error;
+  final bool singleLine;
+  final TextInputType keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      initialValue: value,
+      onChanged: onChanged,
+      maxLines: singleLine ? 1 : 3,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(hintText: label, errorText: error),
+    );
+  }
+}
+
+class _EmployeePicker extends StatefulWidget {
+  const _EmployeePicker({
+    required this.query,
+    required this.results,
+    required this.selected,
+    required this.isSearching,
+    required this.error,
+    required this.onQueryChange,
+    required this.onToggle,
+  });
+
+  final String query;
+  final List<Employee> results;
+  final List<Employee> selected;
+  final bool isSearching;
+  final String? error;
+  final ValueChanged<String> onQueryChange;
+  final ValueChanged<Employee> onToggle;
+
+  @override
+  State<_EmployeePicker> createState() => _EmployeePickerState();
+}
+
+class _EmployeePickerState extends State<_EmployeePicker> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(TmsStrings.newRequisitionFieldSelectEmployees, style: tmsTextTheme.bodySmall),
+        if (widget.selected.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final employee in widget.selected)
+                  InputChip(label: Text(employee.name), onDeleted: () => widget.onToggle(employee)),
+              ],
+            ),
+          ),
+        TextFormField(
+          initialValue: widget.query,
+          onChanged: (value) {
+            widget.onQueryChange(value);
+            setState(() => _expanded = true);
+          },
+          decoration: InputDecoration(
+            hintText: TmsStrings.newRequisitionFieldSelectEmployees,
+            errorText: widget.error,
+            suffixIcon: widget.isSearching
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                : null,
+          ),
+        ),
+        if (_expanded && widget.results.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: tmsSurfaceWhite,
+              border: Border.all(color: tmsBorder),
+              borderRadius: tmsBorderRadius(tmsRadiusSmall),
+            ),
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              children: [
+                for (final employee in widget.results)
+                  ListTile(
+                    title: Text(employee.name),
+                    subtitle: Text('${employee.designation}, ${employee.department}'),
+                    onTap: () {
+                      widget.onToggle(employee);
+                      setState(() => _expanded = false);
+                    },
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
