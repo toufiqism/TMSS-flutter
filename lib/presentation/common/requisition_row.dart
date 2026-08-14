@@ -36,14 +36,20 @@ class RequisitionRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Both children are Flexible: at large accessibility text sizes the
+              // formatted date and the status chip together exceed the card width and
+              // the Row overflows. Letting each shrink keeps both readable.
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _dateTimeFormatter.format(requisition.pickupDateTime),
-                    style: tmsTextTheme.bodySmall,
+                  Flexible(
+                    child: Text(
+                      _dateTimeFormatter.format(requisition.pickupDateTime),
+                      style: tmsTextTheme.bodySmall,
+                    ),
                   ),
-                  StatusChip(status: requisition.status),
+                  const SizedBox(width: 8),
+                  Flexible(child: StatusChip(status: requisition.status)),
                 ],
               ),
               const SizedBox(height: 10),

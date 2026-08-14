@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. **No happy-path-only code.** Never implement only the success path. Every change explicitly handles failure, empty, null, timeout, offline, cancellation, concurrency, and lifecycle/disposal edge cases that apply. Before finishing, enumerate the non-happy paths for the code touched and confirm each is handled (early-return guard, error branch, fallback, or user-facing message) — not silently ignored. If a path is intentionally out of scope, say so explicitly.
 6. **Never commit or push.** Do not run `git commit`, `git push`, `git tag`, `git merge`, `git rebase`, or any history/remote-modifying git command. Stop at staged/unstaged changes and let the user commit. This holds even if a plan lists a "commit" step — treat it as the user's. Read-only git (`status`, `diff`, `log`, `show`, `branch --list`) is fine.
 7. **Match existing conventions.** Prefer the patterns already in the codebase over introducing new ones. If a better pattern exists, propose it explicitly rather than silently mixing paradigms.
+8. **Both platforms, every time.** This app ships Android *and* iOS. Any change touching config, permissions, storage, or platform APIs must be made — and checked — on both, not on whichever one is convenient to run. When something genuinely only applies to one, say so explicitly rather than leaving the other silently unhandled. If a change was only *verified* on one platform, state that plainly in the report instead of implying parity. See "Platform parity" below for the paired locations.
 
 ### Clarify before acting
 
@@ -77,7 +78,60 @@ Pinned to what's installed on this machine (confirmed via `flutter --version` on
 | Flutter | 3.44.1 (stable channel) |
 | Dart | 3.12.1 |
 | Android minSdk | 30 (matches native app) |
+| Android compileSdk | 37 — **pinned**, not `flutter.compileSdkVersion` |
 | iOS deployment target | 13.0 |
+
+`compileSdk` is pinned in `android/app/build.gradle.kts` because flutter_secure_storage
+ships AAR metadata requiring 37, and the Flutter default is lower — the Android build
+fails `:app:checkDebugAarMetadata` without it. Do not "tidy" it back to the inherited value.
+
+## Platform parity
+
+Android and iOS are both first-class. These things live in **two places** — changing one
+without the other is the recurring failure mode here, and it is silent on whichever
+platform you did not run:
+
+| Concern | Android | iOS |
+|---|---|---|
+| App display name | `AndroidManifest.xml` `android:label` | `Info.plist` `CFBundleDisplayName` **and** `CFBundleName` |
+| Network access | `<uses-permission android:name="android.permission.INTERNET"/>` in the **main** manifest (the Flutter template only adds it to debug/profile, so release builds have no network) | nothing needed |
+| Min OS | `minSdk` in `build.gradle.kts` | `IPHONEOS_DEPLOYMENT_TARGET` in `project.pbxproj` |
+| Cleartext HTTP | blocked by default on API 28+; needs a network security config | needs an ATS exception |
+
+Real divergences already encountered — do not assume symmetry:
+
+- **Secure storage lifetime.** iOS Keychain items **survive app uninstall**; Android's do
+  not. A reinstall would otherwise resurrect a dead session, so `SessionLocalDataSource`
+  clears it using a `shared_preferences` marker (prefs *are* wiped on uninstall).
+- **Secure storage options.** iOS needs an explicit `KeychainAccessibility`; Android on
+  flutter_secure_storage 11 needs nothing — its defaults are already AES-GCM under an
+  RSA-OAEP Keystore key. The `encryptedSharedPreferences` flag is v9-era and no longer
+  exists. Check the installed package's source before adding platform options.
+- **Text scaling.** Both platforms scale text, by different mechanisms and to different
+  maxima (iOS reaches ~3.1x). Layout verified on one is not verified on the other.
+
+### Verifying on both
+
+`flutter analyze` and `flutter test` are platform-agnostic and prove neither. For anything
+touching UI or platform behaviour, build **and run**:
+
+```bash
+flutter build apk --debug             # Android compiles
+flutter build ios --simulator --debug # iOS compiles
+flutter run -d <device-id>            # and actually run it on each
+```
+
+Compiling proves nothing about layout. Run the app on an Android emulator *and* an iOS
+simulator, and scan the log for `overflowed by`, `EXCEPTION CAUGHT BY` and
+`Failed assertion` — layout defects frequently do not surface any other way.
+
+Known Android friction: a fat debug APK is ~166MB, and installs fail with
+`INSTALL_FAILED_INSUFFICIENT_STORAGE` on an emulator whose userdata is near full.
+`flutter build apk --debug --target-platform android-arm64` roughly halves it; otherwise
+free space on the AVD.
+
+To exercise text scaling, iOS: `xcrun simctl ui <device> content_size accessibility-extra-extra-extra-large`;
+Android: `adb shell settings put system font_scale 1.5` (and `wm density` for display size).
 
 ## Build System & Commands
 

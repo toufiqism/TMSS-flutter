@@ -115,15 +115,33 @@ class SessionLocalDataSource {
   /// If prefs are unreadable this returns false — hydrating a possibly-stale session is
   /// recoverable (one 401), whereas signing a working user out on every launch is not.
   Future<bool> _clearIfFreshInstall() async {
+    final SharedPreferences prefs;
     try {
-      final prefs = await _preferences();
+      prefs = await _preferences();
       if (prefs.getBool(_installMarkerKey) ?? false) return false;
-      await _storage.delete(key: _sessionKey);
-      await prefs.setBool(_installMarkerKey, true);
-      return true;
     } catch (_) {
+      // Prefs unreadable. Hydrating a possibly-stale session is recoverable — one 401 —
+      // whereas signing a working user out on every launch is not.
       return false;
     }
+
+    try {
+      await _storage.delete(key: _sessionKey);
+    } catch (_) {
+      // Could not clear. Say so, so the caller hydrates rather than assuming an empty
+      // store, and leave the marker unset so the next launch tries again.
+      return false;
+    }
+
+    // Marker last: it records that the delete above actually happened. Writing it first
+    // and then failing the delete would strand a stale session that nothing retries.
+    // A failure here only costs one repeated (harmless) delete next launch.
+    try {
+      await prefs.setBool(_installMarkerKey, true);
+    } catch (_) {
+      // Intentionally ignored; the session is already gone, which is what matters.
+    }
+    return true;
   }
 
   /// Persists [session]. The in-memory copy and the stream are updated even if the

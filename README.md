@@ -4,7 +4,8 @@ Flutter client for the Bangla Trac / Carcopolo vehicle requisition module, targe
 Android and iOS from one codebase. Port of the native Android app
 (`com.banglatrac.tmss`), matching its forest-green redesign.
 
-Screens: **Login → Dashboard → My Requisitions → New Requisition**.
+**Login → Dashboard → My Requisitions → Requisition Detail → Edit**, plus New
+Requisition in passenger and logistics variants.
 
 ## Requirements
 
@@ -12,8 +13,12 @@ Screens: **Login → Dashboard → My Requisitions → New Requisition**.
 |---|---|
 | Flutter | 3.44.1 (stable) |
 | Dart | 3.12.1 |
-| Android minSdk | 30 |
+| Android minSdk / compileSdk | 30 / 37 |
 | iOS deployment target | 13.0 |
+
+`compileSdk` is pinned to 37 in `android/app/build.gradle.kts` rather than inherited
+from `flutter.compileSdkVersion`: flutter_secure_storage ships AAR metadata requiring
+it, and the Flutter default is lower, which fails `:app:checkDebugAarMetadata`.
 
 ## Getting started
 
@@ -31,22 +36,85 @@ The base URL is compiled in, defaulting to production:
 flutter run --dart-define=TMS_BASE_URL=https://tms.carcopolo.com/bt/api
 ```
 
-Override it for a local or staging server. Note that Android blocks cleartext HTTP by
-default on API 28+, so a plain `http://` host needs a network security config before it
-will connect.
+Override it for a local or staging server. Android blocks cleartext HTTP by default on
+API 28+, so a plain `http://` host needs a network security config before it connects.
 
 ## Commands
 
 ```bash
 flutter analyze                        # static analysis — the standard verification step
-flutter test                           # unit and notifier tests
+flutter test                           # unit, mapper and notifier tests
 flutter test test/path/to/file.dart    # a single target
 dart run build_runner watch            # regenerate codegen while iterating
 
 flutter build apk --debug
-flutter build appbundle --release
+flutter build appbundle --release      # Play delivery — per-device ~20MB
+flutter build apk --release --split-per-abi   # sideloading: one APK per ABI
 flutter build ios --release            # requires macOS + Xcode
 ```
+
+### Release signing
+
+Release builds read `android/key.properties` (gitignored). If it is absent the build
+still succeeds but falls back to the **debug** key and warns — convenient for
+`flutter run --release`, useless for distribution. To turn that into a hard failure in CI
+or before an upload:
+
+```bash
+cd android && ./gradlew verifyReleaseSigning
+```
+
+The keystore is `android/tms-release.jks`, alias `banglatrac`, certificate
+`CN=B-Trac Solutions Limited, OU=TMS`, valid to 2053. Both it and `key.properties` are
+gitignored and neither is tracked.
+
+Signature schemes are set explicitly in `build.gradle.kts`: **v1 off** (only needed below
+API 24; minSdk here is 30), **v3 on**. v3 carries the certificate lineage that allows a
+published app to rotate to a new key later — it must be present from the first shipped
+build, because an app released on v2 alone can never rotate afterwards.
+
+> ⚠️ **Back up `tms-release.jks` and its passwords somewhere durable, before the first
+> upload.** `com.banglatrac.tmss` is not yet published, so the key is still free to
+> change; the moment it ships, that key *is* the app's identity. Without Play App Signing,
+> losing it means never being able to update the listing again.
+>
+> Enrol in **Play App Signing** at first upload. Play then holds the app signing key and
+> this one becomes a replaceable *upload* key, which turns "lost keystore, listing dead"
+> into a support ticket.
+>
+> Rotate the passwords if they have been shared outside the team.
+
+To replace the keystore, create one and repoint `key.properties` (see
+`key.properties.example`). Keeping it outside the repo is preferable — `storeFile` is
+resolved relative to `android/`, so `../../secrets/tms-release.jks` works:
+
+```bash
+keytool -genkeypair -v \
+  -keystore ~/secrets/tms-release.jks -storetype JKS \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias banglatrac
+```
+
+### Android release shrinking
+
+`isMinifyEnabled` (R8) and `isShrinkResources` are on for release. Note what that does
+and does not buy on a Flutter app:
+
+| Build | Size |
+|---|---|
+| Fat release APK (all 3 ABIs) | 53.6 MB |
+| Per-ABI APK (arm64) | **19.6 MB** |
+| App bundle | 51.7 MB upload, ~20 MB delivered |
+
+R8 removed ~9,300 classes/members, but that is only worth ~0.1 MB: **51 of the 53 MB is
+native `.so`** — the Flutter engine plus the Dart AOT snapshot — which R8 does not touch.
+The real size lever is per-ABI splitting, which the app bundle does automatically.
+
+Keep R8 on anyway: it obfuscates the Java/Kotlin surface and strips dead plugin code,
+both worth having for a release artifact.
+
+⚠️ **Retain `build/app/outputs/mapping/release/mapping.txt` for every release you ship.**
+Release stack traces are obfuscated and cannot be read without the mapping file for that
+exact build. Upload it to Play Console, or archive it alongside the artifact.
 
 ## Architecture
 
@@ -55,65 +123,113 @@ Clean Architecture, mirroring the Android app. Dependencies point inwards:
 
 ```
 lib/
-├── core/          ApiResult union, notifier lifecycle guards, session expiry
+├── core/           ApiResult union, notifier lifecycle guards, API config,
+│                   network messages, session expiry
 ├── data/
-│   ├── local/     Session storage (flutter_secure_storage)
-│   ├── remote/    Dio client, interceptors, DTO mappers, safeApiCall
-│   └── repository/
-├── domain/        Models, repository interfaces, use cases
-├── presentation/  One folder per screen: screen + notifier + freezed UiState
-├── theme/         Colors, typography, shapes
-└── di/            Riverpod providers — these *are* the DI graph
+│   ├── local/      Session storage (flutter_secure_storage + an install marker)
+│   ├── remote/     Dio client, auth interceptor, safeApiCall, dto/ mappers
+│   └── repository/ Remote*Repository — the only implementations
+├── domain/         Models, repository interfaces, use cases, ApiCapabilities
+├── presentation/   One folder per screen: screen + notifier + freezed UiState
+├── theme/          Colors, typography, shapes
+└── di/             Riverpod providers — these *are* the DI graph
 ```
 
 - **State**: Riverpod `Notifier` + a freezed `UiState` per screen. One-shot events
   (navigation, toasts, session-expired) go through a `StreamController`, consumed with a
   subscription rather than `ref.watch` so a rebuild cannot replay them.
+- **Lifecycle**: every notifier mixes in `NotifierLifecycle`, which guards `state` and
+  event writes after disposal. Riverpod throws `UnmountedRefException` on a post-dispose
+  `state` write, and a user backing out mid-request hits exactly that window.
 - **Errors**: repositories return `ApiResult<T>` instead of throwing —
   `success` / `error` / `logout` / `maintenance` / `offline`. Every notifier handles
-  every branch.
-- **Navigation**: go_router with a session-gated redirect.
+  every branch. HTTP 409 arrives as an `error` carrying `errorCode: 409` rather than a
+  sixth union branch.
+- **Navigation**: go_router with a session-gated redirect. Routes live in
+  `route_paths.dart`; `/requisitions/new` must stay declared before `/requisitions/:id`,
+  or `:id` swallows the literal "new".
+
+### Refreshing versus invalidating
+
+The dashboard and list notifiers are kept alive so they survive a trip to another screen
+and back. That means `build()` — and their initial load — runs once per instance, so:
+
+- **Refresh by calling a method** (`_refreshRequisitionViews`). `ref.invalidate` re-runs
+  `build()` and closes the notifier's event stream out from under any screen still
+  listening to it.
+- **Except on logout**, where invalidation is correct and necessary: the session going
+  null redirects to login and unmounts those screens, and without a reset a later
+  sign-in returns the user to the stale error from the 401 that ended the last session.
 
 ## API status
 
-The client is verified against the live server at `https://tms.carcopolo.com/bt/api`.
+Verified against the live server at `https://tms.carcopolo.com/bt/api`.
 `api-contract/tms-requisition-api.json` is a draft reconstructed from a Postman
 collection and is **wrong in several places** — see `lib/data/remote/README.md`, which
 documents observed behaviour and where the contract diverges from it.
 
-Employee lookup is the one capability still unsupported (no endpoint exists), so that
-picker is disabled rather than sent speculatively.
+Endpoints used: `POST /login`, `POST /logout`, `GET|POST /requisitions`,
+`GET|PUT /requisitions/{id}`, `POST /requisitions/{id}/cancel`.
+
+Search, sort and the dashboard counts have no endpoint behind them and are derived
+client-side from the list (bounded — see `ApiConfig`). Employee lookup is the one
+capability still unsupported: no endpoint exists, so that picker is disabled via
+`ApiCapabilities` rather than sent speculatively.
+
+DTO parsing is hand-written and tolerant rather than generated. Most response schemas in
+the contract were guesses, and a strict generated parser would throw on the first field
+that disagrees — taking a screen down over a value the UI may not even show.
 
 To re-verify against the server:
 
 ```bash
-# API layer only — drives the real Dio stack, cancels every requisition it creates.
+# Drives the real Dio stack end-to-end and cancels every requisition it creates.
 dart run test/live_api_check.dart --user <email> --pass <password>
-
-# Full UI flow on a device/simulator, read-only against the server.
-# Screenshots land in build/screenshots/.
-flutter drive --driver=test_driver/integration_test.dart \
-  --target=integration_test/smoke_test.dart -d <device-id> \
-  --dart-define=TMS_USER=<email> --dart-define=TMS_PASS=<password>
 ```
+
+UI behaviour is verified by running the app on a device or simulator — see
+"Verifying on both" in `CLAUDE.md`.
 
 ### Session storage
 
 The session (token, profile, expiry) is one JSON blob in flutter_secure_storage —
-Keychain on iOS, Keystore-backed on Android. Two behaviours worth knowing:
+Keychain on iOS, Keystore-backed on Android. Three behaviours worth knowing:
 
 - iOS Keychain items **survive app uninstall**, so a reinstall would otherwise resurrect
-  a dead session. The data source detects a fresh install via a marker in
+  a dead session. `SessionLocalDataSource` detects a fresh install via a marker in
   `shared_preferences` (which *is* wiped on uninstall) and clears the orphaned entry.
 - The token's `expires_at` is stored and honoured: an expired session is dropped at
-  launch rather than being sent and bounced by a 401.
+  launch rather than sent and bounced by a 401.
+- Sign-out calls `POST /logout` to revoke server-side before clearing locally. Tokens
+  last about a year, so a purely local sign-out would leave a working token behind.
 
 iOS accessibility is pinned to `first_unlock_this_device` — readable after the first
 unlock following a reboot, and never synced to iCloud Keychain, so a corporate session
-does not travel to the user's other devices.
+does not travel to the user's other devices. Android needs no equivalent option;
+flutter_secure_storage 11 already defaults to AES-GCM under an RSA-OAEP Keystore key.
 
 ## Testing
 
 `flutter_test` + `mocktail`, with Riverpod providers overridden via `ProviderContainer`.
-Notifier and mapper coverage; no widget or golden tests yet. Every notifier test covers
-the success branch **and** each `ApiResult` failure branch.
+**142 tests**, no widget or golden tests yet.
+
+```
+test/data/          mappers, timezone conversion, safeApiCall status branches,
+                    repositories, session storage
+test/presentation/  one notifier test per screen
+test/live_api_check.dart      opt-in probe against the live server (not run by `flutter test`)
+```
+
+Two rules the suite holds to:
+
+- Every notifier test covers the success branch **and** each `ApiResult` failure branch —
+  `error`, `offline`, `maintenance`, `logout`.
+- Notifiers using `isAutoDispose` need a held subscription in tests
+  (`container.listen(...)`), or they are torn down before an awaited call resolves —
+  exactly as a mounted screen holds them.
+
+## Linting
+
+`flutter_lints` plus `strict-casts`, `strict-inference` and `strict-raw-types`, with
+`unawaited_futures` promoted to an error. The strict modes matter most in
+`data/remote/dto/`, where every value arrives as `dynamic` off a decoded JSON map.

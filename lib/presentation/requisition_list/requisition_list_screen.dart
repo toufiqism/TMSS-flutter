@@ -27,7 +27,8 @@ class RequisitionListScreen extends ConsumerStatefulWidget {
   final ValueChanged<Requisition> onOpenRequisition;
 
   @override
-  ConsumerState<RequisitionListScreen> createState() => _RequisitionListScreenState();
+  ConsumerState<RequisitionListScreen> createState() =>
+      _RequisitionListScreenState();
 }
 
 class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
@@ -39,19 +40,25 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _eventSub = ref.read(requisitionListNotifierProvider.notifier).events.listen((event) {
-        if (!mounted) return;
-        final message = switch (event) {
-          RequisitionListShowMessage(:final message) => message,
-          RequisitionListSessionExpired(:final message) => message,
-        };
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      });
+      _eventSub = ref
+          .read(requisitionListNotifierProvider.notifier)
+          .events
+          .listen((event) {
+            if (!mounted) return;
+            final message = switch (event) {
+              RequisitionListShowMessage(:final message) => message,
+              RequisitionListSessionExpired(:final message) => message,
+            };
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
+          });
     });
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 400) {
       ref.read(requisitionListNotifierProvider.notifier).loadNextPage();
     }
   }
@@ -71,13 +78,21 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
         title: const Text(TmsStrings.requisitionListCancelConfirmTitle),
         content: const Text(TmsStrings.requisitionListCancelConfirmBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text(TmsStrings.requisitionListCancelConfirmNo)),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text(TmsStrings.requisitionListCancelConfirmYes)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(TmsStrings.requisitionListCancelConfirmNo),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(TmsStrings.requisitionListCancelConfirmYes),
+          ),
         ],
       ),
     );
     if (confirmed == true && mounted) {
-      await ref.read(requisitionListNotifierProvider.notifier).cancelRequisition(id);
+      await ref
+          .read(requisitionListNotifierProvider.notifier)
+          .cancelRequisition(id);
     }
   }
 
@@ -101,16 +116,22 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              ElevatedButton(
-                onPressed: widget.onNewRequisition,
-                style: ElevatedButton.styleFrom(shape: pillShape),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add, size: 16),
-                    SizedBox(width: 8),
-                    Text(TmsStrings.requisitionListNewFab),
-                  ],
+              // Flexible so the button shrinks to the bar rather than overflowing it
+              // once its label wraps at large accessibility text sizes.
+              Flexible(
+                child: ElevatedButton(
+                  onPressed: widget.onNewRequisition,
+                  style: ElevatedButton.styleFrom(shape: pillShape),
+                  // Flexible for the same reason as the dashboard's hero button: the
+                  // label outgrows the button at large text scales and overflows the Row.
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 16),
+                      SizedBox(width: 8),
+                      Flexible(child: Text(TmsStrings.requisitionListNewFab)),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -134,16 +155,18 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
             child: RefreshIndicator(
               onRefresh: notifier.refresh,
               child: switch (uiState) {
-                RequisitionListUiState(isInitialLoading: true) =>
-                  const Center(child: CircularProgressIndicator()),
+                RequisitionListUiState(isInitialLoading: true) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
                 RequisitionListUiState(items: [], :final errorMessage)
                     when errorMessage != null =>
                   _EmptyOrErrorState(
                     message: errorMessage,
                     onRetry: () => unawaited(notifier.refresh()),
                   ),
-                RequisitionListUiState(items: []) =>
-                  const _EmptyOrErrorState(message: TmsStrings.requisitionListEmpty),
+                RequisitionListUiState(items: []) => const _EmptyOrErrorState(
+                  message: TmsStrings.requisitionListEmpty,
+                ),
                 RequisitionListUiState(:final items, :final isLoadingMore) =>
                   ListView.separated(
                     controller: _scrollController,
@@ -153,7 +176,8 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                     itemCount: items.length + (isLoadingMore ? 1 : 0),
-                    separatorBuilder: (context, index) => const SizedBox(height: 14),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 14),
                     itemBuilder: (context, index) {
                       if (index >= items.length) {
                         return const Padding(
@@ -171,9 +195,11 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                       return RequisitionRow(
                         requisition: requisition,
                         onTap: () => widget.onOpenRequisition(requisition),
-                        trailingAction: requisition.status == RequisitionStatus.pending
+                        trailingAction:
+                            requisition.status == RequisitionStatus.pending
                             ? InkWell(
-                                onTap: () => unawaited(_confirmCancel(requisition.id)),
+                                onTap: () =>
+                                    unawaited(_confirmCancel(requisition.id)),
                                 child: Padding(
                                   padding: const EdgeInsets.all(4),
                                   child: Text(
@@ -226,7 +252,11 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
 
   Future<void> _pickDate(_DatePickerTarget target) async {
     final now = DateTime.now();
-    final initial = (target == _DatePickerTarget.start ? widget.startDate : widget.endDate) ?? now;
+    final initial =
+        (target == _DatePickerTarget.start
+            ? widget.startDate
+            : widget.endDate) ??
+        now;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -235,7 +265,9 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
     );
     if (picked == null) return;
 
-    final newStart = target == _DatePickerTarget.start ? picked : widget.startDate;
+    final newStart = target == _DatePickerTarget.start
+        ? picked
+        : widget.startDate;
     final newEnd = target == _DatePickerTarget.end ? picked : widget.endDate;
     if (newStart != null && newEnd != null && newEnd.isBefore(newStart)) {
       setState(() => _rangeError = TmsStrings.requisitionListDateRangeInvalid);
@@ -265,18 +297,26 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: Row(
+            // Wrap, not Row: two date chips, a rule and Reset do not fit on one line at
+            // large accessibility text sizes. Wrapping onto a second line keeps every
+            // filter reachable instead of clipping Reset off the right edge.
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _FilterPillChip(
-                  label: widget.startDate != null ? _chipDateFormatter.format(widget.startDate!) : 'From',
+                  label: widget.startDate != null
+                      ? _chipDateFormatter.format(widget.startDate!)
+                      : 'From',
                   onTap: () => _pickDate(_DatePickerTarget.start),
                 ),
-                const SizedBox(width: 8),
                 _FilterPillChip(
-                  label: widget.endDate != null ? _chipDateFormatter.format(widget.endDate!) : 'To',
+                  label: widget.endDate != null
+                      ? _chipDateFormatter.format(widget.endDate!)
+                      : 'To',
                   onTap: () => _pickDate(_DatePickerTarget.end),
                 ),
-                const SizedBox(width: 8),
                 // A fixed-height rule, not a VerticalDivider. VerticalDivider builds a
                 // child with `height: double.infinity`, which in a Row with loose
                 // vertical constraints made this filter bar expand to the full height of
@@ -292,14 +332,22 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
                   },
                   child: Text(
                     TmsStrings.requisitionListReset,
-                    style: tmsTextTheme.bodyMedium?.copyWith(color: tmsGreen, fontWeight: FontWeight.bold),
+                    style: tmsTextTheme.bodyMedium?.copyWith(
+                      color: tmsGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           if (_rangeError != null)
-            Text(_rangeError!, style: tmsTextTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _rangeError!,
+              style: tmsTextTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
         ],
       ),
     );
@@ -319,13 +367,22 @@ class _FilterPillChip extends StatelessWidget {
       borderRadius: pillBorderRadius,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: const BoxDecoration(color: tmsGreenLight, borderRadius: pillBorderRadius),
+        decoration: const BoxDecoration(
+          color: tmsGreenLight,
+          borderRadius: pillBorderRadius,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.calendar_month, size: 15, color: tmsGreen),
             const SizedBox(width: 6),
-            Text(label, style: tmsTextTheme.bodyMedium?.copyWith(color: tmsGreen, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: tmsTextTheme.bodyMedium?.copyWith(
+                color: tmsGreen,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -360,7 +417,9 @@ class _EmptyOrErrorState extends StatelessWidget {
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+                    style: tmsTextTheme.bodyMedium?.copyWith(
+                      color: tmsTextMutedAlt,
+                    ),
                   ),
                   if (onRetry != null) ...[
                     const SizedBox(height: 16),

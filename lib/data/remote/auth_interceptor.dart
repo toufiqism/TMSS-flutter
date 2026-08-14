@@ -7,12 +7,13 @@ import 'package:dio/dio.dart';
 /// sent after logout. Reading it per-request keeps this interceptor stateless and
 /// avoids a stale token surviving a sign-out.
 ///
-/// There is deliberately no refresh logic here, and that is now a settled design
-/// rather than a gap: the backend issues Laravel Sanctum tokens that do not expire, so
-/// there is nothing to refresh. A 401 therefore means the token was revoked or is
-/// invalid, not that it aged out, and is handled the way the contract prescribes —
-/// clear the session and route to login — via `safeApiCall` mapping it to
-/// `ApiResult.logout`.
+/// There is deliberately no refresh logic here, and no refresh endpoint exists to build
+/// it against. Tokens *do* expire — the login response carries `expires_at`, roughly a
+/// year out — but that lifetime is long enough that expiry-in-session is not a real
+/// case, and `SessionLocalDataSource` already declines to hand out a token past its
+/// stated expiry. A 401 therefore means revoked or invalid, and is handled the way the
+/// contract prescribes — clear the session and route to login — via `safeApiCall`
+/// mapping it to `ApiResult.logout`.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._tokenProvider);
 

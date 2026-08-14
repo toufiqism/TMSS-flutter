@@ -9,6 +9,7 @@ import '../common/strings.dart';
 import '../../domain/model/requisition.dart';
 import '../dashboard/dashboard_notifier.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../requisition_detail/requisition_detail_notifier.dart';
 import '../requisition_detail/requisition_detail_screen.dart';
 import '../login/login_screen.dart';
 import '../requisition_create/requisition_create_screen.dart';
@@ -71,6 +72,13 @@ void _refreshRequisitionViews(Ref ref) {
   }
   if (ref.exists(dashboardNotifierProvider)) {
     unawaited(ref.read(dashboardNotifierProvider.notifier).refresh());
+  }
+  // The detail screen too, when one is open beneath: after an edit it is the screen the
+  // user is popped back onto, and without this it keeps rendering the values from
+  // before the save. Its refresh preserves the content already on screen if the refetch
+  // fails, so this cannot blank the page.
+  if (ref.exists(requisitionDetailNotifierProvider)) {
+    unawaited(ref.read(requisitionDetailNotifierProvider.notifier).refresh());
   }
 }
 
@@ -211,6 +219,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             existing: existing,
             onBack: () => context.pop(),
             onSubmitted: () {
+              context.pop();
+              _refreshRequisitionViews(ref);
+            },
+            // A 409 means the requisition left `Pending` while the form was open. The
+            // detail screen underneath still shows the old status — and therefore still
+            // offers Edit and Cancel — so it has to resync, or the user's next tap earns
+            // another 409.
+            onEditRejected: () {
               context.pop();
               _refreshRequisitionViews(ref);
             },

@@ -228,8 +228,11 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
       case ApiSuccess<Requisition>():
         setStateIfAlive(state.copyWith(isSubmitting: false));
         emitEvent(RequisitionSubmitted(wasEdit: s.isEditing));
+      // Gated on editingId: only an edit can be rejected for having left `Pending`.
+      // A 409 from create (a duplicate-submission guard, say) must not pop the screen
+      // and throw away everything the user typed.
       case ApiError<Requisition>(:final message, :final errorCode)
-          when errorCode == _httpConflict:
+          when errorCode == _httpConflict && editingId != null:
         // The requisition left `Pending` while this form was open. The edit can never
         // succeed now, so the screen closes and the detail behind it resyncs rather
         // than leaving the user retrying a save the server will keep refusing.

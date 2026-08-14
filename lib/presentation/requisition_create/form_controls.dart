@@ -27,8 +27,19 @@ class DropdownField<T> extends StatelessWidget {
       decoration: InputDecoration(hintText: label),
       icon: const Icon(Icons.keyboard_arrow_down, color: tmsTextSubtle),
       style: tmsTextTheme.bodyLarge,
+      // Without isExpanded the dropdown sizes its internal Row to the *natural* width of
+      // the selected label, so a long value plus the chevron overflows the field at
+      // large accessibility text sizes ("Pickup & Drop" by 20px, "2 Ton" by 93px once
+      // the label wraps). Expanding makes the label take the space that is actually
+      // available and ellipsize instead.
+      isExpanded: true,
       items: options
-          .map((option) => DropdownMenuItem<T>(value: option, child: Text(labelFor(option))))
+          .map(
+            (option) => DropdownMenuItem<T>(
+              value: option,
+              child: Text(labelFor(option), overflow: TextOverflow.ellipsis),
+            ),
+          )
           .toList(),
       onChanged: (value) {
         if (value != null) onSelect(value);
@@ -54,16 +65,19 @@ class RadioRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    // Wrap, not Row: two or three pills side by side do not fit the width at large
+    // accessibility text sizes, and a Row simply clips the last option off the screen —
+    // making it unselectable. Wrapping moves it to the next line instead.
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
       children: [
-        for (var i = 0; i < options.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
+        for (final option in options)
           _RadioPill(
-            label: labelFor(options[i]),
-            isSelected: options[i] == selected,
-            onTap: () => onSelect(options[i]),
+            label: labelFor(option),
+            isSelected: option == selected,
+            onTap: () => onSelect(option),
           ),
-        ],
       ],
     );
   }

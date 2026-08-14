@@ -15,6 +15,10 @@ import 'login_state.dart';
 /// reserves room for it, so the two cannot drift apart.
 const double _logoSize = 32;
 
+/// Ceiling on the header's text scaling. iOS accessibility sizes reach roughly 3.1x,
+/// at which the tagline alone is taller than the screen.
+const double _headerMaxTextScale = 1.3;
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, required this.onLoginSuccess});
 
@@ -73,7 +77,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             // minHeight without needing a bounded max) and the logo is absolutely
             // positioned at the top. The tagline's top padding reserves the logo's
             // space so the two cannot collide as text scales up.
-            Stack(
+            // The header's text scale is clamped, the form's is not. At the largest
+            // accessibility sizes the unclamped tagline grew past the full viewport and
+            // pushed the username, password and Sign In button entirely off-screen —
+            // the form was still there, but unreachable without a long scroll. Clamping
+            // only this decorative block keeps branding bounded while leaving the part
+            // the user actually needs fully scalable.
+            MediaQuery.withClampedTextScaling(
+              maxScaleFactor: _headerMaxTextScale,
+              child: Stack(
               children: [
                 Positioned.fill(
                   child: Image.asset(
@@ -89,7 +101,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: 260.0 * media.textScaler.scale(1).clamp(1.0, 1.6),
+                    minHeight: 260.0 *
+                        media.textScaler.scale(1).clamp(1.0, _headerMaxTextScale),
                   ),
                   child: Align(
                     alignment: Alignment.bottomLeft,
@@ -125,6 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ],
+              ),
             ),
             const Divider(height: 1, indent: 28, endIndent: 28, color: tmsDivider),
             Padding(

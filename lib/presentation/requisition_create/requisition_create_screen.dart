@@ -22,10 +22,16 @@ class RequisitionCreateScreen extends ConsumerStatefulWidget {
     required this.onBack,
     required this.onSubmitted,
     this.existing,
+    this.onEditRejected,
   });
 
   final VoidCallback onBack;
   final VoidCallback onSubmitted;
+
+  /// Invoked when the server refuses the edit outright (409 — no longer `Pending`).
+  /// Distinct from [onBack] because the caller must also resync: the screen underneath
+  /// is showing a status that is now wrong. Falls back to [onBack] when not supplied.
+  final VoidCallback? onEditRejected;
 
   /// Non-null puts the screen in edit mode: the form is seeded from this requisition,
   /// submit becomes a PUT, and the type toggle locks. The whole point of reusing this
@@ -54,8 +60,8 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
           case RequisitionEditRejected(:final message):
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
             // Nothing here can succeed any more; hand control back so the detail
-            // underneath can refetch and show what the requisition actually is now.
-            widget.onBack();
+            // underneath refetches and shows what the requisition actually is now.
+            (widget.onEditRejected ?? widget.onBack)();
           case RequisitionCreateSessionExpired(:final message):
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         }

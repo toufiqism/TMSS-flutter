@@ -122,15 +122,24 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 20),
         _StatPanel(summary: summary),
         const SizedBox(height: 20),
+        // Flexible on both sides: the section title and the View All action outgrow
+        // the row together at large accessibility text sizes.
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(TmsStrings.dashboardRecentRequisitions, style: tmsTextTheme.titleMedium),
-            TextButton(
-              onPressed: onViewAllRequisitions,
+            Flexible(
               child: Text(
-                TmsStrings.dashboardViewAll,
-                style: tmsTextTheme.bodyMedium?.copyWith(color: tmsGreen, fontWeight: FontWeight.bold),
+                TmsStrings.dashboardRecentRequisitions,
+                style: tmsTextTheme.titleMedium,
+              ),
+            ),
+            Flexible(
+              child: TextButton(
+                onPressed: onViewAllRequisitions,
+                child: Text(
+                  TmsStrings.dashboardViewAll,
+                  style: tmsTextTheme.bodyMedium?.copyWith(color: tmsGreen, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -184,10 +193,13 @@ class _HeroCard extends StatelessWidget {
           ElevatedButton(
             onPressed: onRequisitionNow,
             style: ElevatedButton.styleFrom(shape: pillShape),
+            // Flexible, not a bare Text: at large accessibility text sizes the label
+            // plus the icon exceeds the button's width and the Row overflows by ~80px.
+            // Letting the label wrap keeps the icon on screen instead.
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(TmsStrings.dashboardRequisitionNow),
+                Flexible(child: Text(TmsStrings.dashboardRequisitionNow)),
                 SizedBox(width: 8),
                 Icon(Icons.arrow_forward, size: 16),
               ],

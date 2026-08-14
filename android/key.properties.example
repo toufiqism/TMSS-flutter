@@ -1,0 +1,19 @@
+# Copy to android/key.properties and fill in. That file is gitignored — never commit it,
+# and never commit the keystore it points at.
+#
+# storeFile is resolved relative to the android/ directory, so a path outside the repo
+# works and is preferable:
+#     storeFile=../../../secrets/tms-release.jks
+#
+# Create a keystore with:
+#     keytool -genkey -v -keystore tms-release.jks -storetype JKS \
+#       -keyalg RSA -keysize 2048 -validity 10000 -alias tms
+#
+# ⚠️ Back up the keystore and its passwords somewhere durable. For an app already on
+# Play without Play App Signing, losing this file means you can never publish an update
+# to that listing again.
+
+storeFile=../../secrets/tms-release.jks
+storePassword=
+keyAlias=tms
+keyPassword=

@@ -53,6 +53,11 @@ class RequisitionDetailNotifier extends Notifier<RequisitionDetailUiState>
   }
 
   Future<void> _fetch(String id) async {
+    // Captured before the await: whether there is already a requisition on screen
+    // decides whether a failure replaces it or merely reports itself.
+    final existing = state;
+    final hadContent = existing is RequisitionDetailSuccess;
+
     final result = await ref.read(getRequisitionUseCaseProvider)(id);
     if (isDisposed) return;
 
@@ -61,26 +66,48 @@ class RequisitionDetailNotifier extends Notifier<RequisitionDetailUiState>
         setStateIfAlive(RequisitionDetailUiState.success(response));
       case ApiError<Requisition>(:final message, :final errorCode):
         if (errorCode == _httpNotFound) {
-          // Nothing left to show. Close rather than stranding the user on an error
-          // screen for a requisition that no longer exists.
+          // Nothing left to show. Set an error state *before* asking the screen to
+          // close: if this was opened as the navigation root (a deep link, a push
+          // notification) there is nothing to pop to, and returning early would leave
+          // the user on a spinner forever.
+          setStateIfAlive(RequisitionDetailUiState.error(
+            message ?? NetworkMessages.notFound,
+            canRetry: false,
+          ));
           emitEvent(RequisitionDetailClosed(message ?? NetworkMessages.notFound));
           return;
         }
-        setStateIfAlive(RequisitionDetailUiState.error(
+        _onFetchFailed(
+          hadContent,
           message ?? NetworkMessages.generic,
           // A 403 is terminal: the contract is explicit that the caller is not the
           // creator and never will be, so Retry would only fail again.
           canRetry: errorCode != _httpForbidden,
-        ));
+        );
       case ApiOffline<Requisition>(:final message):
-        setStateIfAlive(RequisitionDetailUiState.error(message));
+        _onFetchFailed(hadContent, message);
       case ApiMaintenance<Requisition>(:final message):
-        setStateIfAlive(RequisitionDetailUiState.error(message));
+        _onFetchFailed(hadContent, message);
       case ApiLogout<Requisition>(:final message):
         await ref.read(sessionExpirationHandlerProvider).handle();
         if (isDisposed) return;
         emitEvent(RequisitionDetailSessionExpired(message));
     }
+  }
+
+  /// A failed *refresh* must not blank a requisition the user is already reading —
+  /// losing the page because the lift has no signal is worse than not refreshing. Only
+  /// a failed initial load, where there is nothing to keep, becomes an error screen.
+  void _onFetchFailed(bool hadContent, String message, {bool canRetry = true}) {
+    if (!hadContent) {
+      setStateIfAlive(RequisitionDetailUiState.error(message, canRetry: canRetry));
+      return;
+    }
+    final current = state;
+    if (current is RequisitionDetailSuccess) {
+      setStateIfAlive(current.copyWith(isRefreshing: false));
+    }
+    emitEvent(RequisitionDetailShowMessage(message));
   }
 
   Future<void> cancel() async {

@@ -367,8 +367,11 @@ class _Row extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 132,
+          // Proportional, not a fixed 132px: at large accessibility text sizes a fixed
+          // label column leaves the label wrapping to many lines while the value column
+          // sits half empty. Flex keeps the split sane at every scale.
+          Expanded(
+            flex: 2,
             child: Text(
               label,
               style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
@@ -376,6 +379,7 @@ class _Row extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
+            flex: 3,
             child: Text(
               value.trim().isEmpty ? '—' : value,
               style: tmsTextTheme.bodyMedium?.copyWith(
@@ -492,15 +496,21 @@ class _ActivityRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Flexible on both: the chip and the timestamp together outgrow the
+                  // timeline's remaining width at large accessibility text sizes.
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      StatusChip(status: entry.status),
-                      if (entry.at != null)
-                        Text(
-                          _dateTimeFormatter.format(entry.at!),
-                          style: tmsTextTheme.bodySmall,
+                      Flexible(child: StatusChip(status: entry.status)),
+                      if (entry.at != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            _dateTimeFormatter.format(entry.at!),
+                            style: tmsTextTheme.bodySmall,
+                          ),
                         ),
+                      ],
                     ],
                   ),
                   if (entry.remarks != null && entry.remarks!.isNotEmpty) ...[

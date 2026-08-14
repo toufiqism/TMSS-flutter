@@ -93,6 +93,10 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(events, [isA<RequisitionDetailClosed>()]);
+      // State must also be set: a deep link opened as the navigation root has nothing
+      // to pop to, and returning early would leave a permanent spinner.
+      expect(container.read(requisitionDetailNotifierProvider),
+          isA<RequisitionDetailError>());
       await sub.cancel();
     });
 
@@ -146,6 +150,63 @@ void main() {
       verify(() => mockSessionExpiration.handle()).called(1);
       expect(events, [isA<RequisitionDetailSessionExpired>()]);
       await sub.cancel();
+    });
+  });
+
+  group('refresh', () {
+    Future<RequisitionDetailNotifier> loaded() async {
+      when(() => mockGet('r1')).thenAnswer((_) async => ApiResult.success(_requisition()));
+      final notifier = container.read(requisitionDetailNotifierProvider.notifier);
+      await notifier.load('r1');
+      return notifier;
+    }
+
+    test('a failed refresh keeps the requisition on screen', () async {
+      // Losing the page you are reading because the lift has no signal is far worse
+      // than simply not refreshing.
+      final notifier = await loaded();
+      final events = <RequisitionDetailEvent>[];
+      final sub = notifier.events.listen(events.add);
+      when(() => mockGet('r1')).thenAnswer((_) async => const ApiResult.offline());
+
+      await notifier.refresh();
+      await Future<void>.delayed(Duration.zero);
+
+      final state = container.read(requisitionDetailNotifierProvider);
+      expect(state, isA<RequisitionDetailSuccess>());
+      expect((state as RequisitionDetailSuccess).requisition.id, 'r1');
+      expect(state.isRefreshing, isFalse, reason: 'the spinner must not stick');
+      expect(events, [isA<RequisitionDetailShowMessage>()]);
+      await sub.cancel();
+    });
+
+    test('a failed *initial* load still becomes an error screen', () async {
+      // Nothing to preserve, so the error is the only thing worth showing.
+      when(() => mockGet('r1')).thenAnswer((_) async => const ApiResult.offline());
+
+      await container.read(requisitionDetailNotifierProvider.notifier).load('r1');
+
+      expect(container.read(requisitionDetailNotifierProvider),
+          isA<RequisitionDetailError>());
+    });
+
+    test('a successful refresh swaps in the new data', () async {
+      final notifier = await loaded();
+      when(() => mockGet('r1')).thenAnswer(
+        (_) async => ApiResult.success(_requisition(status: RequisitionStatus.approved)),
+      );
+
+      await notifier.refresh();
+
+      final state = container.read(requisitionDetailNotifierProvider)
+          as RequisitionDetailSuccess;
+      expect(state.requisition.status, RequisitionStatus.approved);
+    });
+
+    test('refresh before any load is a no-op', () async {
+      await container.read(requisitionDetailNotifierProvider.notifier).refresh();
+
+      verifyNever(() => mockGet(any()));
     });
   });
 
