@@ -2,6 +2,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'user.freezed.dart';
 
+/// The signed-in person, as the *login* response describes them.
+///
+/// Deliberately not the same thing as [UserAccount]: everything here comes from
+/// `POST /login` and is persisted with the session, because the drawer renders it on
+/// every screen and must not need a network call to do so.
 @freezed
 abstract class User with _$User {
   const factory User({
@@ -9,7 +14,30 @@ abstract class User with _$User {
     required String name,
     required String designation,
     required String email,
+    String? phone,
+    String? companyName,
   }) = _User;
+}
+
+/// The account row behind the token, from `GET /user`.
+///
+/// Kept separate from [User] and **not** persisted: it is account metadata rather than
+/// identity, it is only needed on the profile screen, and staleness matters more here
+/// (an account can be deactivated between launches).
+///
+/// `GET /user` also returns `remember_token` in plaintext. It is deliberately not
+/// modelled — there is no reason for this client to hold it, let alone display it.
+@freezed
+abstract class UserAccount with _$UserAccount {
+  const factory UserAccount({
+    String? id,
+    String? email,
+    String? employeeId,
+    String? roleId,
+    String? activeStatus,
+    DateTime? memberSince,
+    DateTime? lastPasswordChangedAt,
+  }) = _UserAccount;
 }
 
 @freezed

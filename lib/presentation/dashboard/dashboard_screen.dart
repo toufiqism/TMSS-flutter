@@ -8,6 +8,7 @@ import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/requisition_row.dart';
+import '../common/safe_insets.dart';
 import '../common/strings.dart';
 import 'dashboard_notifier.dart';
 import 'dashboard_state.dart';
@@ -116,7 +117,7 @@ class _DashboardContent extends StatelessWidget {
       // Without this the dashboard cannot be over-scrolled when its content is
       // shorter than the viewport, and the enclosing RefreshIndicator never fires.
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20).addBottomSystemInset(context),
       children: [
         _HeroCard(onRequisitionNow: onRequisitionNow),
         const SizedBox(height: 20),

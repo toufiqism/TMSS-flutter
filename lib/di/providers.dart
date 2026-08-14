@@ -16,6 +16,7 @@ import '../domain/usecase/cancel_requisition_use_case.dart';
 import '../domain/usecase/get_dashboard_summary_use_case.dart';
 import '../domain/usecase/get_requisition_use_case.dart';
 import '../domain/usecase/get_requisitions_use_case.dart';
+import '../domain/usecase/get_user_account_use_case.dart';
 import '../domain/usecase/login_use_case.dart';
 import '../domain/usecase/logout_use_case.dart';
 import '../domain/usecase/observe_session_use_case.dart';
@@ -119,6 +120,10 @@ final sessionExpirationHandlerProvider = Provider<SessionExpirationHandler>((ref
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
   return LoginUseCase(ref.watch(authRepositoryProvider));
+});
+
+final getUserAccountUseCaseProvider = Provider<GetUserAccountUseCase>((ref) {
+  return GetUserAccountUseCase(ref.watch(authRepositoryProvider));
 });
 
 final observeSessionUseCaseProvider = Provider<ObserveSessionUseCase>((ref) {

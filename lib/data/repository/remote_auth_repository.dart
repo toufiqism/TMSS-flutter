@@ -68,6 +68,21 @@ class RemoteAuthRepository implements AuthRepository {
     }
   }
 
+  @override
+  Future<ApiResult<UserAccount>> getAccount() {
+    return safeApiCall<UserAccount>(
+      _apiClient.getAuthenticatedUser,
+      // Bare object, not the {success, message, data} envelope every other endpoint
+      // uses — so the whole body *is* the account.
+      decode: (body) {
+        if (body is! Map<String, dynamic>) {
+          throw const FormatException('Expected a JSON object from GET /user');
+        }
+        return UserMapper.accountFromJson(body);
+      },
+    );
+  }
+
   /// Revokes the token server-side, then clears it locally.
   ///
   /// `POST /logout` is undocumented — it appears nowhere in the contract, which lists

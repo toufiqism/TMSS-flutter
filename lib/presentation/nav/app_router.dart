@@ -12,6 +12,7 @@ import '../dashboard/dashboard_screen.dart';
 import '../requisition_detail/requisition_detail_notifier.dart';
 import '../requisition_detail/requisition_detail_screen.dart';
 import '../login/login_screen.dart';
+import '../profile/profile_screen.dart';
 import '../requisition_create/requisition_create_screen.dart';
 import '../requisition_list/requisition_list_notifier.dart';
 import '../requisition_list/requisition_list_screen.dart';
@@ -145,6 +146,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return AppShell(
             currentPath: state.matchedLocation,
             onNavigate: (path) => context.go(path),
+            onOpenProfile: () => context.push(RoutePaths.profile),
             topBarTitle: topBarTitle,
             showNotificationBell: state.matchedLocation != RoutePaths.requisitionList,
             child: child,
@@ -181,6 +183,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _refreshRequisitionViews(ref);
           },
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.profile,
+        builder: (context, state) => ProfileScreen(onBack: () => context.pop()),
       ),
       GoRoute(
         path: RoutePaths.requisitionDetail,

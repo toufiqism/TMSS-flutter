@@ -96,6 +96,21 @@ class TmsStrings {
 
   static const requisitionListRetry = 'Retry';
 
+  static const profileTitle = 'Profile';
+  static const profileSectionContact = 'Contact';
+  static const profileSectionAccount = 'Account';
+  static const profileEmail = 'Email';
+  static const profilePhone = 'Phone';
+  static const profileCompany = 'Company';
+  static const profileDesignation = 'Designation';
+  static const profileEmployeeId = 'Employee ID';
+  static const profileRole = 'Role';
+  static const profileStatus = 'Status';
+  static const profileMemberSince = 'Member since';
+  static const profilePasswordChanged = 'Password last changed';
+  static const profileAccountUnavailable = 'Could not load account details';
+  static const profileNotProvided = 'Not provided';
+
   static const requisitionDetailTitle = 'Requisition Details';
   static const requisitionDetailEdit = 'Edit';
   static const requisitionDetailCancelled = 'Requisition cancelled';

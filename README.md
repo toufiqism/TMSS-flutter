@@ -5,7 +5,7 @@ Android and iOS from one codebase. Port of the native Android app
 (`com.banglatrac.tmss`), matching its forest-green redesign.
 
 **Login → Dashboard → My Requisitions → Requisition Detail → Edit**, plus New
-Requisition in passenger and logistics variants.
+Requisition in passenger and logistics variants, and a read-only Profile.
 
 ## Requirements
 
@@ -168,8 +168,14 @@ Verified against the live server at `https://tms.carcopolo.com/bt/api`.
 collection and is **wrong in several places** — see `lib/data/remote/README.md`, which
 documents observed behaviour and where the contract diverges from it.
 
-Endpoints used: `POST /login`, `POST /logout`, `GET|POST /requisitions`,
+Endpoints used: `POST /login`, `POST /logout`, `GET /user`, `GET|POST /requisitions`,
 `GET|PUT /requisitions/{id}`, `POST /requisitions/{id}/cancel`.
+
+`GET /user` is the odd one out: it returns a **bare object** with no
+`{success, message, data}` envelope, and carries no name or designation — those come from
+the login response. So the Profile screen renders identity from the stored session and
+account details from `/user`, and a failed fetch degrades only the latter. That response
+also includes `remember_token` in plaintext; the client never reads it.
 
 Search, sort and the dashboard counts have no endpoint behind them and are derived
 client-side from the list (bounded — see `ApiConfig`). Employee lookup is the one
@@ -211,7 +217,7 @@ flutter_secure_storage 11 already defaults to AES-GCM under an RSA-OAEP Keystore
 ## Testing
 
 `flutter_test` + `mocktail`, with Riverpod providers overridden via `ProviderContainer`.
-**142 tests**, no widget or golden tests yet.
+**157 tests**, no widget or golden tests yet.
 
 ```
 test/data/          mappers, timezone conversion, safeApiCall status branches,

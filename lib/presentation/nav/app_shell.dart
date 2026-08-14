@@ -39,6 +39,7 @@ class AppShell extends ConsumerWidget {
     super.key,
     required this.currentPath,
     required this.onNavigate,
+    required this.onOpenProfile,
     required this.child,
     this.topBarTitle,
     this.showNotificationBell = true,
@@ -46,6 +47,10 @@ class AppShell extends ConsumerWidget {
 
   final String currentPath;
   final ValueChanged<String> onNavigate;
+
+  /// Pushed rather than navigated to, so the profile returns to the screen it was
+  /// opened from instead of replacing it in the shell.
+  final VoidCallback onOpenProfile;
   final Widget child;
   final Widget? topBarTitle;
   final bool showNotificationBell;
@@ -215,7 +220,7 @@ class AppShell extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.person_outline, color: tmsTextMutedAlt),
             tooltip: TmsStrings.navProfile,
-            onPressed: () {},
+            onPressed: onOpenProfile,
           ),
           if (showNotificationBell)
             IconButton(

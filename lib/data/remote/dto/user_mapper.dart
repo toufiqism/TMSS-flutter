@@ -1,5 +1,6 @@
 import '../../../domain/model/user.dart';
 import 'json_reader.dart';
+import 'wire_date_time.dart';
 
 /// Builds the domain [User] from what the server actually returns.
 ///
@@ -26,6 +27,33 @@ class UserMapper {
       name: data.stringOrNull('name') ?? _nameFromEmail(username),
       designation: data.stringOrNull('designation') ?? '',
       email: username,
+      phone: data.stringOrNull('phone'),
+      companyName: data.stringOrNull('company_name'),
+    );
+  }
+
+  /// Parses `GET /user`.
+  ///
+  /// **No envelope.** Every other endpoint answers `{success, message, data}`; this one
+  /// returns the account row bare, so there is nothing to unwrap and looking for `data`
+  /// would find nothing.
+  ///
+  /// `remember_token` is present in the response and is deliberately never read.
+  ///
+  /// Note `last_pasword_updated_at` — the typo is the server's, and matching it exactly
+  /// is required. The correct spelling is also accepted in case it is ever fixed.
+  static UserAccount accountFromJson(Map<String, dynamic> json) {
+    return UserAccount(
+      id: json.idOrNull('id'),
+      email: json.stringFrom(['user_name', 'email']),
+      employeeId: json.idOrNull('employee_id'),
+      roleId: json.idOrNull('role_id'),
+      activeStatus: json.stringOrNull('active_status'),
+      // Server timestamps on this API are UTC, like `created_at` elsewhere.
+      memberSince: WireDateTime.parseUtc(json.stringOrNull('created_at')),
+      lastPasswordChangedAt: WireDateTime.parseUtc(
+        json.stringFrom(['last_pasword_updated_at', 'last_password_updated_at']),
+      ),
     );
   }
 

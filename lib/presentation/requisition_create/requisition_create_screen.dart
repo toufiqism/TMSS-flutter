@@ -10,6 +10,7 @@ import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/date_time_field.dart';
+import '../common/safe_insets.dart';
 import '../common/strings.dart';
 import '../common/synced_text_field.dart';
 import 'form_controls.dart';
@@ -126,7 +127,11 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            // Submit is the last thing in a Column, not a bottomNavigationBar, so
+            // Scaffold reserves no space for it and nothing applies the system inset —
+            // it rendered under Android's navigation buttons.
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16)
+                .addBottomSystemInset(context),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(

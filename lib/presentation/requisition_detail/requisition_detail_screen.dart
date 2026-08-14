@@ -9,6 +9,7 @@ import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/status_chip.dart';
+import '../common/safe_insets.dart';
 import '../common/strings.dart';
 import 'requisition_detail_notifier.dart';
 import 'requisition_detail_state.dart';
@@ -185,7 +186,9 @@ class _Content extends StatelessWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      // Actions sit at the very bottom of this list; without the system inset they
+      // render under Android's navigation bar.
+      padding: const EdgeInsets.all(20).addBottomSystemInset(context),
       children: [
         _HeaderCard(requisition: requisition),
         const SizedBox(height: 16),

@@ -190,6 +190,8 @@ class SessionLocalDataSource {
         'userName': session.user.name,
         'userDesignation': session.user.designation,
         'userEmail': session.user.email,
+        'userPhone': session.user.phone,
+        'userCompany': session.user.companyName,
         // ISO-8601 UTC: this is our own persistence format, not the wire format, and it
         // round-trips unambiguously regardless of device timezone.
         'expiresAt': session.expiresAt?.toUtc().toIso8601String(),
@@ -209,6 +211,10 @@ class SessionLocalDataSource {
         name: json['userName'] as String,
         designation: json['userDesignation'] as String,
         email: json['userEmail'] as String,
+        // Read leniently: sessions written before these existed simply lack the keys,
+        // and a missing phone must not invalidate an otherwise good session.
+        phone: json['userPhone'] as String?,
+        companyName: json['userCompany'] as String?,
       ),
       expiresAt: rawExpiry is String ? DateTime.tryParse(rawExpiry)?.toLocal() : null,
     );

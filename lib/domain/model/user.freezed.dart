@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$User {
 
- String get id; String get name; String get designation; String get email;
+ String get id; String get name; String get designation; String get email; String? get phone; String? get companyName;
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $UserCopyWith<User> get copyWith => _$UserCopyWithImpl<User>(this as User, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is User&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.designation, designation) || other.designation == designation)&&(identical(other.email, email) || other.email == email));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is User&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.designation, designation) || other.designation == designation)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.companyName, companyName) || other.companyName == companyName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,designation,email);
+int get hashCode => Object.hash(runtimeType,id,name,designation,email,phone,companyName);
 
 @override
 String toString() {
-  return 'User(id: $id, name: $name, designation: $designation, email: $email)';
+  return 'User(id: $id, name: $name, designation: $designation, email: $email, phone: $phone, companyName: $companyName)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $UserCopyWith<$Res>  {
   factory $UserCopyWith(User value, $Res Function(User) _then) = _$UserCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String designation, String email
+ String id, String name, String designation, String email, String? phone, String? companyName
 });
 
 
@@ -62,13 +62,15 @@ class _$UserCopyWithImpl<$Res>
 
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? designation = null,Object? email = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? designation = null,Object? email = null,Object? phone = freezed,Object? companyName = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,designation: null == designation ? _self.designation : designation // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
-as String,
+as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
+as String?,companyName: freezed == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -153,10 +155,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String designation,  String email)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String designation,  String email,  String? phone,  String? companyName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _User() when $default != null:
-return $default(_that.id,_that.name,_that.designation,_that.email);case _:
+return $default(_that.id,_that.name,_that.designation,_that.email,_that.phone,_that.companyName);case _:
   return orElse();
 
 }
@@ -174,10 +176,10 @@ return $default(_that.id,_that.name,_that.designation,_that.email);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String designation,  String email)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String designation,  String email,  String? phone,  String? companyName)  $default,) {final _that = this;
 switch (_that) {
 case _User():
-return $default(_that.id,_that.name,_that.designation,_that.email);case _:
+return $default(_that.id,_that.name,_that.designation,_that.email,_that.phone,_that.companyName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +196,10 @@ return $default(_that.id,_that.name,_that.designation,_that.email);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String designation,  String email)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String designation,  String email,  String? phone,  String? companyName)?  $default,) {final _that = this;
 switch (_that) {
 case _User() when $default != null:
-return $default(_that.id,_that.name,_that.designation,_that.email);case _:
+return $default(_that.id,_that.name,_that.designation,_that.email,_that.phone,_that.companyName);case _:
   return null;
 
 }
@@ -209,13 +211,15 @@ return $default(_that.id,_that.name,_that.designation,_that.email);case _:
 
 
 class _User implements User {
-  const _User({required this.id, required this.name, required this.designation, required this.email});
+  const _User({required this.id, required this.name, required this.designation, required this.email, this.phone, this.companyName});
   
 
 @override final  String id;
 @override final  String name;
 @override final  String designation;
 @override final  String email;
+@override final  String? phone;
+@override final  String? companyName;
 
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
@@ -227,16 +231,16 @@ _$UserCopyWith<_User> get copyWith => __$UserCopyWithImpl<_User>(this, _$identit
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _User&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.designation, designation) || other.designation == designation)&&(identical(other.email, email) || other.email == email));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _User&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.designation, designation) || other.designation == designation)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.companyName, companyName) || other.companyName == companyName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,designation,email);
+int get hashCode => Object.hash(runtimeType,id,name,designation,email,phone,companyName);
 
 @override
 String toString() {
-  return 'User(id: $id, name: $name, designation: $designation, email: $email)';
+  return 'User(id: $id, name: $name, designation: $designation, email: $email, phone: $phone, companyName: $companyName)';
 }
 
 
@@ -247,7 +251,7 @@ abstract mixin class _$UserCopyWith<$Res> implements $UserCopyWith<$Res> {
   factory _$UserCopyWith(_User value, $Res Function(_User) _then) = __$UserCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String designation, String email
+ String id, String name, String designation, String email, String? phone, String? companyName
 });
 
 
@@ -264,13 +268,290 @@ class __$UserCopyWithImpl<$Res>
 
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? designation = null,Object? email = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? designation = null,Object? email = null,Object? phone = freezed,Object? companyName = freezed,}) {
   return _then(_User(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,designation: null == designation ? _self.designation : designation // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
-as String,
+as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
+as String?,companyName: freezed == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+mixin _$UserAccount {
+
+ String? get id; String? get email; String? get employeeId; String? get roleId; String? get activeStatus; DateTime? get memberSince; DateTime? get lastPasswordChangedAt;
+/// Create a copy of UserAccount
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$UserAccountCopyWith<UserAccount> get copyWith => _$UserAccountCopyWithImpl<UserAccount>(this as UserAccount, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserAccount&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.employeeId, employeeId) || other.employeeId == employeeId)&&(identical(other.roleId, roleId) || other.roleId == roleId)&&(identical(other.activeStatus, activeStatus) || other.activeStatus == activeStatus)&&(identical(other.memberSince, memberSince) || other.memberSince == memberSince)&&(identical(other.lastPasswordChangedAt, lastPasswordChangedAt) || other.lastPasswordChangedAt == lastPasswordChangedAt));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,email,employeeId,roleId,activeStatus,memberSince,lastPasswordChangedAt);
+
+@override
+String toString() {
+  return 'UserAccount(id: $id, email: $email, employeeId: $employeeId, roleId: $roleId, activeStatus: $activeStatus, memberSince: $memberSince, lastPasswordChangedAt: $lastPasswordChangedAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $UserAccountCopyWith<$Res>  {
+  factory $UserAccountCopyWith(UserAccount value, $Res Function(UserAccount) _then) = _$UserAccountCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String? email, String? employeeId, String? roleId, String? activeStatus, DateTime? memberSince, DateTime? lastPasswordChangedAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$UserAccountCopyWithImpl<$Res>
+    implements $UserAccountCopyWith<$Res> {
+  _$UserAccountCopyWithImpl(this._self, this._then);
+
+  final UserAccount _self;
+  final $Res Function(UserAccount) _then;
+
+/// Create a copy of UserAccount
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? email = freezed,Object? employeeId = freezed,Object? roleId = freezed,Object? activeStatus = freezed,Object? memberSince = freezed,Object? lastPasswordChangedAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,employeeId: freezed == employeeId ? _self.employeeId : employeeId // ignore: cast_nullable_to_non_nullable
+as String?,roleId: freezed == roleId ? _self.roleId : roleId // ignore: cast_nullable_to_non_nullable
+as String?,activeStatus: freezed == activeStatus ? _self.activeStatus : activeStatus // ignore: cast_nullable_to_non_nullable
+as String?,memberSince: freezed == memberSince ? _self.memberSince : memberSince // ignore: cast_nullable_to_non_nullable
+as DateTime?,lastPasswordChangedAt: freezed == lastPasswordChangedAt ? _self.lastPasswordChangedAt : lastPasswordChangedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [UserAccount].
+extension UserAccountPatterns on UserAccount {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UserAccount value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _UserAccount() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UserAccount value)  $default,){
+final _that = this;
+switch (_that) {
+case _UserAccount():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UserAccount value)?  $default,){
+final _that = this;
+switch (_that) {
+case _UserAccount() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? email,  String? employeeId,  String? roleId,  String? activeStatus,  DateTime? memberSince,  DateTime? lastPasswordChangedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _UserAccount() when $default != null:
+return $default(_that.id,_that.email,_that.employeeId,_that.roleId,_that.activeStatus,_that.memberSince,_that.lastPasswordChangedAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? email,  String? employeeId,  String? roleId,  String? activeStatus,  DateTime? memberSince,  DateTime? lastPasswordChangedAt)  $default,) {final _that = this;
+switch (_that) {
+case _UserAccount():
+return $default(_that.id,_that.email,_that.employeeId,_that.roleId,_that.activeStatus,_that.memberSince,_that.lastPasswordChangedAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? email,  String? employeeId,  String? roleId,  String? activeStatus,  DateTime? memberSince,  DateTime? lastPasswordChangedAt)?  $default,) {final _that = this;
+switch (_that) {
+case _UserAccount() when $default != null:
+return $default(_that.id,_that.email,_that.employeeId,_that.roleId,_that.activeStatus,_that.memberSince,_that.lastPasswordChangedAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _UserAccount implements UserAccount {
+  const _UserAccount({this.id, this.email, this.employeeId, this.roleId, this.activeStatus, this.memberSince, this.lastPasswordChangedAt});
+  
+
+@override final  String? id;
+@override final  String? email;
+@override final  String? employeeId;
+@override final  String? roleId;
+@override final  String? activeStatus;
+@override final  DateTime? memberSince;
+@override final  DateTime? lastPasswordChangedAt;
+
+/// Create a copy of UserAccount
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$UserAccountCopyWith<_UserAccount> get copyWith => __$UserAccountCopyWithImpl<_UserAccount>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserAccount&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.employeeId, employeeId) || other.employeeId == employeeId)&&(identical(other.roleId, roleId) || other.roleId == roleId)&&(identical(other.activeStatus, activeStatus) || other.activeStatus == activeStatus)&&(identical(other.memberSince, memberSince) || other.memberSince == memberSince)&&(identical(other.lastPasswordChangedAt, lastPasswordChangedAt) || other.lastPasswordChangedAt == lastPasswordChangedAt));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,email,employeeId,roleId,activeStatus,memberSince,lastPasswordChangedAt);
+
+@override
+String toString() {
+  return 'UserAccount(id: $id, email: $email, employeeId: $employeeId, roleId: $roleId, activeStatus: $activeStatus, memberSince: $memberSince, lastPasswordChangedAt: $lastPasswordChangedAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$UserAccountCopyWith<$Res> implements $UserAccountCopyWith<$Res> {
+  factory _$UserAccountCopyWith(_UserAccount value, $Res Function(_UserAccount) _then) = __$UserAccountCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String? email, String? employeeId, String? roleId, String? activeStatus, DateTime? memberSince, DateTime? lastPasswordChangedAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$UserAccountCopyWithImpl<$Res>
+    implements _$UserAccountCopyWith<$Res> {
+  __$UserAccountCopyWithImpl(this._self, this._then);
+
+  final _UserAccount _self;
+  final $Res Function(_UserAccount) _then;
+
+/// Create a copy of UserAccount
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? email = freezed,Object? employeeId = freezed,Object? roleId = freezed,Object? activeStatus = freezed,Object? memberSince = freezed,Object? lastPasswordChangedAt = freezed,}) {
+  return _then(_UserAccount(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,employeeId: freezed == employeeId ? _self.employeeId : employeeId // ignore: cast_nullable_to_non_nullable
+as String?,roleId: freezed == roleId ? _self.roleId : roleId // ignore: cast_nullable_to_non_nullable
+as String?,activeStatus: freezed == activeStatus ? _self.activeStatus : activeStatus // ignore: cast_nullable_to_non_nullable
+as String?,memberSince: freezed == memberSince ? _self.memberSince : memberSince // ignore: cast_nullable_to_non_nullable
+as DateTime?,lastPasswordChangedAt: freezed == lastPasswordChangedAt ? _self.lastPasswordChangedAt : lastPasswordChangedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
