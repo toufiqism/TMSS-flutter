@@ -36,7 +36,7 @@ class LoginNotifier extends Notifier<LoginUiState>
   Future<void> submit() async {
     if (state.isLoading) return;
     if (state.username.trim().isEmpty || state.password.isEmpty) {
-      state = state.copyWith(errorMessage: TmsStrings.loginErrorRequiredFields);
+      state = state.copyWith(errorMessage: TracGoStrings.loginErrorRequiredFields);
       return;
     }
 
@@ -54,7 +54,7 @@ class LoginNotifier extends Notifier<LoginUiState>
       case ApiError<Session>(:final message):
         setStateIfAlive(state.copyWith(
           isLoading: false,
-          errorMessage: message ?? TmsStrings.loginErrorInvalidCredentials,
+          errorMessage: message ?? TracGoStrings.loginErrorInvalidCredentials,
         ));
       case ApiOffline<Session>(:final message):
         setStateIfAlive(state.copyWith(isLoading: false, errorMessage: message));

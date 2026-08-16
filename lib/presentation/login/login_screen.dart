@@ -7,7 +7,7 @@ import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../common/strings.dart';
 import '../common/synced_text_field.dart';
-import '../common/tms_logo_mark.dart';
+import '../common/tracgo_logo_mark.dart';
 import 'login_notifier.dart';
 import 'login_state.dart';
 
@@ -58,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final media = MediaQuery.of(context);
 
     return Scaffold(
-      backgroundColor: tmsSurfaceWhite,
+      backgroundColor: tracGoSurfaceWhite,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -93,11 +93,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     fit: BoxFit.cover,
                     // A missing or corrupt asset must not take the login screen down.
                     errorBuilder: (context, error, stackTrace) =>
-                        const ColoredBox(color: tmsGreenLight),
+                        const ColoredBox(color: tracGoGreenLight),
                   ),
                 ),
                 Positioned.fill(
-                  child: ColoredBox(color: tmsGreenLight.withValues(alpha: 0.4)),
+                  child: ColoredBox(color: tracGoGreenLight.withValues(alpha: 0.4)),
                 ),
                 ConstrainedBox(
                   constraints: BoxConstraints(
@@ -117,11 +117,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(TmsStrings.loginTaglineTitle, style: tmsTextTheme.headlineSmall),
+                          Text(TracGoStrings.loginTaglineTitle, style: tracGoTextTheme.headlineSmall),
                           const SizedBox(height: 10),
                           Text(
-                            TmsStrings.loginTaglineBody,
-                            style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextSubtle),
+                            TracGoStrings.loginTaglineBody,
+                            style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextSubtle),
                           ),
                         ],
                       ),
@@ -131,27 +131,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Positioned(
                   top: media.padding.top + 24,
                   left: 24,
-                  child: const TmsLogoMark(
-                    badgeColor: tmsGreenDark,
-                    glyphColor: tmsLoginAccentGreen,
+                  child: const TracGoLogoMark(
+                    badgeColor: tracGoGreenDark,
+                    glyphColor: tracGoLoginAccentGreen,
                     size: _logoSize,
                   ),
                 ),
               ],
               ),
             ),
-            const Divider(height: 1, indent: 28, endIndent: 28, color: tmsDivider),
+            const Divider(height: 1, indent: 28, endIndent: 28, color: tracGoDivider),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 32),
               child: AutofillGroup(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(TmsStrings.loginHeading, style: tmsTextTheme.titleLarge),
+                    Text(TracGoStrings.loginHeading, style: tracGoTextTheme.titleLarge),
                     const SizedBox(height: 6),
                     Text(
-                      TmsStrings.loginSubheading,
-                      style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+                      TracGoStrings.loginSubheading,
+                      style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
                     ),
                     const SizedBox(height: 24),
                     if (uiState.errorMessage != null)
@@ -163,10 +163,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     _LabeledField(
-                      label: TmsStrings.loginUsernameLabel,
+                      label: TracGoStrings.loginUsernameLabel,
                       value: uiState.username,
                       onChanged: notifier.onUsernameChange,
-                      hint: TmsStrings.loginUsernamePlaceholder,
+                      hint: TracGoStrings.loginUsernamePlaceholder,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.username],
@@ -174,10 +174,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 14),
                     _LabeledField(
-                      label: TmsStrings.loginPasswordLabel,
+                      label: TracGoStrings.loginPasswordLabel,
                       value: uiState.password,
                       onChanged: notifier.onPasswordChange,
-                      hint: TmsStrings.loginPasswordPlaceholder,
+                      hint: TracGoStrings.loginPasswordPlaceholder,
                       obscureText: true,
                       textInputAction: TextInputAction.done,
                       autofillHints: const [AutofillHints.password],
@@ -187,12 +187,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
                     RichText(
                       text: TextSpan(
-                        style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+                        style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
                         children: [
-                          TextSpan(text: '${TmsStrings.loginForgotPassword} '),
+                          TextSpan(text: '${TracGoStrings.loginForgotPassword} '),
                           TextSpan(
-                            text: TmsStrings.loginContactAdmin,
-                            style: const TextStyle(color: tmsGreen, fontWeight: FontWeight.bold),
+                            text: TracGoStrings.loginContactAdmin,
+                            style: const TextStyle(color: tracGoGreen, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -213,15 +213,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: tmsSurfaceWhite,
+                                  color: tracGoSurfaceWhite,
                                 ),
                               )
                             : Text(
-                                TmsStrings.loginSignInButton,
-                                style: tmsTextTheme.bodyLarge?.copyWith(
+                                TracGoStrings.loginSignInButton,
+                                style: tracGoTextTheme.bodyLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15.5,
-                                  color: tmsSurfaceWhite,
+                                  color: tracGoSurfaceWhite,
                                 ),
                               ),
                       ),
@@ -267,7 +267,7 @@ class _LabeledField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: tmsTextTheme.labelMedium),
+        Text(label.toUpperCase(), style: tracGoTextTheme.labelMedium),
         const SizedBox(height: 6),
         SyncedTextField(
           value: value,

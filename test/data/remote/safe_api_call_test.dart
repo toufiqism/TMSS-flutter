@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/core/network_messages.dart';
-import 'package:tmss/data/remote/safe_api_call.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/core/network_messages.dart';
+import 'package:tracgo/data/remote/safe_api_call.dart';
 
 Response<dynamic> _response(int status, [dynamic body]) => Response<dynamic>(
       requestOptions: RequestOptions(path: '/requisitions'),

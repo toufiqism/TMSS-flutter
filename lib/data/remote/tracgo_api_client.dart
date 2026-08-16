@@ -10,8 +10,8 @@ import 'package:dio/dio.dart';
 /// The Dio instance is configured with `validateStatus: (_) => true`, so a 404 comes
 /// back as a response rather than an exception. That keeps status interpretation in
 /// exactly one place instead of split across a return path and a catch block.
-class TmssApiClient {
-  TmssApiClient(this._dio);
+class TracGoApiClient {
+  TracGoApiClient(this._dio);
 
   final Dio _dio;
 

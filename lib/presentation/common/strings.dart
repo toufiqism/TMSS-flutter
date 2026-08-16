@@ -1,10 +1,10 @@
 /// Plain Dart constants mirroring the Android app's strings.xml values verbatim.
 /// Full ARB/flutter_localizations scaffolding wasn't in scope for this port — add it later
 /// if/when multi-language support is actually needed.
-class TmsStrings {
-  TmsStrings._();
+class TracGoStrings {
+  TracGoStrings._();
 
-  static const appName = 'TMS';
+  static const appName = 'TracGo';
 
   static const loginHeading = 'Sign In';
   static const loginSubheading = 'Enter your username and password';

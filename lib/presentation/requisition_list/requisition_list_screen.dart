@@ -75,16 +75,16 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(TmsStrings.requisitionListCancelConfirmTitle),
-        content: const Text(TmsStrings.requisitionListCancelConfirmBody),
+        title: const Text(TracGoStrings.requisitionListCancelConfirmTitle),
+        content: const Text(TracGoStrings.requisitionListCancelConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(TmsStrings.requisitionListCancelConfirmNo),
+            child: const Text(TracGoStrings.requisitionListCancelConfirmNo),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(TmsStrings.requisitionListCancelConfirmYes),
+            child: const Text(TracGoStrings.requisitionListCancelConfirmYes),
           ),
         ],
       ),
@@ -102,10 +102,10 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
     final notifier = ref.read(requisitionListNotifierProvider.notifier);
 
     return Scaffold(
-      backgroundColor: tmsPageBackground,
+      backgroundColor: tracGoPageBackground,
       bottomNavigationBar: SafeArea(
         child: Container(
-          color: tmsSurfaceWhite,
+          color: tracGoSurfaceWhite,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           // Row(end), not Align(centerRight). Scaffold measures bottomNavigationBar with
           // *loose* constraints, and an Align without a heightFactor expands to the
@@ -129,7 +129,7 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                     children: [
                       Icon(Icons.add, size: 16),
                       SizedBox(width: 8),
-                      Flexible(child: Text(TmsStrings.requisitionListNewFab)),
+                      Flexible(child: Text(TracGoStrings.requisitionListNewFab)),
                     ],
                   ),
                 ),
@@ -165,7 +165,7 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                     onRetry: () => unawaited(notifier.refresh()),
                   ),
                 RequisitionListUiState(items: []) => const _EmptyOrErrorState(
-                  message: TmsStrings.requisitionListEmpty,
+                  message: TracGoStrings.requisitionListEmpty,
                 ),
                 RequisitionListUiState(:final items, :final isLoadingMore) =>
                   ListView.separated(
@@ -203,9 +203,9 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(4),
                                   child: Text(
-                                    TmsStrings.requisitionListCancel,
-                                    style: tmsTextTheme.bodyMedium?.copyWith(
-                                      color: tmsDestructiveRed,
+                                    TracGoStrings.requisitionListCancel,
+                                    style: tracGoTextTheme.bodyMedium?.copyWith(
+                                      color: tracGoDestructiveRed,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -270,7 +270,7 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
         : widget.startDate;
     final newEnd = target == _DatePickerTarget.end ? picked : widget.endDate;
     if (newStart != null && newEnd != null && newEnd.isBefore(newStart)) {
-      setState(() => _rangeError = TmsStrings.requisitionListDateRangeInvalid);
+      setState(() => _rangeError = TracGoStrings.requisitionListDateRangeInvalid);
       return;
     }
     setState(() => _rangeError = null);
@@ -290,10 +290,10 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
           SyncedTextField(
             value: widget.searchQuery,
             onChanged: widget.onSearchQueryChange,
-            hintText: TmsStrings.requisitionListSearchPlaceholder,
+            hintText: TracGoStrings.requisitionListSearchPlaceholder,
             textInputAction: TextInputAction.search,
-            prefixIcon: const Icon(Icons.search, color: tmsTextSubtle),
-            fillColor: tmsSurfaceWhite,
+            prefixIcon: const Icon(Icons.search, color: tracGoTextSubtle),
+            fillColor: tracGoSurfaceWhite,
           ),
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -324,16 +324,16 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
                 // requisition rows were built but never laid out and the screen showed
                 // nothing at all. The dashboard's stat panel gets away with
                 // VerticalDivider only because it wraps its Row in IntrinsicHeight.
-                Container(width: 1, height: 24, color: tmsDivider),
+                Container(width: 1, height: 24, color: tracGoDivider),
                 TextButton(
                   onPressed: () {
                     setState(() => _rangeError = null);
                     widget.onReset();
                   },
                   child: Text(
-                    TmsStrings.requisitionListReset,
-                    style: tmsTextTheme.bodyMedium?.copyWith(
-                      color: tmsGreen,
+                    TracGoStrings.requisitionListReset,
+                    style: tracGoTextTheme.bodyMedium?.copyWith(
+                      color: tracGoGreen,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -344,7 +344,7 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
           if (_rangeError != null)
             Text(
               _rangeError!,
-              style: tmsTextTheme.bodySmall?.copyWith(
+              style: tracGoTextTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
               ),
             ),
@@ -368,18 +368,18 @@ class _FilterPillChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: const BoxDecoration(
-          color: tmsGreenLight,
+          color: tracGoGreenLight,
           borderRadius: pillBorderRadius,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.calendar_month, size: 15, color: tmsGreen),
+            const Icon(Icons.calendar_month, size: 15, color: tracGoGreen),
             const SizedBox(width: 6),
             Text(
               label,
-              style: tmsTextTheme.bodyMedium?.copyWith(
-                color: tmsGreen,
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                color: tracGoGreen,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -417,8 +417,8 @@ class _EmptyOrErrorState extends StatelessWidget {
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: tmsTextTheme.bodyMedium?.copyWith(
-                      color: tmsTextMutedAlt,
+                    style: tracGoTextTheme.bodyMedium?.copyWith(
+                      color: tracGoTextMutedAlt,
                     ),
                   ),
                   if (onRetry != null) ...[
@@ -426,7 +426,7 @@ class _EmptyOrErrorState extends StatelessWidget {
                     ElevatedButton(
                       onPressed: onRetry,
                       style: ElevatedButton.styleFrom(shape: pillShape),
-                      child: const Text(TmsStrings.requisitionListRetry),
+                      child: const Text(TracGoStrings.requisitionListRetry),
                     ),
                   ],
                 ],

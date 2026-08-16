@@ -26,13 +26,13 @@ Future<void> main() async {
         crashReporterProvider.overrideWithValue(telemetry.crashReporter),
         appRemoteConfigProvider.overrideWithValue(telemetry.remoteConfig),
       ],
-      child: const TmsApp(),
+      child: const TracGoApp(),
     ),
   );
 }
 
-class TmsApp extends ConsumerWidget {
-  const TmsApp({super.key});
+class TracGoApp extends ConsumerWidget {
+  const TracGoApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,9 +43,9 @@ class TmsApp extends ConsumerWidget {
 
     final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
-      title: TmsStrings.appName,
+      title: TracGoStrings.appName,
       debugShowCheckedModeBanner: false,
-      theme: buildTmsTheme(),
+      theme: buildTracGoTheme(),
       routerConfig: router,
     );
   }

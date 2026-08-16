@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/core/session_expiration_handler.dart';
-import 'package:tmss/di/providers.dart';
-import 'package:tmss/domain/model/requisition.dart';
-import 'package:tmss/domain/usecase/get_dashboard_summary_use_case.dart';
-import 'package:tmss/presentation/dashboard/dashboard_notifier.dart';
-import 'package:tmss/presentation/dashboard/dashboard_state.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/core/session_expiration_handler.dart';
+import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/requisition.dart';
+import 'package:tracgo/domain/usecase/get_dashboard_summary_use_case.dart';
+import 'package:tracgo/presentation/dashboard/dashboard_notifier.dart';
+import 'package:tracgo/presentation/dashboard/dashboard_state.dart';
 
 class MockGetDashboardSummaryUseCase extends Mock implements GetDashboardSummaryUseCase {}
 

@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/core/session_expiration_handler.dart';
-import 'package:tmss/di/providers.dart';
-import 'package:tmss/domain/model/requisition.dart';
-import 'package:tmss/domain/usecase/cancel_requisition_use_case.dart';
-import 'package:tmss/domain/usecase/get_requisition_use_case.dart';
-import 'package:tmss/presentation/requisition_detail/requisition_detail_notifier.dart';
-import 'package:tmss/presentation/requisition_detail/requisition_detail_state.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/core/session_expiration_handler.dart';
+import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/requisition.dart';
+import 'package:tracgo/domain/usecase/cancel_requisition_use_case.dart';
+import 'package:tracgo/domain/usecase/get_requisition_use_case.dart';
+import 'package:tracgo/presentation/requisition_detail/requisition_detail_notifier.dart';
+import 'package:tracgo/presentation/requisition_detail/requisition_detail_state.dart';
 
 class MockGetRequisitionUseCase extends Mock implements GetRequisitionUseCase {}
 

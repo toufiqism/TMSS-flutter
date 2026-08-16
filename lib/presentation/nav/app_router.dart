@@ -152,7 +152,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         observers: [shellObserver],
         builder: (context, state, child) {
           final topBarTitle = state.matchedLocation == RoutePaths.requisitionList
-              ? Text(TmsStrings.requisitionListTitle, style: tmsTextTheme.titleMedium)
+              ? Text(TracGoStrings.requisitionListTitle, style: tracGoTextTheme.titleMedium)
               : null;
           return AppShell(
             currentPath: state.matchedLocation,

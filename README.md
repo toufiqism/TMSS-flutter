@@ -1,4 +1,4 @@
-# TMS — Transport Management System
+# TracGo — Transport Management System
 
 Flutter client for the Bangla Trac / Carcopolo vehicle requisition module, targeting
 Android and iOS from one codebase. Port of the native Android app
@@ -74,7 +74,7 @@ published app to rotate to a new key later — it must be present from the first
 build, because an app released on v2 alone can never rotate afterwards.
 
 > ⚠️ **Back up `tms-release.jks` and its passwords somewhere durable, before the first
-> upload.** `com.banglatrac.tmss` is not yet published, so the key is still free to
+> upload.** `com.btracsl.tracgo` is not yet published, so the key is still free to
 > change; the moment it ships, that key *is* the app's identity. Without Play App Signing,
 > losing it means never being able to update the listing again.
 >
@@ -220,7 +220,11 @@ flutter_secure_storage 11 already defaults to AES-GCM under an RSA-OAEP Keystore
 ## Firebase, Crashlytics and Remote Config
 
 Firebase project **`tracgo-631b7`**, one app per platform, both under the bundle id
-`com.banglatrac.tmss`. Config lives in three generated files, all committed: 
+`com.btracsl.tracgo` (app ids `...:android:717e99075de2620daa30da` and
+`...:ios:bd45970b8f04cb90aa30da`). The two apps registered under the pre-rebrand id
+`com.banglatrac.tmss` still exist in the project, unused — `google-services.json` carries
+both Android clients, which is harmless because the plugin matches on package name.
+Config lives in three generated files, all committed: 
 `lib/firebase_options.dart`, `android/app/google-services.json` and
 `ios/Runner/GoogleService-Info.plist`. The keys in them are client identifiers, not
 secrets — access is controlled by Firebase security rules, not by hiding them.

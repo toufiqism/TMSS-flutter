@@ -75,16 +75,16 @@ class _RequisitionDetailScreenState extends ConsumerState<RequisitionDetailScree
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(TmsStrings.requisitionListCancelConfirmTitle),
-        content: const Text(TmsStrings.requisitionListCancelConfirmBody),
+        title: const Text(TracGoStrings.requisitionListCancelConfirmTitle),
+        content: const Text(TracGoStrings.requisitionListCancelConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(TmsStrings.requisitionListCancelConfirmNo),
+            child: const Text(TracGoStrings.requisitionListCancelConfirmNo),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(TmsStrings.requisitionListCancelConfirmYes),
+            child: const Text(TracGoStrings.requisitionListCancelConfirmYes),
           ),
         ],
       ),
@@ -100,11 +100,11 @@ class _RequisitionDetailScreenState extends ConsumerState<RequisitionDetailScree
     final notifier = ref.read(requisitionDetailNotifierProvider.notifier);
 
     return Scaffold(
-      backgroundColor: tmsPageBackground,
+      backgroundColor: tracGoPageBackground,
       appBar: AppBar(
-        title: Text(TmsStrings.requisitionDetailTitle, style: tmsTextTheme.titleMedium),
+        title: Text(TracGoStrings.requisitionDetailTitle, style: tracGoTextTheme.titleMedium),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: tmsTextDark),
+          icon: const Icon(Icons.arrow_back, color: tracGoTextDark),
           onPressed: widget.onBack,
         ),
       ),
@@ -150,14 +150,14 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+              style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: onRetry,
                 style: ElevatedButton.styleFrom(shape: pillShape),
-                child: const Text(TmsStrings.requisitionListRetry),
+                child: const Text(TracGoStrings.requisitionListRetry),
               ),
             ],
           ],
@@ -193,57 +193,57 @@ class _Content extends StatelessWidget {
         _HeaderCard(requisition: requisition),
         const SizedBox(height: 16),
         _Section(
-          title: TmsStrings.requisitionDetailSectionTrip,
+          title: TracGoStrings.requisitionDetailSectionTrip,
           rows: [
-            _Row(TmsStrings.requisitionDetailPickup, requisition.pickupLocation),
-            _Row(TmsStrings.requisitionDetailDrop, requisition.dropLocation),
+            _Row(TracGoStrings.requisitionDetailPickup, requisition.pickupLocation),
+            _Row(TracGoStrings.requisitionDetailDrop, requisition.dropLocation),
             _Row(
-              TmsStrings.requisitionDetailPickupAt,
+              TracGoStrings.requisitionDetailPickupAt,
               _dateTimeFormatter.format(requisition.pickupDateTime),
             ),
             // Only rendered once dispatch fills it in; null on every pending row.
             if (requisition.endDateTime != null)
               _Row(
-                TmsStrings.requisitionDetailEndsAt,
+                TracGoStrings.requisitionDetailEndsAt,
                 _dateTimeFormatter.format(requisition.endDateTime!),
               ),
             if (requisition.remarks != null && requisition.remarks!.isNotEmpty)
-              _Row(TmsStrings.newRequisitionFieldRemarks, requisition.remarks!),
+              _Row(TracGoStrings.newRequisitionFieldRemarks, requisition.remarks!),
           ],
         ),
         const SizedBox(height: 16),
         switch (details) {
           PassengerDetails() => _Section(
-              title: TmsStrings.requisitionDetailSectionPassenger,
+              title: TracGoStrings.requisitionDetailSectionPassenger,
               rows: [
-                _Row(TmsStrings.newRequisitionFieldUsedType, details.usedType.label),
-                _Row(TmsStrings.newRequisitionFieldCustomerName, details.customerName),
+                _Row(TracGoStrings.newRequisitionFieldUsedType, details.usedType.label),
+                _Row(TracGoStrings.newRequisitionFieldCustomerName, details.customerName),
                 _Row(
-                  TmsStrings.newRequisitionFieldNumberOfPersons,
+                  TracGoStrings.newRequisitionFieldNumberOfPersons,
                   '${details.numberOfPersons}',
                 ),
                 _Row(
-                  TmsStrings.newRequisitionFieldRequiredFor,
+                  TracGoStrings.newRequisitionFieldRequiredFor,
                   details.requiredFor.label,
                 ),
                 if (details.userType != null)
-                  _Row(TmsStrings.newRequisitionFieldUserType, details.userType!.label),
-                _Row(TmsStrings.newRequisitionFieldPurpose, details.purpose),
+                  _Row(TracGoStrings.newRequisitionFieldUserType, details.userType!.label),
+                _Row(TracGoStrings.newRequisitionFieldPurpose, details.purpose),
               ],
             ),
           LogisticsDetails() => _Section(
-              title: TmsStrings.requisitionDetailSectionLogistics,
+              title: TracGoStrings.requisitionDetailSectionLogistics,
               rows: [
                 _Row(
-                  TmsStrings.newRequisitionFieldLoadingCapacity,
+                  TracGoStrings.newRequisitionFieldLoadingCapacity,
                   details.loadingCapacity.label,
                 ),
-                _Row(TmsStrings.newRequisitionFieldGoodsWeight, details.goodsWeight),
-                _Row(TmsStrings.newRequisitionFieldStoreName, details.storeName),
-                _Row(TmsStrings.newRequisitionFieldGoodsDetails, details.goodsDetails),
-                _Row(TmsStrings.newRequisitionFieldCustomerName, details.customerName),
+                _Row(TracGoStrings.newRequisitionFieldGoodsWeight, details.goodsWeight),
+                _Row(TracGoStrings.newRequisitionFieldStoreName, details.storeName),
+                _Row(TracGoStrings.newRequisitionFieldGoodsDetails, details.goodsDetails),
+                _Row(TracGoStrings.newRequisitionFieldCustomerName, details.customerName),
                 _Row(
-                  TmsStrings.newRequisitionFieldUserDepartment,
+                  TracGoStrings.newRequisitionFieldUserDepartment,
                   details.userDepartment,
                 ),
               ],
@@ -252,15 +252,15 @@ class _Content extends StatelessWidget {
         if (requisition.departmentName != null || requisition.companyName != null) ...[
           const SizedBox(height: 16),
           _Section(
-            title: TmsStrings.requisitionDetailSectionRequester,
+            title: TracGoStrings.requisitionDetailSectionRequester,
             rows: [
               if (requisition.departmentName != null)
                 _Row(
-                  TmsStrings.requisitionDetailDepartment,
+                  TracGoStrings.requisitionDetailDepartment,
                   requisition.departmentName!,
                 ),
               if (requisition.companyName != null)
-                _Row(TmsStrings.requisitionDetailCompany, requisition.companyName!),
+                _Row(TracGoStrings.requisitionDetailCompany, requisition.companyName!),
             ],
           ),
         ],
@@ -291,8 +291,8 @@ class _HeaderCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: tmsBorderRadius(tmsRadiusLarge),
-        gradient: const LinearGradient(colors: [tmsGreenLight, tmsGreenLightAlt]),
+        borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
+        gradient: const LinearGradient(colors: [tracGoGreenLight, tracGoGreenLightAlt]),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +303,7 @@ class _HeaderCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   '${requisition.pickupLocation} → ${requisition.dropLocation}',
-                  style: tmsTextTheme.titleMedium,
+                  style: tracGoTextTheme.titleMedium,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -314,9 +314,9 @@ class _HeaderCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '${TmsStrings.requisitionDetailRaisedOn} '
+            '${TracGoStrings.requisitionDetailRaisedOn} '
             '${_dateTimeFormatter.format(requisition.createdAt)}',
-            style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextSubtle),
+            style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextSubtle),
           ),
         ],
       ),
@@ -339,7 +339,7 @@ class _Section extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8, left: 4),
           child: Text(
             title.toUpperCase(),
-            style: tmsTextTheme.labelMedium?.copyWith(color: tmsGreen),
+            style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen),
           ),
         ),
         Card(
@@ -377,7 +377,7 @@ class _Row extends StatelessWidget {
             flex: 2,
             child: Text(
               label,
-              style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+              style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
             ),
           ),
           const SizedBox(width: 12),
@@ -385,8 +385,8 @@ class _Row extends StatelessWidget {
             flex: 3,
             child: Text(
               value.trim().isEmpty ? '—' : value,
-              style: tmsTextTheme.bodyMedium?.copyWith(
-                color: tmsTextDark,
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                color: tracGoTextDark,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -406,11 +406,11 @@ class _AssignmentSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!requisition.hasAssignment) {
       return _Section(
-        title: TmsStrings.requisitionDetailSectionAssignment,
+        title: TracGoStrings.requisitionDetailSectionAssignment,
         rows: const [
           Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(TmsStrings.requisitionDetailNotAssigned),
+            child: Text(TracGoStrings.requisitionDetailNotAssigned),
           ),
         ],
       );
@@ -419,16 +419,16 @@ class _AssignmentSection extends StatelessWidget {
     final driver = requisition.driver;
     final vehicle = requisition.vehicle;
     return _Section(
-      title: TmsStrings.requisitionDetailSectionAssignment,
+      title: TracGoStrings.requisitionDetailSectionAssignment,
       rows: [
         // Field names for these objects are unverified, so only what actually parsed
         // is shown — no empty placeholders for keys that may not exist.
         if (driver?.name != null)
-          _Row(TmsStrings.requisitionDetailDriver, driver!.name!),
+          _Row(TracGoStrings.requisitionDetailDriver, driver!.name!),
         if (driver?.phone != null) _Row('Phone', driver!.phone!),
         if (driver?.identifier != null) _Row('Driver ID', driver!.identifier!),
         if (vehicle?.registrationNumber != null)
-          _Row(TmsStrings.requisitionDetailVehicle, vehicle!.registrationNumber!),
+          _Row(TracGoStrings.requisitionDetailVehicle, vehicle!.registrationNumber!),
         if (vehicle?.model != null) _Row('Model', vehicle!.model!),
         if (vehicle?.type != null) _Row('Vehicle type', vehicle!.type!),
       ],
@@ -445,18 +445,18 @@ class _ActivitySection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
       return _Section(
-        title: TmsStrings.requisitionDetailSectionActivity,
+        title: TracGoStrings.requisitionDetailSectionActivity,
         rows: const [
           Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(TmsStrings.requisitionDetailNoActivity),
+            child: Text(TracGoStrings.requisitionDetailNoActivity),
           ),
         ],
       );
     }
 
     return _Section(
-      title: TmsStrings.requisitionDetailSectionActivity,
+      title: TracGoStrings.requisitionDetailSectionActivity,
       rows: [
         for (var i = 0; i < entries.length; i++)
           _ActivityRow(entry: entries[i], isLast: i == entries.length - 1),
@@ -486,10 +486,10 @@ class _ActivityRow extends StatelessWidget {
                 width: 10,
                 height: 10,
                 margin: const EdgeInsets.only(top: 16),
-                decoration: const BoxDecoration(color: tmsGreen, shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: tracGoGreen, shape: BoxShape.circle),
               ),
               if (!isLast)
-                const Expanded(child: VerticalDivider(width: 1, color: tmsDivider)),
+                const Expanded(child: VerticalDivider(width: 1, color: tracGoDivider)),
             ],
           ),
           const SizedBox(width: 14),
@@ -510,7 +510,7 @@ class _ActivityRow extends StatelessWidget {
                         Flexible(
                           child: Text(
                             _dateTimeFormatter.format(entry.at!),
-                            style: tmsTextTheme.bodySmall,
+                            style: tracGoTextTheme.bodySmall,
                           ),
                         ),
                       ],
@@ -518,7 +518,7 @@ class _ActivityRow extends StatelessWidget {
                   ),
                   if (entry.remarks != null && entry.remarks!.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Text(entry.remarks!, style: tmsTextTheme.bodyMedium),
+                    Text(entry.remarks!, style: tracGoTextTheme.bodyMedium),
                   ],
                   if (entry.actorName != null) ...[
                     const SizedBox(height: 4),
@@ -526,7 +526,7 @@ class _ActivityRow extends StatelessWidget {
                       entry.actorCode == null
                           ? entry.actorName!
                           : '${entry.actorName} · ${entry.actorCode}',
-                      style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+                      style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
                     ),
                   ],
                 ],
@@ -561,8 +561,8 @@ class _Actions extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Text(
-          TmsStrings.requisitionDetailNotEditable,
-          style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+          TracGoStrings.requisitionDetailNotEditable,
+          style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
         ),
       );
     }
@@ -575,10 +575,10 @@ class _Actions extends StatelessWidget {
             style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             onPressed: isCancelling ? null : onEdit,
             child: Text(
-              TmsStrings.requisitionDetailEdit,
-              style: tmsTextTheme.bodyLarge?.copyWith(
+              TracGoStrings.requisitionDetailEdit,
+              style: tracGoTextTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: tmsSurfaceWhite,
+                color: tracGoSurfaceWhite,
               ),
             ),
           ),
@@ -589,9 +589,9 @@ class _Actions extends StatelessWidget {
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
-              side: const BorderSide(color: tmsDestructiveRed),
+              side: const BorderSide(color: tracGoDestructiveRed),
               shape: RoundedRectangleBorder(
-                borderRadius: tmsBorderRadius(tmsRadiusSmall),
+                borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
               ),
             ),
             onPressed: isCancelling ? null : onCancel,
@@ -602,10 +602,10 @@ class _Actions extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    TmsStrings.requisitionListCancel,
-                    style: tmsTextTheme.bodyLarge?.copyWith(
+                    TracGoStrings.requisitionListCancel,
+                    style: tracGoTextTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: tmsDestructiveRed,
+                      color: tracGoDestructiveRed,
                     ),
                   ),
           ),

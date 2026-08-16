@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 /// Compass-mark badge from the redesign mock: a rounded-square badge with a circle+tick glyph
 /// (viewBox 24x24: circle r=8 centered, diagonal tick from (17,7) to (20,4)), drawn directly
 /// rather than shipped as a raster asset so it can be recolored per context (dark badge on
-/// light screens, translucent badge on the drawer's gradient header). Ports TmsLogoMark.kt 1:1.
-class TmsLogoMark extends StatelessWidget {
-  const TmsLogoMark({
+/// light screens, translucent badge on the drawer's gradient header). Ports TracGoLogoMark.kt 1:1.
+class TracGoLogoMark extends StatelessWidget {
+  const TracGoLogoMark({
     super.key,
     required this.badgeColor,
     required this.glyphColor,

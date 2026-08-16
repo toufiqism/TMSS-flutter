@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/di/providers.dart';
-import 'package:tmss/domain/model/user.dart';
+import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/user.dart';
 
 import '../core/telemetry/recording_crash_reporter.dart';
 
@@ -46,7 +46,7 @@ void main() {
   /// `listen`, not `read`: providers are auto-dispose by default in Riverpod 3, so a
   /// bare `read` builds the provider and then throws it away the moment the call
   /// returns, taking its session subscription with it. In the app the equivalent hold
-  /// is `TmsApp` watching it, which lasts as long as the app does.
+  /// is `TracGoApp` watching it, which lasts as long as the app does.
   void startBinder() {
     container.listen<void>(crashReporterIdentityProvider, (previous, next) {});
   }

@@ -50,7 +50,7 @@ class DashboardNotifier extends Notifier<DashboardUiState>
       case ApiSuccess<DashboardSummary>(:final response):
         setStateIfAlive(DashboardUiState.success(response));
       case ApiError<DashboardSummary>(:final message):
-        _onFetchFailed(hadDataBeforeFetch, message ?? TmsStrings.dashboardErrorGeneric);
+        _onFetchFailed(hadDataBeforeFetch, message ?? TracGoStrings.dashboardErrorGeneric);
       case ApiOffline<DashboardSummary>(:final message):
         _onFetchFailed(hadDataBeforeFetch, message);
       case ApiMaintenance<DashboardSummary>(:final message):

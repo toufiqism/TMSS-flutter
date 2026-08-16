@@ -97,7 +97,7 @@ class RequisitionListNotifier extends Notifier<RequisitionListUiState>
         await refresh();
       case ApiError<void>(:final message, :final errorCode):
         emitEvent(RequisitionListShowMessage(
-          message ?? TmsStrings.requisitionListCancelFailed,
+          message ?? TracGoStrings.requisitionListCancelFailed,
         ));
         // 409 means the requisition left `Pending` while this list was on screen —
         // the contract calls this out as an expected path, and the fix is to resync
@@ -130,7 +130,7 @@ class RequisitionListNotifier extends Notifier<RequisitionListUiState>
           errorMessage: null,
         ));
       case ApiError<List<Requisition>>(:final message):
-        _applyFailure(message ?? TmsStrings.requisitionListLoadFailed);
+        _applyFailure(message ?? TracGoStrings.requisitionListLoadFailed);
       case ApiOffline<List<Requisition>>(:final message):
         _applyFailure(message);
       case ApiMaintenance<List<Requisition>>(:final message):

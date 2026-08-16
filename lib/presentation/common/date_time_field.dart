@@ -49,13 +49,13 @@ class DateTimeField extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           hintText: label,
-          hintStyle: tmsTextTheme.bodyLarge?.copyWith(color: tmsPlaceholder),
-          suffixIcon: const Icon(Icons.calendar_month, color: tmsTextSubtle),
+          hintStyle: tracGoTextTheme.bodyLarge?.copyWith(color: tracGoPlaceholder),
+          suffixIcon: const Icon(Icons.calendar_month, color: tracGoTextSubtle),
           errorText: isError ? errorText : null,
         ),
         child: Text(
           value != null ? _displayFormatter.format(value!) : '',
-          style: tmsTextTheme.bodyLarge,
+          style: tracGoTextTheme.bodyLarge,
         ),
       ),
     );

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:tmss/core/telemetry/crash_reporter.dart';
+import 'package:tracgo/core/telemetry/crash_reporter.dart';
 
 /// A recorded call to [RecordingCrashReporter.recordError].
 class RecordedError {

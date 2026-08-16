@@ -4,7 +4,7 @@
          at all once the app talks to https://tms.carcopolo.com/bt/api. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="TMS"
+        android:label="TracGo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

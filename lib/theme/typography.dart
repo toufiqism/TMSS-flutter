@@ -9,56 +9,56 @@ const manropeFontFamily = 'Manrope';
 const interFontFamily = 'Inter';
 
 /// Ported 1:1 from ui/theme/Type.kt's Typography() mapping, onto Flutter's TextTheme roles.
-const tmsTextTheme = TextTheme(
+const tracGoTextTheme = TextTheme(
   headlineSmall: TextStyle(
     fontFamily: manropeFontFamily,
     fontWeight: FontWeight.w800,
     fontSize: 27,
     height: 34 / 27,
     letterSpacing: -0.01,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
   titleLarge: TextStyle(
     fontFamily: manropeFontFamily,
     fontWeight: FontWeight.w800,
     fontSize: 21,
     height: 27 / 21,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
   titleMedium: TextStyle(
     fontFamily: manropeFontFamily,
     fontWeight: FontWeight.w800,
     fontSize: 17,
     height: 22 / 17,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
   bodyLarge: TextStyle(
     fontFamily: interFontFamily,
     fontWeight: FontWeight.w400,
     fontSize: 15,
     height: 22 / 15,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
   bodyMedium: TextStyle(
     fontFamily: interFontFamily,
     fontWeight: FontWeight.w400,
     fontSize: 13.5,
     height: 20 / 13.5,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
   bodySmall: TextStyle(
     fontFamily: interFontFamily,
     fontWeight: FontWeight.w400,
     fontSize: 12.5,
     height: 17 / 12.5,
-    color: tmsTextMutedAlt,
+    color: tracGoTextMutedAlt,
   ),
   labelLarge: TextStyle(
     fontFamily: manropeFontFamily,
     fontWeight: FontWeight.w700,
     fontSize: 14,
     height: 18 / 14,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
   labelMedium: TextStyle(
     fontFamily: interFontFamily,
@@ -66,13 +66,13 @@ const tmsTextTheme = TextTheme(
     fontSize: 12,
     height: 16 / 12,
     letterSpacing: 0.04,
-    color: tmsTextSubtle,
+    color: tracGoTextSubtle,
   ),
   labelSmall: TextStyle(
     fontFamily: interFontFamily,
     fontWeight: FontWeight.w700,
     fontSize: 11.5,
     height: 15 / 11.5,
-    color: tmsTextDark,
+    color: tracGoTextDark,
   ),
 );

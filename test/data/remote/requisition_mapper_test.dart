@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/data/remote/dto/requisition_mapper.dart';
-import 'package:tmss/domain/model/requisition.dart';
+import 'package:tracgo/data/remote/dto/requisition_mapper.dart';
+import 'package:tracgo/domain/model/requisition.dart';
 
 void main() {
   group('fromJson', () {

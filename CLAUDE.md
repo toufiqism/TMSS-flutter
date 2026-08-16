@@ -59,12 +59,12 @@ Use `AskUserQuestion`, batched into one round when possible. Skip questions whos
 
 ## Project Overview
 
-**TMS** (`K:\TMSS-flutter`) is a **Flutter port of the native Android TMSS app** (`K:\TMSS`, package `com.banglatrac.tmss`), which is itself a client for the real "Carcopolo TMS" web app (white-labeled "Bangla Trac TMS", `https://tms.carcopolo.com/bt/`). This is a **separate sibling repo** with its own git history — not a folder inside `K:\TMSS`. No git repo has been initialized here yet (plain folder); when one is, follow rule 6 (init only, never commit).
+**TracGo** (`D:\Projects\TMSS-flutter`) is a **Flutter port of the native Android TMSS app** (`K:\TMSS`, package `com.banglatrac.tmss`), which is itself a client for the real "Carcopolo TMS" web app (white-labeled "Bangla Trac TMS", `https://tms.carcopolo.com/bt/`). This is a **separate sibling repo** with its own git history — not a folder inside `K:\TMSS`. No git repo has been initialized here yet (plain folder); when one is, follow rule 6 (init only, never commit).
 
 Goal: pixel-match the Android app's forest-green redesign (colors, Manrope/Inter fonts, pill UI, grouped forms, unified stat panel) across **Android + iOS**, backed by fake repositories behind real domain interfaces, ready to swap in real backend APIs later — same approach the Android app used, since real API endpoints aren't available yet.
 
-**App identity:** applicationId / bundle id `com.banglatrac.tmss` (same as the native app), display name **"TMS"**.
-> ⚠️ Same package ID as the native Android app — the two cannot be installed on one device at the same time. During side-by-side testing, uninstall one before installing the other.
+**App identity:** applicationId / bundle id `com.btracsl.tracgo`, display name **"TracGo"**.
+> Rebranded from `com.banglatrac.tmss` / "TMS". The id now differs from the native Android app's, so the two **can** be installed side by side — the earlier "uninstall one first" constraint no longer applies. Note that changing applicationId makes this a new listing on Play: existing installs of the old id will not update to it.
 
 **Feature scope (build all at once, matching what's verified on the Android side):**
 Login → Dashboard → My Requisition list → New Requisition (Passenger + Logistics variants).
@@ -179,7 +179,7 @@ lib/
 ├── data/
 │   ├── local/                   # flutter_secure_storage (session) + shared_preferences (prefs)
 │   ├── remote/
-│   │   ├── tmss_api_client.dart # Dio-based client
+│   │   ├── tracgo_api_client.dart # Dio-based client
 │   │   └── safe_api_call.dart   # Error-handling wrapper — not yet used until real API exists
 │   └── repository/              # Fake*Repository implementations (see below)
 │
@@ -194,7 +194,7 @@ lib/
 │   ├── requisition_list/
 │   ├── requisition_create/
 │   ├── nav/                     # go_router config, session-gated redirect
-│   └── common/                  # Shared widgets (status chip, requisition row, date/time field, pill toggle, stat panel, TmsLogoMark)
+│   └── common/                  # Shared widgets (status chip, requisition row, date/time field, pill toggle, stat panel, TracGoLogoMark)
 │
 ├── theme/                       # Colors, typography (Manrope/Inter), shapes (incl. PillShape)
 │
@@ -247,7 +247,7 @@ TmsGreen `#2F5A3F`, TmsGreenDark `#1F3B2C`, TmsGreenLight `#EAF3E4`, TmsGreenLig
 
 **Shapes:** `extraSmall` 10dp, `small` 14dp, `medium` 16dp, `large` 20dp, `extraLarge` 24dp, plus a fully-rounded `PillShape` (`BorderRadius.circular(999)`), matching `Shape.kt`.
 
-**Assets:** copy `login_bg.jpg`, launcher icon source, and Font Awesome vector icons (clipboard-list, calendar-check, check-square, clock-outline, times-circle) from `K:\TMSS\app\src\main\res\drawable-nodpi\` / `drawable\` into `assets/images/`. `TmsLogoMark` (the compass-icon badge) was originally a Canvas-drawn Composable — port it as a `CustomPainter`, not a rasterized image, to keep it crisp at any size.
+**Assets:** copy `login_bg.jpg`, launcher icon source, and Font Awesome vector icons (clipboard-list, calendar-check, check-square, clock-outline, times-circle) from `K:\TMSS\app\src\main\res\drawable-nodpi\` / `drawable\` into `assets/images/`. `TracGoLogoMark` (the compass-icon badge) was originally a Canvas-drawn Composable — port it as a `CustomPainter`, not a rasterized image, to keep it crisp at any size.
 
 **Custom widgets to port 1:1** (not stock Material defaults): pill-shaped status chip, bordered (non-elevated) requisition row card, unified 2-column stat panel with full-width rejected row, custom pill-segmented toggle (Passenger/Logistics), radio-row pill chips with dot indicator, combined date+time picker field, gradient hero card + gradient nav-drawer header.
 
@@ -327,7 +327,7 @@ and Remote Config".
 5. Register the route in `presentation/nav/`; wire providers in `di/`.
 
 ### Add an API endpoint
-1. Add the method to `data/remote/tmss_api_client.dart` (Dio).
+1. Add the method to `data/remote/tracgo_api_client.dart` (Dio).
 2. Once `SafeApiCall` is wired up, wrap the call and return `ApiResult<T>` from the repository instead of throwing.
 3. Handle `ApiResult.logout()` in the notifier; emit a `SessionExpired` event through the events stream once real auth exists.
 

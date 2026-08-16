@@ -9,11 +9,11 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:tmss/core/api_config.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/data/remote/tmss_api_client.dart';
-import 'package:tmss/data/repository/remote_requisition_repository.dart';
-import 'package:tmss/domain/model/requisition.dart';
+import 'package:tracgo/core/api_config.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/data/remote/tracgo_api_client.dart';
+import 'package:tracgo/data/repository/remote_requisition_repository.dart';
+import 'package:tracgo/domain/model/requisition.dart';
 
 void main(List<String> args) async {
   final user = _arg(args, '--user');
@@ -34,7 +34,7 @@ void main(List<String> args) async {
       validateStatus: (_) => true,
     ),
   );
-  final api = TmssApiClient(dio);
+  final api = TracGoApiClient(dio);
 
   var failures = 0;
   void check(String label, bool ok, [String detail = '']) {

@@ -10,7 +10,7 @@ import '../core/session_expiration_handler.dart';
 import '../core/telemetry/crash_reporter.dart';
 import '../data/local/session_local_data_source.dart';
 import '../data/remote/auth_interceptor.dart';
-import '../data/remote/tmss_api_client.dart';
+import '../data/remote/tracgo_api_client.dart';
 import '../data/repository/remote_auth_repository.dart';
 import '../data/repository/remote_requisition_repository.dart';
 import '../domain/model/user.dart';
@@ -46,7 +46,7 @@ final appRemoteConfigProvider = Provider<AppRemoteConfig>(
 
 /// Ties crash reports to the signed-in user, and unties them on logout.
 ///
-/// Watched by `TmsApp` so it lives as long as the app does. It is a side-effecting
+/// Watched by `TracGoApp` so it lives as long as the app does. It is a side-effecting
 /// provider with no value, which is unusual — the alternative was an `ref.listen` in a
 /// widget `build`, and putting it here keeps the session-to-telemetry wiring in the
 /// same file as the rest of the graph.
@@ -140,8 +140,8 @@ String _redactSecrets(String line) {
   return result;
 }
 
-final tmssApiClientProvider = Provider<TmssApiClient>((ref) {
-  return TmssApiClient(ref.watch(dioProvider));
+final tracGoApiClientProvider = Provider<TracGoApiClient>((ref) {
+  return TracGoApiClient(ref.watch(dioProvider));
 });
 
 /// Riverpod providers ARE the DI graph. These two bindings are the seam: the fake
@@ -149,7 +149,7 @@ final tmssApiClientProvider = Provider<TmssApiClient>((ref) {
 /// by the Dio-backed implementations, and nothing above this file changed.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return RemoteAuthRepository(
-    ref.watch(tmssApiClientProvider),
+    ref.watch(tracGoApiClientProvider),
     ref.watch(sessionLocalDataSourceProvider),
     reporter: ref.watch(crashReporterProvider),
   );
@@ -157,7 +157,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final requisitionRepositoryProvider = Provider<RequisitionRepository>((ref) {
   return RemoteRequisitionRepository(
-    ref.watch(tmssApiClientProvider),
+    ref.watch(tracGoApiClientProvider),
     reporter: ref.watch(crashReporterProvider),
   );
 });

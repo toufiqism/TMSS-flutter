@@ -162,7 +162,7 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
       // Previously these three branches only cleared the spinner, leaving the user
       // staring at an empty result list with no idea the lookup had failed.
       case ApiError<List<Employee>>(:final message):
-        _onEmployeeSearchFailed(message ?? TmsStrings.newRequisitionEmployeeSearchFailed);
+        _onEmployeeSearchFailed(message ?? TracGoStrings.newRequisitionEmployeeSearchFailed);
       case ApiOffline<List<Employee>>(:final message):
         _onEmployeeSearchFailed(message);
       case ApiMaintenance<List<Employee>>(:final message):
@@ -243,7 +243,7 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
         // instead of dumping one opaque banner at the top of the form.
         setStateIfAlive(state.copyWith(
           isSubmitting: false,
-          submitError: message ?? TmsStrings.newRequisitionSubmitFailed,
+          submitError: message ?? TracGoStrings.newRequisitionSubmitFailed,
           fieldErrors: _mapWireFieldErrors(fieldErrors),
         ));
       case ApiOffline<Requisition>(:final message):
@@ -315,7 +315,7 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
   }
 
   Map<String, String> _validatePassenger(PassengerFormState form) {
-    const required = TmsStrings.newRequisitionErrorRequired;
+    const required = TracGoStrings.newRequisitionErrorRequired;
     final errors = <String, String>{};
     if (form.pickupDateTime == null) errors[RequisitionFormField.pickupDateTime] = required;
     if (form.pickupLocation.trim().isEmpty) errors[RequisitionFormField.pickupLocation] = required;
@@ -323,7 +323,7 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
     if (form.customerName.trim().isEmpty) errors[RequisitionFormField.customerName] = required;
     final persons = int.tryParse(form.numberOfPersons);
     if (persons == null || persons <= 0) {
-      errors[RequisitionFormField.numberOfPersons] = TmsStrings.newRequisitionErrorNumberInvalid;
+      errors[RequisitionFormField.numberOfPersons] = TracGoStrings.newRequisitionErrorNumberInvalid;
     }
     if (form.purpose.trim().isEmpty) errors[RequisitionFormField.purpose] = required;
     // Only demanded while the picker is actually shown. There is no directory endpoint
@@ -332,13 +332,13 @@ class RequisitionCreateNotifier extends Notifier<RequisitionCreateUiState>
     if (ApiCapabilities.employeeDirectory &&
         form.requiredFor == RequiredFor.someoneElse &&
         form.selectedEmployees.isEmpty) {
-      errors[RequisitionFormField.employees] = TmsStrings.newRequisitionErrorSelectEmployee;
+      errors[RequisitionFormField.employees] = TracGoStrings.newRequisitionErrorSelectEmployee;
     }
     return errors;
   }
 
   Map<String, String> _validateLogistics(LogisticsFormState form) {
-    const required = TmsStrings.newRequisitionErrorRequired;
+    const required = TracGoStrings.newRequisitionErrorRequired;
     final errors = <String, String>{};
     if (form.pickupDateTime == null) errors[RequisitionFormField.pickupDateTime] = required;
     if (form.pickupLocation.trim().isEmpty) errors[RequisitionFormField.pickupLocation] = required;

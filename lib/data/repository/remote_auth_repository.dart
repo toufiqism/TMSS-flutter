@@ -8,7 +8,7 @@ import '../remote/dto/json_reader.dart';
 import '../remote/dto/user_mapper.dart';
 import '../remote/dto/wire_date_time.dart';
 import '../remote/safe_api_call.dart';
-import '../remote/tmss_api_client.dart';
+import '../remote/tracgo_api_client.dart';
 
 /// Auth against `POST /login` and `POST /logout`.
 ///
@@ -31,7 +31,7 @@ class RemoteAuthRepository implements AuthRepository {
     // ignore: prefer_initializing_formals
   }) : _reporter = reporter;
 
-  final TmssApiClient _apiClient;
+  final TracGoApiClient _apiClient;
   final SessionLocalDataSource _sessionLocalDataSource;
   final CrashReporter _reporter;
 

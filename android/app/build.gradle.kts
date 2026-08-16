@@ -25,7 +25,7 @@ val keystoreProperties = Properties().apply {
 val hasReleaseSigning = keystoreProperties.getProperty("storeFile") != null
 
 android {
-    namespace = "com.banglatrac.tmss"
+    namespace = "com.btracsl.tracgo"
     // Pinned rather than inherited from flutter.compileSdkVersion: flutter_secure_storage
     // ships AAR metadata requiring compileSdk 37, and the Flutter SDK's default is lower,
     // which fails :app:checkDebugAarMetadata. Raising compileSdk only widens the APIs
@@ -39,8 +39,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.banglatrac.tmss"
+        applicationId = "com.btracsl.tracgo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 30

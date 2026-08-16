@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/core/telemetry/crash_route_observer.dart';
+import 'package:tracgo/core/telemetry/crash_route_observer.dart';
 
 import 'recording_crash_reporter.dart';
 

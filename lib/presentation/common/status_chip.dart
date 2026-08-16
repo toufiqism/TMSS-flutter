@@ -12,16 +12,16 @@ class _StatusColors {
 }
 
 _StatusColors _colorsFor(RequisitionStatus status) => switch (status) {
-      RequisitionStatus.pending => const _StatusColors(tmsStatusPendingOrangeText, tmsStatusPendingOrangeBg),
-      RequisitionStatus.approved => const _StatusColors(tmsStatusApprovedGreen, tmsStatusApprovedGreenBg),
-      RequisitionStatus.assigned => const _StatusColors(tmsStatusAssignedTeal, tmsStatusAssignedTealBg),
-      RequisitionStatus.rejected => const _StatusColors(tmsStatusRejectedRed, tmsStatusRejectedRedBg),
+      RequisitionStatus.pending => const _StatusColors(tracGoStatusPendingOrangeText, tracGoStatusPendingOrangeBg),
+      RequisitionStatus.approved => const _StatusColors(tracGoStatusApprovedGreen, tracGoStatusApprovedGreenBg),
+      RequisitionStatus.assigned => const _StatusColors(tracGoStatusAssignedTeal, tracGoStatusAssignedTealBg),
+      RequisitionStatus.rejected => const _StatusColors(tracGoStatusRejectedRed, tracGoStatusRejectedRedBg),
       // Neither status carries a colour in the redesign — cancelled is a terminal
       // non-event and unknown means the server sent a value this build predates — so
       // both read as neutral rather than borrowing another status's semantic colour.
       RequisitionStatus.cancelled ||
       RequisitionStatus.unknown =>
-        const _StatusColors(tmsTextMutedAlt, tmsDivider),
+        const _StatusColors(tracGoTextMutedAlt, tracGoDivider),
     };
 
 class StatusChip extends StatelessWidget {
@@ -37,7 +37,7 @@ class StatusChip extends StatelessWidget {
       decoration: BoxDecoration(color: colors.background, borderRadius: pillBorderRadius),
       child: Text(
         status.label,
-        style: tmsTextTheme.labelSmall?.copyWith(color: colors.text),
+        style: tracGoTextTheme.labelSmall?.copyWith(color: colors.text),
       ),
     );
   }

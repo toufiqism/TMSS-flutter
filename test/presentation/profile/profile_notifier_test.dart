@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/core/session_expiration_handler.dart';
-import 'package:tmss/di/providers.dart';
-import 'package:tmss/domain/model/user.dart';
-import 'package:tmss/domain/usecase/get_user_account_use_case.dart';
-import 'package:tmss/presentation/profile/profile_notifier.dart';
-import 'package:tmss/presentation/profile/profile_state.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/core/session_expiration_handler.dart';
+import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/user.dart';
+import 'package:tracgo/domain/usecase/get_user_account_use_case.dart';
+import 'package:tracgo/presentation/profile/profile_notifier.dart';
+import 'package:tracgo/presentation/profile/profile_state.dart';
 
 class MockGetUserAccountUseCase extends Mock implements GetUserAccountUseCase {}
 

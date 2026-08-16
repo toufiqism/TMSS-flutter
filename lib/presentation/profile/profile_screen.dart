@@ -77,11 +77,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = ref.watch(sessionStreamProvider).value?.user;
 
     return Scaffold(
-      backgroundColor: tmsPageBackground,
+      backgroundColor: tracGoPageBackground,
       appBar: AppBar(
-        title: Text(TmsStrings.profileTitle, style: tmsTextTheme.titleMedium),
+        title: Text(TracGoStrings.profileTitle, style: tracGoTextTheme.titleMedium),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: tmsTextDark),
+          icon: const Icon(Icons.arrow_back, color: tracGoTextDark),
           onPressed: widget.onBack,
         ),
       ),
@@ -95,11 +95,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _IdentityCard(user: user),
               const SizedBox(height: 16),
               _Section(
-                title: TmsStrings.profileSectionContact,
+                title: TracGoStrings.profileSectionContact,
                 rows: [
-                  _Row(TmsStrings.profileEmail, user.email),
-                  _Row(TmsStrings.profilePhone, user.phone),
-                  _Row(TmsStrings.profileCompany, user.companyName),
+                  _Row(TracGoStrings.profileEmail, user.email),
+                  _Row(TracGoStrings.profilePhone, user.phone),
+                  _Row(TracGoStrings.profileCompany, user.companyName),
                 ],
               ),
               const SizedBox(height: 16),
@@ -126,19 +126,19 @@ class _IdentityCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: tmsBorderRadius(tmsRadiusLarge),
-        gradient: const LinearGradient(colors: [tmsGreenLight, tmsGreenLightAlt]),
+        borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
+        gradient: const LinearGradient(colors: [tracGoGreenLight, tracGoGreenLightAlt]),
       ),
       child: Row(
         children: [
           Container(
             width: 58,
             height: 58,
-            decoration: const BoxDecoration(color: tmsSurfaceWhite, shape: BoxShape.circle),
+            decoration: const BoxDecoration(color: tracGoSurfaceWhite, shape: BoxShape.circle),
             alignment: Alignment.center,
             child: Text(
               _initialsOf(user.name),
-              style: tmsTextTheme.titleMedium?.copyWith(color: tmsGreen),
+              style: tracGoTextTheme.titleMedium?.copyWith(color: tracGoGreen),
             ),
           ),
           const SizedBox(width: 16),
@@ -149,12 +149,12 @@ class _IdentityCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(user.name, style: tmsTextTheme.titleMedium),
+                Text(user.name, style: tracGoTextTheme.titleMedium),
                 if (user.designation.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     user.designation,
-                    style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextSubtle),
+                    style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextSubtle),
                   ),
                 ],
               ],
@@ -176,7 +176,7 @@ class _AccountSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.isLoading) {
       return const _Section(
-        title: TmsStrings.profileSectionAccount,
+        title: TracGoStrings.profileSectionAccount,
         rows: [
           Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
@@ -195,7 +195,7 @@ class _AccountSection extends StatelessWidget {
     final error = state.errorMessage;
     if (error != null) {
       return _Section(
-        title: TmsStrings.profileSectionAccount,
+        title: TracGoStrings.profileSectionAccount,
         rows: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -203,13 +203,13 @@ class _AccountSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  TmsStrings.profileAccountUnavailable,
-                  style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextDark),
+                  TracGoStrings.profileAccountUnavailable,
+                  style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextDark),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   error,
-                  style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+                  style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
                 ),
                 // Withheld for terminal failures such as 403, where a second attempt
                 // cannot produce a different answer.
@@ -218,7 +218,7 @@ class _AccountSection extends StatelessWidget {
                   ElevatedButton(
                     onPressed: onRetry,
                     style: ElevatedButton.styleFrom(shape: pillShape),
-                    child: const Text(TmsStrings.requisitionListRetry),
+                    child: const Text(TracGoStrings.requisitionListRetry),
                   ),
                 ],
               ],
@@ -232,19 +232,19 @@ class _AccountSection extends StatelessWidget {
     if (account == null) return const SizedBox.shrink();
 
     return _Section(
-      title: TmsStrings.profileSectionAccount,
+      title: TracGoStrings.profileSectionAccount,
       rows: [
-        _Row(TmsStrings.profileEmployeeId, account.employeeId),
-        _Row(TmsStrings.profileRole, account.roleId),
-        _Row(TmsStrings.profileStatus, account.activeStatus),
+        _Row(TracGoStrings.profileEmployeeId, account.employeeId),
+        _Row(TracGoStrings.profileRole, account.roleId),
+        _Row(TracGoStrings.profileStatus, account.activeStatus),
         if (account.memberSince != null)
           _Row(
-            TmsStrings.profileMemberSince,
+            TracGoStrings.profileMemberSince,
             _dateFormatter.format(account.memberSince!),
           ),
         if (account.lastPasswordChangedAt != null)
           _Row(
-            TmsStrings.profilePasswordChanged,
+            TracGoStrings.profilePasswordChanged,
             _dateFormatter.format(account.lastPasswordChangedAt!),
           ),
       ],
@@ -267,7 +267,7 @@ class _Section extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8, left: 4),
           child: Text(
             title.toUpperCase(),
-            style: tmsTextTheme.labelMedium?.copyWith(color: tmsGreen),
+            style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen),
           ),
         ),
         Card(
@@ -293,7 +293,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final display = (value == null || value!.trim().isEmpty)
-        ? TmsStrings.profileNotProvided
+        ? TracGoStrings.profileNotProvided
         : value!;
     final isMissing = value == null || value!.trim().isEmpty;
 
@@ -308,7 +308,7 @@ class _Row extends StatelessWidget {
             flex: 2,
             child: Text(
               label,
-              style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+              style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
             ),
           ),
           const SizedBox(width: 12),
@@ -316,8 +316,8 @@ class _Row extends StatelessWidget {
             flex: 3,
             child: Text(
               display,
-              style: tmsTextTheme.bodyMedium?.copyWith(
-                color: isMissing ? tmsPlaceholder : tmsTextDark,
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                color: isMissing ? tracGoPlaceholder : tracGoTextDark,
                 fontWeight: isMissing ? FontWeight.w400 : FontWeight.w600,
               ),
             ),

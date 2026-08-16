@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/data/remote/dto/wire_date_time.dart';
+import 'package:tracgo/data/remote/dto/wire_date_time.dart';
 
 void main() {
   group('parse', () {

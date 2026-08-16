@@ -1,13 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/data/local/session_local_data_source.dart';
-import 'package:tmss/data/remote/tmss_api_client.dart';
-import 'package:tmss/data/repository/remote_auth_repository.dart';
-import 'package:tmss/domain/model/user.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/data/local/session_local_data_source.dart';
+import 'package:tracgo/data/remote/tracgo_api_client.dart';
+import 'package:tracgo/data/repository/remote_auth_repository.dart';
+import 'package:tracgo/domain/model/user.dart';
 
-class MockTmssApiClient extends Mock implements TmssApiClient {}
+class MockTracGoApiClient extends Mock implements TracGoApiClient {}
 
 class MockSessionLocalDataSource extends Mock implements SessionLocalDataSource {}
 
@@ -34,14 +34,14 @@ Map<String, dynamic> _loginBody({String token = 'abc123'}) => {
     };
 
 void main() {
-  late MockTmssApiClient api;
+  late MockTracGoApiClient api;
   late MockSessionLocalDataSource storage;
   late RemoteAuthRepository repository;
 
   setUpAll(() => registerFallbackValue(FakeSession()));
 
   setUp(() {
-    api = MockTmssApiClient();
+    api = MockTracGoApiClient();
     storage = MockSessionLocalDataSource();
     repository = RemoteAuthRepository(api, storage);
     when(() => storage.save(any())).thenAnswer((_) async {});

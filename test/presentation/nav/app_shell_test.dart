@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/di/providers.dart';
-import 'package:tmss/domain/model/user.dart';
-import 'package:tmss/presentation/common/strings.dart';
-import 'package:tmss/presentation/nav/app_shell.dart';
-import 'package:tmss/presentation/nav/route_paths.dart';
+import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/user.dart';
+import 'package:tracgo/presentation/common/strings.dart';
+import 'package:tracgo/presentation/nav/app_shell.dart';
+import 'package:tracgo/presentation/nav/route_paths.dart';
 
 /// Widget tests for the shell chrome, added for one specific reason: the profile icon
 /// shipped wired to `onPressed: () {}`.
@@ -48,7 +48,7 @@ void main() {
     await tester.pumpWidget(_shell(onOpenProfile: () => opened++));
     await tester.pump();
 
-    await tester.tap(find.byTooltip(TmsStrings.navProfile));
+    await tester.tap(find.byTooltip(TracGoStrings.navProfile));
     await tester.pump();
 
     expect(opened, 1, reason: 'the icon must actually call its callback');
@@ -61,9 +61,9 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byTooltip(TmsStrings.navOpenMenu));
+    await tester.tap(find.byTooltip(TracGoStrings.navOpenMenu));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(TmsStrings.navMyRequisition));
+    await tester.tap(find.text(TracGoStrings.navMyRequisition));
     await tester.pumpAndSettle();
 
     expect(navigated, [RoutePaths.requisitionList]);
@@ -73,7 +73,7 @@ void main() {
     await tester.pumpWidget(_shell(onOpenProfile: () {}));
     await tester.pump();
 
-    await tester.tap(find.byTooltip(TmsStrings.navOpenMenu));
+    await tester.tap(find.byTooltip(TracGoStrings.navOpenMenu));
     await tester.pumpAndSettle();
 
     expect(find.text('Md. Tofiq Akbar'), findsOneWidget);

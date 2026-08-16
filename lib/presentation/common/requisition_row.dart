@@ -45,7 +45,7 @@ class RequisitionRow extends StatelessWidget {
                   Flexible(
                     child: Text(
                       _dateTimeFormatter.format(requisition.pickupDateTime),
-                      style: tmsTextTheme.bodySmall,
+                      style: tracGoTextTheme.bodySmall,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -55,14 +55,14 @@ class RequisitionRow extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 '${requisition.pickupLocation} → ${requisition.dropLocation}',
-                style: tmsTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: tracGoTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
               Text(
                 requisition.purposeText,
-                style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+                style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

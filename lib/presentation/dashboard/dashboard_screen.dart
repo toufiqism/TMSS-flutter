@@ -59,7 +59,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final notifier = ref.read(dashboardNotifierProvider.notifier);
 
     return Scaffold(
-      backgroundColor: tmsPageBackground,
+      backgroundColor: tracGoPageBackground,
       body: switch (uiState) {
         DashboardLoading() => const Center(child: CircularProgressIndicator()),
         DashboardError(:final message) => _ErrorState(message: message, onRetry: notifier.load),
@@ -91,7 +91,7 @@ class _ErrorState extends StatelessWidget {
         children: [
           Text(message, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: onRetry, child: const Text(TmsStrings.dashboardRetry)),
+          ElevatedButton(onPressed: onRetry, child: const Text(TracGoStrings.dashboardRetry)),
         ],
       ),
     );
@@ -130,16 +130,16 @@ class _DashboardContent extends StatelessWidget {
           children: [
             Flexible(
               child: Text(
-                TmsStrings.dashboardRecentRequisitions,
-                style: tmsTextTheme.titleMedium,
+                TracGoStrings.dashboardRecentRequisitions,
+                style: tracGoTextTheme.titleMedium,
               ),
             ),
             Flexible(
               child: TextButton(
                 onPressed: onViewAllRequisitions,
                 child: Text(
-                  TmsStrings.dashboardViewAll,
-                  style: tmsTextTheme.bodyMedium?.copyWith(color: tmsGreen, fontWeight: FontWeight.bold),
+                  TracGoStrings.dashboardViewAll,
+                  style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoGreen, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -149,9 +149,9 @@ class _DashboardContent extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Text(
-              TmsStrings.dashboardNoRecentRequisitions,
+              TracGoStrings.dashboardNoRecentRequisitions,
               textAlign: TextAlign.center,
-              style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextMutedAlt),
+              style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
             ),
           )
         else
@@ -178,17 +178,17 @@ class _HeroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        borderRadius: tmsBorderRadius(tmsRadiusLarge),
-        gradient: const LinearGradient(colors: [tmsGreenLight, tmsGreenLightAlt]),
+        borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
+        gradient: const LinearGradient(colors: [tracGoGreenLight, tracGoGreenLightAlt]),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(TmsStrings.dashboardNeedVehicleTitle, style: tmsTextTheme.titleLarge),
+          Text(TracGoStrings.dashboardNeedVehicleTitle, style: tracGoTextTheme.titleLarge),
           const SizedBox(height: 6),
           Text(
-            TmsStrings.dashboardNeedVehicleSubtitle,
-            style: tmsTextTheme.bodyMedium?.copyWith(color: tmsTextDark.withValues(alpha: 0.7)),
+            TracGoStrings.dashboardNeedVehicleSubtitle,
+            style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextDark.withValues(alpha: 0.7)),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -200,7 +200,7 @@ class _HeroCard extends StatelessWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(child: Text(TmsStrings.dashboardRequisitionNow)),
+                Flexible(child: Text(TracGoStrings.dashboardRequisitionNow)),
                 SizedBox(width: 8),
                 Icon(Icons.arrow_forward, size: 16),
               ],
@@ -229,12 +229,12 @@ class _StatPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gridSpecs = [
-      _StatSpec(summary.allCount, TmsStrings.dashboardStatAll, Icons.assignment_outlined, tmsStatusAllPurple, tmsStatusAllPurpleBg),
-      _StatSpec(summary.approvedCount, TmsStrings.dashboardStatApproved, Icons.event_available_outlined, tmsStatusApprovedGreen, tmsStatusApprovedGreenBg),
-      _StatSpec(summary.assignedCount, TmsStrings.dashboardStatAssigned, Icons.check_box_outlined, tmsStatusAssignedTeal, tmsStatusAssignedTealBg),
-      _StatSpec(summary.pendingCount, TmsStrings.dashboardStatPending, Icons.access_time_outlined, tmsStatusPendingOrange, tmsStatusPendingOrangeBg),
+      _StatSpec(summary.allCount, TracGoStrings.dashboardStatAll, Icons.assignment_outlined, tracGoStatusAllPurple, tracGoStatusAllPurpleBg),
+      _StatSpec(summary.approvedCount, TracGoStrings.dashboardStatApproved, Icons.event_available_outlined, tracGoStatusApprovedGreen, tracGoStatusApprovedGreenBg),
+      _StatSpec(summary.assignedCount, TracGoStrings.dashboardStatAssigned, Icons.check_box_outlined, tracGoStatusAssignedTeal, tracGoStatusAssignedTealBg),
+      _StatSpec(summary.pendingCount, TracGoStrings.dashboardStatPending, Icons.access_time_outlined, tracGoStatusPendingOrange, tracGoStatusPendingOrangeBg),
     ];
-    final rejectedSpec = _StatSpec(summary.rejectedCount, TmsStrings.dashboardStatRejected, Icons.cancel_outlined, tmsStatusRejectedRed, tmsStatusRejectedRedBg);
+    final rejectedSpec = _StatSpec(summary.rejectedCount, TracGoStrings.dashboardStatRejected, Icons.cancel_outlined, tracGoStatusRejectedRed, tracGoStatusRejectedRedBg);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -245,12 +245,12 @@ class _StatPanel extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: _StatCell(spec: gridSpecs[rowStart])),
-                  const VerticalDivider(width: 1, color: tmsDivider),
+                  const VerticalDivider(width: 1, color: tracGoDivider),
                   Expanded(child: _StatCell(spec: gridSpecs[rowStart + 1])),
                 ],
               ),
             ),
-            const Divider(height: 1, color: tmsDivider),
+            const Divider(height: 1, color: tracGoDivider),
           ],
           Padding(
             padding: const EdgeInsets.all(20),
@@ -261,8 +261,8 @@ class _StatPanel extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${rejectedSpec.count}', style: tmsTextTheme.titleLarge),
-                    Text(rejectedSpec.label, style: tmsTextTheme.bodySmall),
+                    Text('${rejectedSpec.count}', style: tracGoTextTheme.titleLarge),
+                    Text(rejectedSpec.label, style: tracGoTextTheme.bodySmall),
                   ],
                 ),
               ],
@@ -288,9 +288,9 @@ class _StatCell extends StatelessWidget {
         children: [
           _StatIconBadge(spec: spec),
           const SizedBox(height: 10),
-          Text('${spec.count}', style: tmsTextTheme.titleLarge),
+          Text('${spec.count}', style: tracGoTextTheme.titleLarge),
           const SizedBox(height: 2),
-          Text(spec.label, style: tmsTextTheme.bodySmall),
+          Text(spec.label, style: tracGoTextTheme.bodySmall),
         ],
       ),
     );
@@ -307,7 +307,7 @@ class _StatIconBadge extends StatelessWidget {
     return Container(
       width: 36,
       height: 36,
-      decoration: BoxDecoration(color: spec.tintBg, borderRadius: tmsBorderRadius(tmsRadiusExtraSmall)),
+      decoration: BoxDecoration(color: spec.tintBg, borderRadius: tracGoBorderRadius(tracGoRadiusExtraSmall)),
       alignment: Alignment.center,
       child: Icon(spec.icon, color: spec.tint, size: 18),
     );

@@ -1,13 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/data/remote/tmss_api_client.dart';
-import 'package:tmss/data/repository/remote_requisition_repository.dart';
-import 'package:tmss/domain/model/employee.dart';
-import 'package:tmss/domain/model/requisition.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/data/remote/tracgo_api_client.dart';
+import 'package:tracgo/data/repository/remote_requisition_repository.dart';
+import 'package:tracgo/domain/model/employee.dart';
+import 'package:tracgo/domain/model/requisition.dart';
 
-class MockTmssApiClient extends Mock implements TmssApiClient {}
+class MockTracGoApiClient extends Mock implements TracGoApiClient {}
 
 Response<dynamic> _raw(dynamic body) => Response<dynamic>(
       requestOptions: RequestOptions(path: '/requisitions'),
@@ -52,11 +52,11 @@ Map<String, dynamic> _row(
     };
 
 void main() {
-  late MockTmssApiClient api;
+  late MockTracGoApiClient api;
   late RemoteRequisitionRepository repository;
 
   setUp(() {
-    api = MockTmssApiClient();
+    api = MockTracGoApiClient();
     repository = RemoteRequisitionRepository(api);
   });
 

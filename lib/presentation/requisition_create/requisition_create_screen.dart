@@ -87,13 +87,13 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
       appBar: AppBar(
         title: Text(
           uiState.isEditing
-              ? TmsStrings.editRequisitionTitle
-              : TmsStrings.newRequisitionTitle,
-          style: tmsTextTheme.titleMedium,
+              ? TracGoStrings.editRequisitionTitle
+              : TracGoStrings.newRequisitionTitle,
+          style: tracGoTextTheme.titleMedium,
         ),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: tmsTextDark), onPressed: widget.onBack),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: tracGoTextDark), onPressed: widget.onBack),
       ),
-      backgroundColor: tmsPageBackground,
+      backgroundColor: tracGoPageBackground,
       body: Column(
         children: [
           Padding(
@@ -143,13 +143,13 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: tmsSurfaceWhite),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: tracGoSurfaceWhite),
                       )
                     : Text(
                         uiState.isEditing
-                            ? TmsStrings.editRequisitionSave
-                            : TmsStrings.newRequisitionSubmit,
-                        style: tmsTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 15, color: tmsSurfaceWhite),
+                            ? TracGoStrings.editRequisitionSave
+                            : TracGoStrings.newRequisitionSubmit,
+                        style: tracGoTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 15, color: tracGoSurfaceWhite),
                       ),
               ),
             ),
@@ -185,16 +185,16 @@ class _PillSegmentedToggle extends StatelessWidget {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: tmsSurfaceWhite,
+            color: tracGoSurfaceWhite,
             borderRadius: pillBorderRadius,
-            border: Border.all(color: tmsBorder, width: 1.5),
+            border: Border.all(color: tracGoBorder, width: 1.5),
           ),
           padding: const EdgeInsets.all(4),
           child: Row(
             children: [
               Expanded(
                 child: _SegmentPill(
-                  label: TmsStrings.newRequisitionTogglePassenger,
+                  label: TracGoStrings.newRequisitionTogglePassenger,
                   selected: selected == RequisitionFormType.passenger,
                   enabled: !locked,
                   onTap: locked ? null : () => onSelect(RequisitionFormType.passenger),
@@ -202,7 +202,7 @@ class _PillSegmentedToggle extends StatelessWidget {
               ),
               Expanded(
                 child: _SegmentPill(
-                  label: TmsStrings.newRequisitionToggleLogistics,
+                  label: TracGoStrings.newRequisitionToggleLogistics,
                   selected: selected == RequisitionFormType.logistics,
                   enabled: logisticsEnabled && !locked,
                   onTap: logisticsEnabled && !locked
@@ -217,8 +217,8 @@ class _PillSegmentedToggle extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              TmsStrings.editRequisitionTypeLocked,
-              style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+              TracGoStrings.editRequisitionTypeLocked,
+              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
             ),
           ),
       ],
@@ -251,16 +251,16 @@ class _SegmentPill extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
-            color: selected ? tmsGreen : Colors.transparent,
+            color: selected ? tracGoGreen : Colors.transparent,
             borderRadius: pillBorderRadius,
           ),
           alignment: Alignment.center,
           child: Text(
             label,
-            style: tmsTextTheme.bodyMedium?.copyWith(
+            style: tracGoTextTheme.bodyMedium?.copyWith(
               color: selected
-                  ? tmsSurfaceWhite
-                  : (enabled ? tmsTextMutedAlt : tmsPlaceholder),
+                  ? tracGoSurfaceWhite
+                  : (enabled ? tracGoTextMutedAlt : tracGoPlaceholder),
               fontWeight: selected ? FontWeight.bold : FontWeight.w600,
               fontSize: 13.5,
             ),
@@ -280,7 +280,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 22, bottom: 8),
-      child: Text(text.toUpperCase(), style: tmsTextTheme.labelMedium?.copyWith(color: tmsGreen)),
+      child: Text(text.toUpperCase(), style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen)),
     );
   }
 }
@@ -300,46 +300,46 @@ class _PassengerFormFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(TmsStrings.newRequisitionSectionTripDetails),
+        const _SectionHeader(TracGoStrings.newRequisitionSectionTripDetails),
         DateTimeField(
-          label: TmsStrings.newRequisitionFieldPickupDatetime,
+          label: TracGoStrings.newRequisitionFieldPickupDatetime,
           value: form.pickupDateTime,
           onChanged: notifier.onPassengerPickupDateTimeChange,
           isError: errors.containsKey(RequisitionFormField.pickupDateTime),
           errorText: errors[RequisitionFormField.pickupDateTime],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldPickupLocation,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldPickupLocation,
           value: form.pickupLocation,
           onChanged: notifier.onPassengerPickupLocationChange,
           error: errors[RequisitionFormField.pickupLocation],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldDropLocation,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldDropLocation,
           value: form.dropLocation,
           onChanged: notifier.onPassengerDropLocationChange,
           error: errors[RequisitionFormField.dropLocation],
         ),
         spacing,
         DropdownField<UsedType>(
-          label: TmsStrings.newRequisitionFieldUsedType,
+          label: TracGoStrings.newRequisitionFieldUsedType,
           options: UsedType.values,
           selected: form.usedType,
           labelFor: (v) => v.label,
           onSelect: notifier.onUsedTypeChange,
         ),
-        const _SectionHeader(TmsStrings.newRequisitionSectionPassengerDetails),
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldCustomerName,
+        const _SectionHeader(TracGoStrings.newRequisitionSectionPassengerDetails),
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldCustomerName,
           value: form.customerName,
           onChanged: notifier.onPassengerCustomerNameChange,
           error: errors[RequisitionFormField.customerName],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldNumberOfPersons,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldNumberOfPersons,
           value: form.numberOfPersons,
           onChanged: notifier.onNumberOfPersonsChange,
           error: errors[RequisitionFormField.numberOfPersons],
@@ -347,7 +347,7 @@ class _PassengerFormFields extends StatelessWidget {
         ),
         spacing,
         DropdownField<RequiredFor>(
-          label: TmsStrings.newRequisitionFieldRequiredFor,
+          label: TracGoStrings.newRequisitionFieldRequiredFor,
           options: RequiredFor.values,
           selected: form.requiredFor,
           labelFor: (v) => v.label,
@@ -361,14 +361,14 @@ class _PassengerFormFields extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              TmsStrings.unsupportedEmployeePicker,
-              style: tmsTextTheme.bodySmall?.copyWith(color: tmsTextMutedAlt),
+              TracGoStrings.unsupportedEmployeePicker,
+              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
             ),
           ),
         if (ApiCapabilities.employeeDirectory &&
             form.requiredFor == RequiredFor.someoneElse) ...[
           spacing,
-          Text(TmsStrings.newRequisitionFieldUserType, style: tmsTextTheme.bodySmall),
+          Text(TracGoStrings.newRequisitionFieldUserType, style: tracGoTextTheme.bodySmall),
           const SizedBox(height: 8),
           RadioRow<RequisitionUserType>(
             options: RequisitionUserType.values,
@@ -388,16 +388,16 @@ class _PassengerFormFields extends StatelessWidget {
             onToggle: notifier.toggleEmployeeSelection,
           ),
         ],
-        const _SectionHeader(TmsStrings.newRequisitionSectionPurpose),
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldPurpose,
+        const _SectionHeader(TracGoStrings.newRequisitionSectionPurpose),
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldPurpose,
           value: form.purpose,
           onChanged: notifier.onPurposeChange,
           error: errors[RequisitionFormField.purpose],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldRemarks,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldRemarks,
           value: form.remarks,
           onChanged: notifier.onPassengerRemarksChange,
           singleLine: false,
@@ -422,7 +422,7 @@ class _LogisticsFormFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(TmsStrings.newRequisitionSectionVehicleDetails),
+        const _SectionHeader(TracGoStrings.newRequisitionSectionVehicleDetails),
         RadioRow<VehicleType>(
           options: VehicleType.values,
           selected: form.vehicleType,
@@ -431,73 +431,73 @@ class _LogisticsFormFields extends StatelessWidget {
         ),
         spacing,
         DropdownField<LoadingCapacity>(
-          label: TmsStrings.newRequisitionFieldLoadingCapacity,
+          label: TracGoStrings.newRequisitionFieldLoadingCapacity,
           options: LoadingCapacity.values,
           selected: form.loadingCapacity,
           labelFor: (v) => v.label,
           onSelect: notifier.onLoadingCapacityChange,
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldGoodsWeight,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldGoodsWeight,
           value: form.goodsWeight,
           onChanged: notifier.onGoodsWeightChange,
           error: errors[RequisitionFormField.goodsWeight],
         ),
-        const _SectionHeader(TmsStrings.newRequisitionSectionTripDetails),
+        const _SectionHeader(TracGoStrings.newRequisitionSectionTripDetails),
         DateTimeField(
-          label: TmsStrings.newRequisitionFieldPickupDatetime,
+          label: TracGoStrings.newRequisitionFieldPickupDatetime,
           value: form.pickupDateTime,
           onChanged: notifier.onLogisticsPickupDateTimeChange,
           isError: errors.containsKey(RequisitionFormField.pickupDateTime),
           errorText: errors[RequisitionFormField.pickupDateTime],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldPickupLocation,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldPickupLocation,
           value: form.pickupLocation,
           onChanged: notifier.onLogisticsPickupLocationChange,
           error: errors[RequisitionFormField.pickupLocation],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldDropLocation,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldDropLocation,
           value: form.dropLocation,
           onChanged: notifier.onLogisticsDropLocationChange,
           error: errors[RequisitionFormField.dropLocation],
         ),
-        const _SectionHeader(TmsStrings.newRequisitionSectionRequesterDetails),
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldCustomerName,
+        const _SectionHeader(TracGoStrings.newRequisitionSectionRequesterDetails),
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldCustomerName,
           value: form.customerName,
           onChanged: notifier.onLogisticsCustomerNameChange,
           error: errors[RequisitionFormField.customerName],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldUserDepartment,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldUserDepartment,
           value: form.userDepartment,
           onChanged: notifier.onUserDepartmentChange,
           error: errors[RequisitionFormField.userDepartment],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldStoreName,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldStoreName,
           value: form.storeName,
           onChanged: notifier.onStoreNameChange,
           error: errors[RequisitionFormField.storeName],
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldGoodsDetails,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldGoodsDetails,
           value: form.goodsDetails,
           onChanged: notifier.onGoodsDetailsChange,
           error: errors[RequisitionFormField.goodsDetails],
           singleLine: false,
         ),
         spacing,
-        _TmsTextField(
-          label: TmsStrings.newRequisitionFieldRemarks,
+        _TracGoTextField(
+          label: TracGoStrings.newRequisitionFieldRemarks,
           value: form.remarks,
           onChanged: notifier.onLogisticsRemarksChange,
           singleLine: false,
@@ -507,8 +507,8 @@ class _LogisticsFormFields extends StatelessWidget {
   }
 }
 
-class _TmsTextField extends StatelessWidget {
-  const _TmsTextField({
+class _TracGoTextField extends StatelessWidget {
+  const _TracGoTextField({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -573,7 +573,7 @@ class _EmployeePickerState extends State<_EmployeePicker> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(TmsStrings.newRequisitionFieldSelectEmployees, style: tmsTextTheme.bodySmall),
+        Text(TracGoStrings.newRequisitionFieldSelectEmployees, style: tracGoTextTheme.bodySmall),
         if (widget.selected.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -592,7 +592,7 @@ class _EmployeePickerState extends State<_EmployeePicker> {
             widget.onQueryChange(value);
             setState(() => _expanded = true);
           },
-          hintText: TmsStrings.newRequisitionFieldSelectEmployees,
+          hintText: TracGoStrings.newRequisitionFieldSelectEmployees,
           errorText: widget.error ?? widget.searchError,
           suffixIcon: widget.isSearching
               ? const Padding(
@@ -605,9 +605,9 @@ class _EmployeePickerState extends State<_EmployeePicker> {
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: tmsSurfaceWhite,
-              border: Border.all(color: tmsBorder),
-              borderRadius: tmsBorderRadius(tmsRadiusSmall),
+              color: tracGoSurfaceWhite,
+              border: Border.all(color: tracGoBorder),
+              borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
             ),
             constraints: const BoxConstraints(maxHeight: 220),
             child: ListView(

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/data/remote/dto/user_mapper.dart';
+import 'package:tracgo/data/remote/dto/user_mapper.dart';
 
 void main() {
   group('fromLoginData', () {

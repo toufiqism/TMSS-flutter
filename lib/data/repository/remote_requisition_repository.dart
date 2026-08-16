@@ -9,7 +9,7 @@ import '../remote/dto/json_reader.dart';
 import '../remote/dto/requisition_mapper.dart';
 import '../remote/dto/wire_date_time.dart';
 import '../remote/safe_api_call.dart';
-import '../remote/tmss_api_client.dart';
+import '../remote/tracgo_api_client.dart';
 
 /// Requisitions against `/requisitions`.
 ///
@@ -41,7 +41,7 @@ class RemoteRequisitionRepository implements RequisitionRepository {
     // ignore: prefer_initializing_formals
   }) : _reporter = reporter;
 
-  final TmssApiClient _apiClient;
+  final TracGoApiClient _apiClient;
   final CrashReporter _reporter;
 
   /// How far back the dashboard looks. The server defaults to one month when no dates

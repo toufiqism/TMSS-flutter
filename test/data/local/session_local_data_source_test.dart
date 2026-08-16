@@ -4,8 +4,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tmss/data/local/session_local_data_source.dart';
-import 'package:tmss/domain/model/user.dart';
+import 'package:tracgo/data/local/session_local_data_source.dart';
+import 'package:tracgo/domain/model/user.dart';
 
 class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
 

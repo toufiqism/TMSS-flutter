@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tmss/core/remote_config/app_remote_config.dart';
+import 'package:tracgo/core/remote_config/app_remote_config.dart';
 
 void main() {
   group('defaults are the safe-to-run-forever state', () {

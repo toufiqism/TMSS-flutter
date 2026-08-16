@@ -8,7 +8,7 @@ import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/strings.dart';
-import '../common/tms_logo_mark.dart';
+import '../common/tracgo_logo_mark.dart';
 import 'route_paths.dart';
 
 const _honorifics = {
@@ -61,10 +61,10 @@ class AppShell extends ConsumerWidget {
     final user = sessionAsync.value?.user;
 
     return Scaffold(
-      backgroundColor: tmsPageBackground,
+      backgroundColor: tracGoPageBackground,
       drawer: Drawer(
         width: MediaQuery.of(context).size.width * 0.82,
-        backgroundColor: tmsSurfaceWhite,
+        backgroundColor: tracGoSurfaceWhite,
         // Scrollable, with the logout row still pinned to the bottom. At large
         // accessibility text sizes the header, nav items and logout together exceed the
         // drawer's height and the Column overflowed by ~183px, clipping logout off the
@@ -84,15 +84,15 @@ class AppShell extends ConsumerWidget {
                         padding: const EdgeInsets.all(24),
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [tmsGreenDark, tmsGreen],
+                            colors: [tracGoGreenDark, tracGoGreen],
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const TmsLogoMark(
+                            const TracGoLogoMark(
                               badgeColor: Color(0x24FFFFFF),
-                              glyphColor: tmsLoginAccentGreen,
+                              glyphColor: tracGoLoginAccentGreen,
                               size: 26,
                               cornerRadius: 8,
                             ),
@@ -104,14 +104,14 @@ class AppShell extends ConsumerWidget {
                                     width: 46,
                                     height: 46,
                                     decoration: const BoxDecoration(
-                                      color: tmsGreenLight,
+                                      color: tracGoGreenLight,
                                       shape: BoxShape.circle,
                                     ),
                                     alignment: Alignment.center,
                                     child: Text(
                                       _initialsOf(user.name),
-                                      style: tmsTextTheme.titleMedium?.copyWith(
-                                        color: tmsGreen,
+                                      style: tracGoTextTheme.titleMedium?.copyWith(
+                                        color: tracGoGreen,
                                       ),
                                     ),
                                   ),
@@ -123,16 +123,16 @@ class AppShell extends ConsumerWidget {
                                       children: [
                                         Text(
                                           user.name,
-                                          style: tmsTextTheme.titleMedium
+                                          style: tracGoTextTheme.titleMedium
                                               ?.copyWith(
-                                                color: tmsSurfaceWhite,
+                                                color: tracGoSurfaceWhite,
                                               ),
                                         ),
                                         Text(
                                           user.designation,
-                                          style: tmsTextTheme.bodySmall
+                                          style: tracGoTextTheme.bodySmall
                                               ?.copyWith(
-                                                color: tmsSurfaceWhite
+                                                color: tracGoSurfaceWhite
                                                     .withValues(alpha: 0.7),
                                               ),
                                         ),
@@ -151,7 +151,7 @@ class AppShell extends ConsumerWidget {
                           children: [
                             _DrawerItem(
                               icon: Icons.dashboard_outlined,
-                              label: TmsStrings.navDashboard,
+                              label: TracGoStrings.navDashboard,
                               selected: currentPath == RoutePaths.dashboard,
                               onTap: () {
                                 Navigator.of(context).pop();
@@ -160,7 +160,7 @@ class AppShell extends ConsumerWidget {
                             ),
                             _DrawerItem(
                               icon: Icons.assignment_outlined,
-                              label: TmsStrings.navMyRequisition,
+                              label: TracGoStrings.navMyRequisition,
                               selected:
                                   currentPath == RoutePaths.requisitionList,
                               onTap: () {
@@ -172,14 +172,14 @@ class AppShell extends ConsumerWidget {
                         ),
                       ),
                       const Spacer(),
-                      const Divider(height: 1, color: tmsDivider),
+                      const Divider(height: 1, color: tracGoDivider),
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: _DrawerItem(
                           icon: Icons.logout,
-                          label: TmsStrings.navLogout,
+                          label: TracGoStrings.navLogout,
                           selected: false,
-                          tint: tmsDestructiveRed,
+                          tint: tracGoDestructiveRed,
                           onTap: () {
                             Navigator.of(context).pop();
                             unawaited(ref.read(logoutUseCaseProvider)());
@@ -197,8 +197,8 @@ class AppShell extends ConsumerWidget {
       appBar: AppBar(
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: tmsTextDark),
-            tooltip: TmsStrings.navOpenMenu,
+            icon: const Icon(Icons.menu, color: tracGoTextDark),
+            tooltip: TracGoStrings.navOpenMenu,
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -206,32 +206,32 @@ class AppShell extends ConsumerWidget {
             topBarTitle ??
             Row(
               children: [
-                const TmsLogoMark(
-                  badgeColor: tmsGreenLight,
-                  glyphColor: tmsGreen,
+                const TracGoLogoMark(
+                  badgeColor: tracGoGreenLight,
+                  glyphColor: tracGoGreen,
                   size: 24,
                   cornerRadius: 7,
                 ),
                 const SizedBox(width: 7),
-                Text(TmsStrings.appName, style: tmsTextTheme.titleMedium),
+                Text(TracGoStrings.appName, style: tracGoTextTheme.titleMedium),
               ],
             ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline, color: tmsTextMutedAlt),
-            tooltip: TmsStrings.navProfile,
+            icon: const Icon(Icons.person_outline, color: tracGoTextMutedAlt),
+            tooltip: TracGoStrings.navProfile,
             onPressed: onOpenProfile,
           ),
           if (showNotificationBell)
             IconButton(
-              tooltip: TmsStrings.navNotifications,
+              tooltip: TracGoStrings.navNotifications,
               onPressed: () {},
               icon: Badge(
-                backgroundColor: tmsDestructiveRed,
+                backgroundColor: tracGoDestructiveRed,
                 label: const Text('0'),
                 child: const Icon(
                   Icons.notifications_outlined,
-                  color: tmsTextMutedAlt,
+                  color: tracGoTextMutedAlt,
                 ),
               ),
             ),
@@ -259,7 +259,7 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTint = tint ?? (selected ? tmsGreen : tmsTextMutedAlt);
+    final effectiveTint = tint ?? (selected ? tracGoGreen : tracGoTextMutedAlt);
     return InkWell(
       onTap: onTap,
       borderRadius: pillBorderRadius,
@@ -267,7 +267,7 @@ class _DrawerItem extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: selected ? tmsGreenLight : Colors.transparent,
+          color: selected ? tracGoGreenLight : Colors.transparent,
           borderRadius: pillBorderRadius,
         ),
         child: Row(
@@ -279,8 +279,8 @@ class _DrawerItem extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: tmsTextTheme.bodyLarge?.copyWith(
-                  color: selected ? tmsTextDark : effectiveTint,
+                style: tracGoTextTheme.bodyLarge?.copyWith(
+                  color: selected ? tracGoTextDark : effectiveTint,
                   fontWeight: selected ? FontWeight.bold : FontWeight.w600,
                   fontSize: 14.5,
                 ),

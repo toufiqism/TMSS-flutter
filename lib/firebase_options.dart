@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBO3RmBzoiZ7zBEYa6k0aWDLUT87YIjkxk',
-    appId: '1:313133964847:android:d718f2541744764aaa30da',
+    appId: '1:313133964847:android:717e99075de2620daa30da',
     messagingSenderId: '313133964847',
     projectId: 'tracgo-631b7',
     storageBucket: 'tracgo-631b7.firebasestorage.app',
@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBfR4lTSshJXfJxPvoEsG8CSM_3oq52CgA',
-    appId: '1:313133964847:ios:29588a897e3f73f3aa30da',
+    appId: '1:313133964847:ios:bd45970b8f04cb90aa30da',
     messagingSenderId: '313133964847',
     projectId: 'tracgo-631b7',
     storageBucket: 'tracgo-631b7.firebasestorage.app',
-    iosBundleId: 'com.banglatrac.tmss',
+    iosBundleId: 'com.btracsl.tracgo',
   );
 }

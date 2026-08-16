@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tmss/core/api_result.dart';
-import 'package:tmss/di/providers.dart';
-import 'package:tmss/domain/model/requisition.dart';
-import 'package:tmss/domain/usecase/cancel_requisition_use_case.dart';
-import 'package:tmss/domain/usecase/get_requisition_use_case.dart';
-import 'package:tmss/domain/usecase/get_requisitions_use_case.dart';
-import 'package:tmss/domain/model/user.dart';
-import 'package:tmss/presentation/common/strings.dart';
-import 'package:tmss/presentation/nav/app_shell.dart';
-import 'package:tmss/presentation/nav/route_paths.dart';
-import 'package:tmss/presentation/requisition_create/requisition_create_screen.dart';
-import 'package:tmss/presentation/requisition_detail/requisition_detail_screen.dart';
-import 'package:tmss/presentation/requisition_list/requisition_list_screen.dart';
+import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/requisition.dart';
+import 'package:tracgo/domain/usecase/cancel_requisition_use_case.dart';
+import 'package:tracgo/domain/usecase/get_requisition_use_case.dart';
+import 'package:tracgo/domain/usecase/get_requisitions_use_case.dart';
+import 'package:tracgo/domain/model/user.dart';
+import 'package:tracgo/presentation/common/strings.dart';
+import 'package:tracgo/presentation/nav/app_shell.dart';
+import 'package:tracgo/presentation/nav/route_paths.dart';
+import 'package:tracgo/presentation/requisition_create/requisition_create_screen.dart';
+import 'package:tracgo/presentation/requisition_detail/requisition_detail_screen.dart';
+import 'package:tracgo/presentation/requisition_list/requisition_list_screen.dart';
 
 /// Android 15+ enforces edge-to-edge for apps targeting API 35+, and this app targets
 /// 36 — so the system navigation bar sits *over* the app unless its inset is honoured.
@@ -99,7 +99,7 @@ void main() {
 
     final button = find.widgetWithText(
       ElevatedButton,
-      TmsStrings.newRequisitionSubmit,
+      TracGoStrings.newRequisitionSubmit,
     );
     expect(button, findsOneWidget);
     expect(
@@ -144,7 +144,7 @@ void main() {
 
     final button = find.widgetWithText(
       ElevatedButton,
-      TmsStrings.requisitionListNewFab,
+      TracGoStrings.requisitionListNewFab,
     );
     expect(button, findsOneWidget);
     expect(
@@ -189,7 +189,7 @@ void main() {
     await tester.pump();
 
     expect(
-      tester.getRect(find.text(TmsStrings.requisitionDetailEdit)).bottom,
+      tester.getRect(find.text(TracGoStrings.requisitionDetailEdit)).bottom,
       lessThanOrEqualTo(_navBarTop(tester)),
       reason: 'Edit must be reachable, not hidden behind the navigation buttons',
     );

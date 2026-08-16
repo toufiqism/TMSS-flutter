@@ -123,12 +123,12 @@ class RequisitionDetailNotifier extends Notifier<RequisitionDetailUiState>
     switch (result) {
       case ApiSuccess<void>():
         emitEvent(
-          const RequisitionDetailClosed(TmsStrings.requisitionDetailCancelled),
+          const RequisitionDetailClosed(TracGoStrings.requisitionDetailCancelled),
         );
       case ApiError<void>(:final message, :final errorCode):
         _clearCancelling();
         emitEvent(RequisitionDetailShowMessage(
-          message ?? TmsStrings.requisitionListCancelFailed,
+          message ?? TracGoStrings.requisitionListCancelFailed,
         ));
         // 409 means an approver moved it out of Pending while this screen was open.
         // Refetching swaps in the real status, which also removes the actions that are
