@@ -301,8 +301,19 @@ Exact versions get pinned once `flutter pub get` first resolves them — list he
 | shared_preferences | Non-sensitive local prefs |
 | mocktail | Test doubles (no codegen, unlike mockito) |
 | flutter_lints | Lint ruleset |
+| firebase_core | Firebase initialisation (project `tracgo-631b7`) |
+| firebase_crashlytics | Crash + non-fatal reporting, behind the `CrashReporter` interface |
+| firebase_remote_config | Server-controlled flags, behind the `AppRemoteConfig` interface |
 
-No Firebase, no `get_it`, no Bloc — deliberate exclusions per the decisions above.
+No `get_it`, no Bloc — deliberate exclusions per the decisions above.
+
+Firebase **was** on that exclusion list and no longer is: Core, Crashlytics and
+Remote Config were added deliberately. They are confined to
+`core/telemetry/` and `core/remote_config/`, reached only through the
+`CrashReporter` and `AppRemoteConfig` interfaces, and bound in `di/providers.dart`
+with no-op defaults that `main` overrides — so `domain/`, `presentation/` and every
+test still run with no Firebase binding present. See README "Firebase, Crashlytics
+and Remote Config".
 
 ---
 

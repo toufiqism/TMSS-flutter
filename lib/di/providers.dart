@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api_config.dart';
+import '../core/remote_config/app_remote_config.dart';
 import '../core/session_expiration_handler.dart';
+import '../core/telemetry/crash_reporter.dart';
 import '../data/local/session_local_data_source.dart';
 import '../data/remote/auth_interceptor.dart';
 import '../data/remote/tmss_api_client.dart';
@@ -23,6 +27,46 @@ import '../domain/usecase/observe_session_use_case.dart';
 import '../domain/usecase/search_employees_use_case.dart';
 import '../domain/usecase/submit_requisition_use_case.dart';
 import '../domain/usecase/update_requisition_use_case.dart';
+
+/// Crash/telemetry sink.
+///
+/// The default is the no-op implementation, and `main` overrides it with the
+/// Firebase-backed one after [bootstrapTelemetry] succeeds. Defaulting rather than
+/// throwing is what lets a `ProviderContainer` in a unit test — where there is no
+/// Firebase binding and no platform channels — build the graph without an override.
+final crashReporterProvider = Provider<CrashReporter>(
+  (ref) => const NoOpCrashReporter(),
+);
+
+/// Server-controlled values. Same override-in-`main` arrangement as
+/// [crashReporterProvider]; the default returns the compiled-in defaults.
+final appRemoteConfigProvider = Provider<AppRemoteConfig>(
+  (ref) => const StaticAppRemoteConfig(),
+);
+
+/// Ties crash reports to the signed-in user, and unties them on logout.
+///
+/// Watched by `TmsApp` so it lives as long as the app does. It is a side-effecting
+/// provider with no value, which is unusual — the alternative was an `ref.listen` in a
+/// widget `build`, and putting it here keeps the session-to-telemetry wiring in the
+/// same file as the rest of the graph.
+///
+/// Only [User.id] is sent. Name and email are deliberately withheld: crash reports are
+/// retained by a third party and readable by anyone with console access, and an opaque
+/// id is enough to correlate a report with a support ticket.
+final crashReporterIdentityProvider = Provider<void>((ref) {
+  final reporter = ref.watch(crashReporterProvider);
+  ref.listen<AsyncValue<Session?>>(
+    sessionStreamProvider,
+    (previous, next) {
+      // `value` collapses the pre-hydration loading state and the logged-out
+      // state to the same thing, which is right: in both cases there is no user to
+      // attribute a crash to.
+      unawaited(reporter.setUserIdentifier(next.value?.user.id));
+    },
+    fireImmediately: true,
+  );
+});
 
 final sessionLocalDataSourceProvider = Provider<SessionLocalDataSource>((ref) {
   final dataSource = SessionLocalDataSource();
@@ -107,11 +151,15 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return RemoteAuthRepository(
     ref.watch(tmssApiClientProvider),
     ref.watch(sessionLocalDataSourceProvider),
+    reporter: ref.watch(crashReporterProvider),
   );
 });
 
 final requisitionRepositoryProvider = Provider<RequisitionRepository>((ref) {
-  return RemoteRequisitionRepository(ref.watch(tmssApiClientProvider));
+  return RemoteRequisitionRepository(
+    ref.watch(tmssApiClientProvider),
+    reporter: ref.watch(crashReporterProvider),
+  );
 });
 
 final sessionExpirationHandlerProvider = Provider<SessionExpirationHandler>((ref) {

@@ -125,6 +125,9 @@ Clean Architecture, mirroring the Android app. Dependencies point inwards:
 lib/
 ├── core/           ApiResult union, notifier lifecycle guards, API config,
 │                   network messages, session expiry
+│   ├── telemetry/  CrashReporter interface + Firebase impl, route breadcrumbs,
+│   │               Firebase/error-handler bootstrap
+│   └── remote_config/  AppRemoteConfig interface + Firebase impl and defaults
 ├── data/
 │   ├── local/      Session storage (flutter_secure_storage + an install marker)
 │   ├── remote/     Dio client, auth interceptor, safeApiCall, dto/ mappers
@@ -213,6 +216,84 @@ iOS accessibility is pinned to `first_unlock_this_device` — readable after the
 unlock following a reboot, and never synced to iCloud Keychain, so a corporate session
 does not travel to the user's other devices. Android needs no equivalent option;
 flutter_secure_storage 11 already defaults to AES-GCM under an RSA-OAEP Keystore key.
+
+## Firebase, Crashlytics and Remote Config
+
+Firebase project **`tracgo-631b7`**, one app per platform, both under the bundle id
+`com.banglatrac.tmss`. Config lives in three generated files, all committed: 
+`lib/firebase_options.dart`, `android/app/google-services.json` and
+`ios/Runner/GoogleService-Info.plist`. The keys in them are client identifiers, not
+secrets — access is controlled by Firebase security rules, not by hiding them.
+
+`main()` calls `bootstrapTelemetry()` before `runApp`. It **never throws**: if Firebase
+fails to start, the app runs on `Telemetry.disabled` (a no-op reporter and the
+compiled-in config defaults) with Flutter's own error handlers left untouched, so
+errors still reach the console. Crash collection is currently **enabled in debug builds
+too** — flip the `setCrashlyticsCollectionEnabled(true)` call in
+`core/telemetry/telemetry_bootstrap.dart` to `!kDebugMode` to keep development crashes
+out of the dashboard.
+
+### What gets reported
+
+| Source | Treatment |
+|---|---|
+| `FlutterError.onError` | fatal, chained to the previous handler so the console dump survives |
+| `PlatformDispatcher.instance.onError` | fatal; returns `false` so the framework still prints |
+| 5xx (except 503), timeouts, bad certificate, undecodable 2xx, unclassified throws | non-fatal, keyed with `operation` + `status` |
+| 401/403/404/409/422/503, offline, cancelled | breadcrumb only — specified behaviour, not defects |
+| Every navigation | breadcrumb (`CrashRouteObserver`, on both the root and shell navigators) |
+
+The split is deliberate: a non-fatal per failed request would bury real defects under
+the ones working as designed. Breadcrumbs still ride along with whatever is reported
+next, so a crash after a run of 401s stays diagnosable.
+
+User identity is `User.id` and nothing else — no name, no email. Crash reports are
+retained by a third party and readable by anyone with console access.
+
+Nothing in `domain/` or `presentation/` imports `firebase_*`. Everything talks to the
+`CrashReporter` / `AppRemoteConfig` interfaces, bound in `di/providers.dart` and
+overridden in `main`, which is what lets every test build the same graph with no
+Firebase binding.
+
+### Remote Config
+
+Two keys, both defaulting to "do nothing" so a failed fetch can never lock users out or
+invent an outage: `minimum_supported_build` (0 = gate off) and `maintenance_message`
+(empty = nothing to show). **No UI consumes them yet** — the service is wired and
+fetching, but the force-update and maintenance surfaces are not built.
+
+`api_base_url` is deliberately *not* a remote key: it decides where the app sends a
+bearer token and a password. It stays a compile-time `--dart-define` (see `ApiConfig`).
+
+### iOS — one step needs a Mac
+
+`flutterfire configure` cannot patch an Xcode project from Windows, so the iOS side was
+wired by hand: `GoogleService-Info.plist` was fetched from the Firebase project and
+added to the Runner target's Resources, and an **Upload Crashlytics dSYMs** build phase
+was added that runs `ios/scripts/upload_crashlytics_dsyms.sh`. Because this project has
+no Podfile — plugins come through Swift Package Manager — that script looks for the
+helper under `SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run`, falling back
+to the CocoaPods path, and warns rather than failing when neither exists.
+
+None of that has been compiled or run: there is no macOS toolchain on this machine.
+Open `ios/Runner.xcworkspace` and build once to confirm Xcode accepts the project edit,
+that `GoogleService-Info.plist` appears under Build Phases → Copy Bundle Resources, and
+that the dSYM phase runs on an Archive.
+
+### Verifying it works
+
+Force a crash from a debug build, then restart the app — Crashlytics uploads on the
+next launch, never during the crash itself:
+
+```dart
+FirebaseCrashlytics.instance.crash();      // fatal
+throw StateError('non-fatal smoke test');  // caught by PlatformDispatcher.onError
+```
+
+Reports land in the Firebase console within a few minutes. Android release builds
+upload their R8 mapping automatically via the Crashlytics Gradle plugin
+(`com.google.firebase.crashlytics` 3.0.7); Flutter's own `libapp.so` frames stay
+unsymbolicated unless NDK symbol upload is added separately.
 
 ## Testing
 

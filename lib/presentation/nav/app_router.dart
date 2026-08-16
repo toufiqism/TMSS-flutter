@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/telemetry/crash_route_observer.dart';
 import '../../di/providers.dart';
 import '../common/strings.dart';
 import '../../domain/model/requisition.dart';
@@ -112,9 +113,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = _SessionRefreshListenable(ref);
   ref.onDispose(refreshListenable.dispose);
 
+  // Two instances, not one shared observer: `Navigator` asserts that an observer
+  // belongs to a single navigator, and the ShellRoute creates its own. Registering
+  // only the root would also miss every move between Dashboard and Requisition List,
+  // which is most of the navigation in this app.
+  final reporter = ref.watch(crashReporterProvider);
+  final rootObserver = CrashRouteObserver(reporter);
+  final shellObserver = CrashRouteObserver(reporter);
+
   return GoRouter(
     initialLocation: RoutePaths.splash,
     refreshListenable: refreshListenable,
+    observers: [rootObserver],
     redirect: (context, state) {
       final sessionAsync = ref.read(sessionStreamProvider);
       if (!sessionAsync.hasValue) {
@@ -139,6 +149,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LoginScreen(onLoginSuccess: () => context.go(RoutePaths.dashboard)),
       ),
       ShellRoute(
+        observers: [shellObserver],
         builder: (context, state, child) {
           final topBarTitle = state.matchedLocation == RoutePaths.requisitionList
               ? Text(TmsStrings.requisitionListTitle, style: tmsTextTheme.titleMedium)

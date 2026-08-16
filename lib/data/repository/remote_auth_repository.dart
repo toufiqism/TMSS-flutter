@@ -1,5 +1,6 @@
 import '../../core/api_result.dart';
 import '../../core/network_messages.dart';
+import '../../core/telemetry/crash_reporter.dart';
 import '../../domain/model/user.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../local/session_local_data_source.dart';
@@ -18,10 +19,21 @@ import '../remote/tmss_api_client.dart';
 /// display name, so it would add a request and a failure mode for a user id nothing
 /// sends anywhere.
 class RemoteAuthRepository implements AuthRepository {
-  RemoteAuthRepository(this._apiClient, this._sessionLocalDataSource);
+  RemoteAuthRepository(
+    this._apiClient,
+    this._sessionLocalDataSource, {
+    // Defaulted rather than required so tests and the live-API script keep their
+    // two-argument construction; the real binding in `di/providers.dart` passes the
+    // Firebase-backed reporter.
+    // An initializing formal is impossible here: the field is private and a
+    // named parameter cannot be, so the parameter and the field must differ.
+    CrashReporter reporter = const NoOpCrashReporter(),
+    // ignore: prefer_initializing_formals
+  }) : _reporter = reporter;
 
   final TmssApiClient _apiClient;
   final SessionLocalDataSource _sessionLocalDataSource;
+  final CrashReporter _reporter;
 
   @override
   Stream<Session?> get session => _sessionLocalDataSource.session;
@@ -31,6 +43,8 @@ class RemoteAuthRepository implements AuthRepository {
     final result = await safeApiCall<Map<String, dynamic>?>(
       () => _apiClient.login(userName: username, password: password),
       decode: (body) => body is Map<String, dynamic> ? body.mapOrNull('data') : null,
+      reporter: _reporter,
+      operation: 'POST /login',
     );
 
     switch (result) {
@@ -80,6 +94,8 @@ class RemoteAuthRepository implements AuthRepository {
         }
         return UserMapper.accountFromJson(body);
       },
+      reporter: _reporter,
+      operation: 'GET /user',
     );
   }
 
@@ -96,7 +112,12 @@ class RemoteAuthRepository implements AuthRepository {
   /// the session.
   @override
   Future<void> logout() async {
-    await safeApiCall<void>(_apiClient.logout, decode: (_) {});
+    await safeApiCall<void>(
+      _apiClient.logout,
+      decode: (_) {},
+      reporter: _reporter,
+      operation: 'POST /logout',
+    );
     await _sessionLocalDataSource.clear();
   }
 }

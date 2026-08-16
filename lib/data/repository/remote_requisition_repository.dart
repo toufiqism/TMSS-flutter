@@ -1,6 +1,7 @@
 import '../../core/api_config.dart';
 import '../../core/api_result.dart';
 import '../../core/network_messages.dart';
+import '../../core/telemetry/crash_reporter.dart';
 import '../../domain/model/employee.dart';
 import '../../domain/model/requisition.dart';
 import '../../domain/repository/requisition_repository.dart';
@@ -29,9 +30,19 @@ import '../remote/tmss_api_client.dart';
 /// list that ceiling is far above realistic volumes, and it is a deliberate stop
 /// rather than an unbounded loop against an unverified pagination envelope.
 class RemoteRequisitionRepository implements RequisitionRepository {
-  RemoteRequisitionRepository(this._apiClient);
+  RemoteRequisitionRepository(
+    this._apiClient, {
+    // Defaulted rather than required so tests and the live-API script keep their
+    // single-argument construction; the real binding in `di/providers.dart` passes the
+    // Firebase-backed reporter.
+    // An initializing formal is impossible here: the field is private and a
+    // named parameter cannot be, so the parameter and the field must differ.
+    CrashReporter reporter = const NoOpCrashReporter(),
+    // ignore: prefer_initializing_formals
+  }) : _reporter = reporter;
 
   final TmssApiClient _apiClient;
+  final CrashReporter _reporter;
 
   /// How far back the dashboard looks. The server defaults to one month when no dates
   /// are sent, which would silently under-count the tiles, so a window is always sent
@@ -72,6 +83,8 @@ class RemoteRequisitionRepository implements RequisitionRepository {
     return safeApiCall<Requisition>(
       () => _apiClient.createRequisition(RequisitionMapper.toWriteJson(request)),
       decode: _decodeSingle,
+      reporter: _reporter,
+      operation: 'POST /requisitions',
     );
   }
 
@@ -82,6 +95,8 @@ class RemoteRequisitionRepository implements RequisitionRepository {
       // The response echoes the cancelled requisition, but nothing needs it: the list
       // refetches after a successful cancel.
       decode: (_) {},
+      reporter: _reporter,
+      operation: 'POST /requisitions/{id}/cancel',
     );
     return result;
   }
@@ -91,6 +106,10 @@ class RemoteRequisitionRepository implements RequisitionRepository {
     return safeApiCall<Requisition>(
       () => _apiClient.getRequisition(id),
       decode: _decodeSingle,
+      reporter: _reporter,
+      // The id stays out of the label on purpose: it is the Crashlytics grouping key,
+      // and one issue per requisition id would be one issue per user.
+      operation: 'GET /requisitions/{id}',
     );
   }
 
@@ -102,6 +121,8 @@ class RemoteRequisitionRepository implements RequisitionRepository {
     return safeApiCall<Requisition>(
       () => _apiClient.updateRequisition(id, RequisitionMapper.toWriteJson(request)),
       decode: _decodeSingle,
+      reporter: _reporter,
+      operation: 'PUT /requisitions/{id}',
     );
   }
 
@@ -137,6 +158,8 @@ class RemoteRequisitionRepository implements RequisitionRepository {
           toDate: to == null ? null : WireDateTime.formatDate(to),
         ),
         decode: _decodePage,
+        reporter: _reporter,
+        operation: 'GET /requisitions',
       );
 
       switch (pageResult) {
