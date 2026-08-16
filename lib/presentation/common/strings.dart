@@ -43,15 +43,13 @@ class TracGoStrings {
   static const navNotifications = 'Notifications';
 
   static const dashboardErrorGeneric = 'Something went wrong. Please try again.';
-  static const dashboardNeedVehicleTitle = 'Need a vehicle?';
-  static const dashboardNeedVehicleSubtitle = 'Submit a request in under a minute';
-  static const dashboardRequisitionNow = 'Requisition Now';
+  static const dashboardNewRequisition = 'New';
   static const dashboardStatAll = 'All Requisitions';
   static const dashboardStatApproved = 'Approved';
   static const dashboardStatAssigned = 'Assigned';
   static const dashboardStatPending = 'Pending';
   static const dashboardStatRejected = 'Rejected';
-  static const dashboardRecentRequisitions = 'Recent Requisitions';
+  static const dashboardRecentRequisitions = 'Recent Req.';
   static const dashboardViewAll = 'View All';
   static const dashboardNoRecentRequisitions = 'No recent requisitions found';
   static const dashboardRetry = 'Retry';

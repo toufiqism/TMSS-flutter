@@ -7,6 +7,11 @@ const tracGoRadiusMedium = 16.0;
 const tracGoRadiusLarge = 20.0;
 const tracGoRadiusExtraLarge = 24.0;
 
+/// Inner tiles of the dashboard's requisition-summary card. Sits between [tracGoRadiusMedium]
+/// and [tracGoRadiusLarge] because the tiles nest inside a 24px card and need a visibly
+/// tighter corner than their container.
+const tracGoRadiusStatTile = 18.0;
+
 BorderRadius tracGoBorderRadius(double radius) => BorderRadius.circular(radius);
 
 /// Fully-rounded pill shape used for buttons, toggles, filter chips, and status badges.

@@ -34,6 +34,20 @@ const tracGoStatusPendingOrangeBg = Color(0xFFFDF3DD);
 const tracGoStatusRejectedRed = Color(0xFFB23B30);
 const tracGoStatusRejectedRedBg = Color(0xFFFBE4E2);
 
+// "Requisition Summary" card (claude.ai/design project "Requisition Summary.dc.html").
+// The All Requisitions hero tile carries its own violet ramp, which sits outside the
+// status-accent pairs above and is only used there.
+const tracGoStatHeroGradientTop = Color(0xFFF5F2FF);
+const tracGoStatHeroGradientBottom = Color(0xFFF9F7FF);
+const tracGoStatHeroAccent = Color(0xFF6B4EE6);
+const tracGoStatHeroBadgeBg = Color(0xFFE7E0FF);
+const tracGoStatHeroLabel = Color(0xFF4B3E7A);
+const tracGoStatHeroCount = Color(0xFF241C42);
+
+/// Backing for the four status tiles — a hair warmer than [tracGoSurfaceWhite] so the
+/// tiles read as insets inside the white card rather than merging with it.
+const tracGoStatTileBackground = Color(0xFFFBFCFB);
+
 // Destructive actions (Cancel, Log Out) — distinct, brighter red from the "Rejected"
 // status semantic color above, per the redesign mock.
 const tracGoDestructiveRed = Color(0xFFC4453A);
