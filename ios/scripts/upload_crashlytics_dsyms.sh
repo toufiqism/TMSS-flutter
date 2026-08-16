@@ -14,15 +14,25 @@
 
 set -u
 
-SPM_RUN="${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
+# `flutter build ios` passes -clonedSourcePackagesDirPath <project>/build/ios/SourcePackages,
+# so the checkouts are NOT under DerivedData. A plain `xcodebuild`/Xcode-GUI build has no
+# such override and does put them under DerivedData. Probe both, then CocoaPods.
+FLUTTER_SPM_RUN="${SRCROOT:-}/../build/ios/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
+DERIVED_SPM_RUN="${BUILD_DIR:-}"
+DERIVED_SPM_RUN="${DERIVED_SPM_RUN%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
 PODS_RUN="${PODS_ROOT:-}/FirebaseCrashlytics/run"
 
-if [ -x "$SPM_RUN" ] || [ -f "$SPM_RUN" ]; then
-  exec "$SPM_RUN"
-elif [ -f "$PODS_RUN" ]; then
-  exec "$PODS_RUN"
-fi
+for CANDIDATE in "$FLUTTER_SPM_RUN" "$DERIVED_SPM_RUN" "$PODS_RUN"; do
+  [ -f "$CANDIDATE" ] || continue
+  # The checkout normally ships mode 555, but a filesystem or transfer that drops the
+  # exec bit would otherwise turn this into a hard build failure.
+  if [ -x "$CANDIDATE" ]; then
+    exec "$CANDIDATE"
+  else
+    exec /bin/sh "$CANDIDATE"
+  fi
+done
 
 echo "warning: Firebase Crashlytics run script not found — dSYMs were not uploaded."
-echo "warning: looked in '$SPM_RUN' and '$PODS_RUN'."
+echo "warning: looked in '$FLUTTER_SPM_RUN', '$DERIVED_SPM_RUN' and '$PODS_RUN'."
 exit 0

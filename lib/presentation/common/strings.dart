@@ -6,8 +6,9 @@ class TracGoStrings {
 
   static const appName = 'TracGo';
 
-  static const loginHeading = 'Sign In';
-  static const loginSubheading = 'Enter your username and password';
+  static const loginHeading = 'Welcome back.';
+  static const loginSubheading =
+      'Sign in to manage allocations, trips and vehicle requisitions.';
   static const loginUsernamePlaceholder = 'yourname@company.com';
   static const loginPasswordPlaceholder = '••••••••';
   static const loginUsernameLabel = 'Username';
@@ -19,11 +20,14 @@ class TracGoStrings {
   /// guess that activating it changes anything.
   static const loginShowPassword = 'Show password';
   static const loginHidePassword = 'Hide password';
-  static const loginContactAdmin = 'Contact system admin.';
-  static const loginSignInButton = 'Sign In';
-  static const loginTaglineTitle = 'Transport Management System';
-  static const loginTaglineBody =
-      'One platform for fleet allocation, tracking, and vehicle requisitions across your enterprise.';
+  static const loginContactAdmin = 'Contact admin';
+  static const loginSignInButton = 'Sign in';
+
+  /// Label on the password reveal control. Short and uppercase per the Sign In design;
+  /// the longer [loginShowPassword]/[loginHidePassword] stay as its semantics label,
+  /// because "SHOW" alone tells a screen-reader user nothing about what it shows.
+  static const loginShowPasswordShort = 'Show';
+  static const loginHidePasswordShort = 'Hide';
   static const loginErrorRequiredFields = 'Username and password are required';
   static const loginErrorInvalidCredentials = 'Username/Password is invalid!';
 
@@ -38,6 +42,11 @@ class TracGoStrings {
   static const navLogoutRevokeFailed =
       'Signed out on this device. The server could not be reached, so the session may '
       'still be active until the token expires.';
+  /// Shown on the dashboard's first back press. Worded as a prompt, not a warning: on
+  /// iOS the second press does not actually close the app (see `DashboardBackScope`),
+  /// so anything promising an exit would be a lie on half the platforms we ship.
+  static const backExitPrompt = 'Press back again to exit';
+
   static const navOpenMenu = 'Open menu';
   static const navProfile = 'Profile';
   static const navNotifications = 'Notifications';

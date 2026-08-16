@@ -10,6 +10,13 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  # `flutter build ios` clones every Swift Package *and* copies each plugin's own Dart
+  # sources into build/ios/SourcePackages. Those carry their own tests, written against
+  # other packages' versions of mockito and friends, and they land in `flutter analyze`
+  # as ~120 errors in code this repo does not own — enough noise to hide a real finding.
+  # Nothing under build/ is ours; it is regenerated on every build.
+  exclude:
+    - build/**
   # Strict modes close the holes `dynamic` otherwise punches through the type
   # system. This matters most in data/remote/dto/, where every value arrives as
   # `dynamic` off a decoded JSON map: without strict-casts an accidental

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Background layer of the adaptive launcher icon. White rather than a brand green:
+         the mark's enclosed counter is white, and on a green plate that counter reads as
+         a hole punched through the pin. -->
+    <color name="ic_launcher_background">#FFFFFFFF</color>
+</resources>

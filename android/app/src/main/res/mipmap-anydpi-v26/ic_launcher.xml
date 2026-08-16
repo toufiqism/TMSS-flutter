@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon. Every device this app runs on supports it (minSdk 30), but the
+  legacy PNGs in mipmap-*dpi/ are kept: they are what shows up in places that still ask
+  for a raster icon, such as some third-party launchers and notification shade shortcuts.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <!-- Themed icons are tinted flat, so the colour art would collapse into a solid
+         blob. The mono cut is drawn for exactly this: one shape, road knocked out. -->
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>

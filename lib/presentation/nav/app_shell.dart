@@ -90,11 +90,12 @@ class AppShell extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Mono: this sits on the dark green gradient, where the
+                            // navy road of the colour art disappears into the
+                            // background.
                             const TracGoLogoMark(
-                              badgeColor: Color(0x24FFFFFF),
-                              glyphColor: tracGoLoginAccentGreen,
-                              size: 26,
-                              cornerRadius: 8,
+                              size: 30,
+                              variant: TracGoLogoVariant.mono,
                             ),
                             if (user != null) ...[
                               const SizedBox(height: 20),
@@ -197,12 +198,7 @@ class AppShell extends ConsumerWidget {
             topBarTitle ??
             Row(
               children: [
-                const TracGoLogoMark(
-                  badgeColor: tracGoGreenLight,
-                  glyphColor: tracGoGreen,
-                  size: 24,
-                  cornerRadius: 7,
-                ),
+                const TracGoLogoMark(size: 28),
                 const SizedBox(width: 7),
                 Text(TracGoStrings.appName, style: tracGoTextTheme.titleMedium),
               ],
@@ -228,6 +224,9 @@ class AppShell extends ConsumerWidget {
             ),
         ],
       ),
+      // Back handling deliberately does *not* live here. It is mounted inside the
+      // shell's nested navigator, around each screen, because that is the navigator
+      // predictive back consults — see `DashboardBackScope`.
       body: child,
     );
   }

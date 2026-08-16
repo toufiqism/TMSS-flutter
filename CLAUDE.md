@@ -79,7 +79,14 @@ Pinned to what's installed on this machine (confirmed via `flutter --version` on
 | Dart | 3.12.1 |
 | Android minSdk | 30 (matches native app) |
 | Android compileSdk | 37 — **pinned**, not `flutter.compileSdkVersion` |
-| iOS deployment target | 13.0 |
+| iOS deployment target | 15.0 — **raised from 13.0**, forced by the Firebase iOS SDK |
+
+The iOS deployment target is 15.0 because the Firebase SPM products
+(`firebase-core`, `firebase-crashlytics`, `firebase-remote-config`) declare a 15.0
+minimum; at 13.0 the build fails with "Target Integrity (Xcode): The package product
+… requires minimum platform version 15.0". It is set in all three build configs in
+`ios/Runner.xcodeproj/project.pbxproj`. No device support is lost — every iPhone/iPad
+that runs iOS 13 also runs iOS 15.
 
 `compileSdk` is pinned in `android/app/build.gradle.kts` because flutter_secure_storage
 ships AAR metadata requiring 37, and the Flutter default is lower — the Android build
@@ -243,11 +250,26 @@ Port these verbatim from `K:\TMSS\app\src\main\java\com\banglatrac\tmss\ui\theme
 
 TmsGreen `#2F5A3F`, TmsGreenDark `#1F3B2C`, TmsGreenLight `#EAF3E4`, TmsGreenLightAlt `#DCEFD3`, TmsLoginAccentGreen `#8FD98F`, TmsTextDark `#16231A`, TmsTextMuted `#7A857E`, TmsTextMutedAlt `#8A938C`, TmsTextSubtle `#5B6660`, TmsPlaceholder `#B8BFB6`, TmsBorder `#E3E9DF`, TmsDivider `#EDF0EA`, TmsInputBackground `#FAFCF9`, TmsScreenBackground `#F6F8F5`, TmsPageBackground `#F0F3EE`, TmsSurfaceWhite, status colors (All/Approved/Assigned/Pending/Rejected — purple/green/teal/orange/red variants incl. text+bg pairs), TmsDestructiveRed `#C4453A` (distinct from TmsStatusRejectedRed), TmsLauncherNavy.
 
-**Fonts:** Manrope (medium/bold/extrabold) + Inter (regular/medium/semibold). Copy the `.ttf` files directly from `K:\TMSS\app\src\main\res\font\` into `assets/fonts/` — already downloaded from Google Fonts, no need to re-fetch.
+**Fonts:** ~~Manrope + Inter~~ → **Space Grotesk** (400/500/700, display) + **Plus Jakarta Sans** (400/500/600/700, body), app-wide, adopted with the Sign In redesign. Manrope and Inter and their `.ttf` files are deleted — this is now the divergence point from the Android app's type scale.
+
+Google publishes both families as variable fonts only; the static per-weight `.ttf` files in `assets/fonts/` were cut from the `wght` axis with `fontTools` (see README "Fonts"). Space Grotesk's axis stops at **700**, so the three roles that used Manrope's 800 now use 700 — asking for a weight a family does not ship makes the engine synthesise a fake bold.
+
+Constants are role-named (`displayFontFamily`, `bodyFontFamily`) rather than family-named, so the next swap does not have to touch every call site.
 
 **Shapes:** `extraSmall` 10dp, `small` 14dp, `medium` 16dp, `large` 20dp, `extraLarge` 24dp, plus a fully-rounded `PillShape` (`BorderRadius.circular(999)`), matching `Shape.kt`.
 
-**Assets:** copy `login_bg.jpg`, launcher icon source, and Font Awesome vector icons (clipboard-list, calendar-check, check-square, clock-outline, times-circle) from `K:\TMSS\app\src\main\res\drawable-nodpi\` / `drawable\` into `assets/images/`. `TracGoLogoMark` (the compass-icon badge) was originally a Canvas-drawn Composable — port it as a `CustomPainter`, not a rasterized image, to keep it crisp at any size.
+**Assets:** copy the launcher icon source and Font Awesome vector icons (clipboard-list, calendar-check, check-square, clock-outline, times-circle) from `K:\TMSS\app\src\main\res\drawable-nodpi\` / `drawable\` into `assets/images/`. `login_bg.jpg` is **gone** — the Sign In redesign replaced the photo hero with a centred logo, so the 370 KB asset and the `loginTagline*` strings were deleted rather than left orphaned.
+
+**Brand mark.** `TracGoLogoMark` no longer draws the Android app's compass badge. It renders the real TracGo pin — green swoosh, navy road, car, traffic light, signal arcs — from `assets/images/tracgo_logo.svg` via `flutter_svg`, in two cuts:
+
+| Variant | Asset | Where |
+|---|---|---|
+| `TracGoLogoVariant.color` | `tracgo_logo.svg` | login hero, top bar |
+| `TracGoLogoVariant.mono` | `tracgo_logo_mono.svg` | drawer header (dark green gradient) |
+
+The old `badgeColor`/`glyphColor` parameters are **gone**, not deprecated: the artwork is ten fixed brand colours and cannot honour a caller's two.
+
+Both SVGs are traced from `refference-image/Logo1.png`, and every launcher/splash asset is derived from them (see "Regenerating the brand assets" in the README). The wordmark is deliberately cropped out — the top bar and drawer already set "TracGo" in text beside the mark.
 
 **Custom widgets to port 1:1** (not stock Material defaults): pill-shaped status chip, bordered (non-elevated) requisition row card, unified 2-column stat panel with full-width rejected row, custom pill-segmented toggle (Passenger/Logistics), radio-row pill chips with dot indicator, combined date+time picker field, gradient hero card + gradient nav-drawer header.
 
@@ -336,4 +358,4 @@ and Remote Config".
 ## Version & Release
 
 - **Starting version:** `1.0.0+1` (`pubspec.yaml`) — update this line when it changes.
-- **Android minSdk / iOS deployment target:** 30 / 13.0.
+- **Android minSdk / iOS deployment target:** 30 / 15.0.

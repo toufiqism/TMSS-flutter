@@ -1,59 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-/// Compass-mark badge from the redesign mock: a rounded-square badge with a circle+tick glyph
-/// (viewBox 24x24: circle r=8 centered, diagonal tick from (17,7) to (20,4)), drawn directly
-/// rather than shipped as a raster asset so it can be recolored per context (dark badge on
-/// light screens, translucent badge on the drawer's gradient header). Ports TracGoLogoMark.kt 1:1.
+import 'strings.dart';
+
+/// Which cut of the brand mark to draw.
+enum TracGoLogoVariant {
+  /// The full-colour pin: green swoosh, navy road with lane dashes, car, traffic light
+  /// and signal arcs. For light surfaces.
+  color,
+
+  /// A single white pin with the road knocked out of it, for dark surfaces where the
+  /// colour art turns into an unreadable smudge — the drawer's green gradient header.
+  mono,
+}
+
+/// The TracGo pin, traced from the brand artwork into SVG so it stays sharp at any size.
+///
+/// Symbol only, no wordmark: every place this appears, the name "TracGo" is already set
+/// in text beside it, and baking the lettering in would print the name twice.
+///
+/// This replaced a hand-drawn `CustomPainter` badge (a circle with a tick) that took
+/// `badgeColor` and `glyphColor`. Those are gone rather than deprecated — the artwork is
+/// ten fixed brand colours and cannot be recoloured to a caller's two, so a parameter
+/// that silently did nothing would be worse than a compile error.
 class TracGoLogoMark extends StatelessWidget {
   const TracGoLogoMark({
     super.key,
-    required this.badgeColor,
-    required this.glyphColor,
     this.size = 32,
-    this.cornerRadius = 9,
+    this.variant = TracGoLogoVariant.color,
   });
 
-  final Color badgeColor;
-  final Color glyphColor;
   final double size;
-  final double cornerRadius;
+  final TracGoLogoVariant variant;
+
+  static const _colorAsset = 'assets/images/tracgo_logo.svg';
+  static const _monoAsset = 'assets/images/tracgo_logo_mono.svg';
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SvgPicture.asset(
+      variant == TracGoLogoVariant.mono ? _monoAsset : _colorAsset,
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: badgeColor,
-        borderRadius: BorderRadius.circular(cornerRadius),
-      ),
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: _CompassGlyphPainter(glyphColor: glyphColor),
-      ),
+      // The artwork is very slightly taller than it is wide. `contain` centres it in the
+      // square instead of stretching the pin.
+      fit: BoxFit.contain,
+      semanticsLabel: TracGoStrings.appName,
+      // Decoding is asynchronous. Without this the surrounding row reflows once the
+      // picture arrives — visible as a jump on the drawer header and the top bar.
+      placeholderBuilder: (context) => SizedBox(width: size, height: size),
     );
   }
-}
-
-class _CompassGlyphPainter extends CustomPainter {
-  _CompassGlyphPainter({required this.glyphColor});
-
-  final Color glyphColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scale = size.width / 24;
-    final strokeWidth = 2 * scale;
-    final paint = Paint()
-      ..color = glyphColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(Offset(12 * scale, 12 * scale), 8 * scale, paint);
-    canvas.drawLine(Offset(17 * scale, 7 * scale), Offset(20 * scale, 4 * scale), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CompassGlyphPainter oldDelegate) => oldDelegate.glyphColor != glyphColor;
 }

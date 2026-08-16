@@ -47,6 +47,7 @@ dependencies:
   firebase_core: ^4.13.0
   firebase_crashlytics: ^5.2.7
   firebase_remote_config: ^6.5.6
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -87,20 +88,26 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+  # Space Grotesk + Plus Jakarta Sans replaced Manrope + Inter with the Sign In redesign.
+  # Google ships both only as variable fonts; these static instances were cut from the
+  # wght axis with fontTools (see README "Fonts"), matching the per-weight file layout
+  # the project already used.
   fonts:
-    - family: Manrope
+    - family: Space Grotesk
       fonts:
-        - asset: assets/fonts/manrope_medium.ttf
-          weight: 500
-        - asset: assets/fonts/manrope_bold.ttf
-          weight: 700
-        - asset: assets/fonts/manrope_extrabold.ttf
-          weight: 800
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/inter_regular.ttf
+        - asset: assets/fonts/space_grotesk_regular.ttf
           weight: 400
-        - asset: assets/fonts/inter_medium.ttf
+        - asset: assets/fonts/space_grotesk_medium.ttf
           weight: 500
-        - asset: assets/fonts/inter_semibold.ttf
+        - asset: assets/fonts/space_grotesk_bold.ttf
+          weight: 700
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/plus_jakarta_sans_regular.ttf
+          weight: 400
+        - asset: assets/fonts/plus_jakarta_sans_medium.ttf
+          weight: 500
+        - asset: assets/fonts/plus_jakarta_sans_semibold.ttf
           weight: 600
+        - asset: assets/fonts/plus_jakarta_sans_bold.ttf
+          weight: 700

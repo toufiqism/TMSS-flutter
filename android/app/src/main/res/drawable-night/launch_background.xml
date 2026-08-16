@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cold-start background in dark mode. Same layout as the light variant, but with the mono
+  mark: the colour art's road is #110F3F, which on the black plate of
+  Theme.Black.NoTitleBar (values-night/styles.xml) reads as a hole in the pin rather than
+  a road.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="?android:colorBackground" />
+
+    <item
+        android:drawable="@drawable/tracgo_splash_logo_mono"
+        android:gravity="center" />
+</layer-list>

@@ -14,7 +14,7 @@ Requisition in passenger and logistics variants, and a read-only Profile.
 | Flutter | 3.44.1 (stable) |
 | Dart | 3.12.1 |
 | Android minSdk / compileSdk | 30 / 37 |
-| iOS deployment target | 13.0 |
+| iOS deployment target | 15.0 |
 
 `compileSdk` is pinned to 37 in `android/app/build.gradle.kts` rather than inherited
 from `flutter.compileSdkVersion`: flutter_secure_storage ships AAR metadata requiring
@@ -298,6 +298,73 @@ Reports land in the Firebase console within a few minutes. Android release build
 upload their R8 mapping automatically via the Crashlytics Gradle plugin
 (`com.google.firebase.crashlytics` 3.0.7); Flutter's own `libapp.so` frames stay
 unsymbolicated unless NDK symbol upload is added separately.
+
+## Fonts
+
+**Space Grotesk** (display) + **Plus Jakarta Sans** (body), adopted app-wide with the Sign
+In redesign; Manrope and Inter are gone. `theme/typography.dart` names them by role
+(`displayFontFamily`, `bodyFontFamily`) so a future swap touches one file.
+
+Google publishes both only as variable fonts, and the project registers one `.ttf` per
+weight. The static instances in `assets/fonts/` were cut from the `wght` axis:
+
+```bash
+pip3 install fonttools
+python3 - <<'PY'
+from fontTools.ttLib import TTFont
+from fontTools.varLib.instancer import instantiateVariableFont
+plan = {'SpaceGrotesk': [('Regular', 400), ('Medium', 500), ('Bold', 700)],
+        'PlusJakartaSans': [('Regular', 400), ('Medium', 500), ('SemiBold', 600), ('Bold', 700)]}
+for family, weights in plan.items():
+    for name, weight in weights:
+        font = instantiateVariableFont(TTFont(f'{family}.ttf'), {'wght': weight},
+                                       inplace=True, updateFontNames=True)
+        font.save(f'{family}-{name}.ttf')
+PY
+```
+
+Source variable fonts come from `github.com/google/fonts/ofl/{spacegrotesk,plusjakartasans}`.
+**Space Grotesk's axis stops at 700** — asking for 800 makes the engine synthesise a fake
+bold, so the roles that used Manrope's 800 now use 700.
+
+## Brand assets
+
+Everything with the logo on it is generated from one file, `refference-image/Logo1.png`:
+
+```bash
+brew install potrace resvg          # tracer + SVG renderer
+pip3 install pillow                 # image processing
+python3 tool/brand/generate_brand_assets.py
+```
+
+That rewrites, in place:
+
+| Output | Used by |
+|---|---|
+| `assets/images/tracgo_logo.svg` | `TracGoLogoMark` (login hero, top bar) |
+| `assets/images/tracgo_logo_mono.svg` | `TracGoLogoMark(variant: mono)` on the drawer's dark gradient |
+| `android/.../mipmap-*/ic_launcher.png` | legacy launcher icons, 5 densities |
+| `android/.../drawable/ic_launcher_foreground.xml` | adaptive icon foreground |
+| `android/.../drawable/ic_launcher_monochrome.xml` | Android 13+ themed icons |
+| `android/.../drawable/tracgo_splash_logo{,_mono}.xml` | cold-start screen, light and dark |
+| `ios/.../AppIcon.appiconset/*.png` | all 15 iOS icon sizes |
+
+Do not hand-edit those files — the next run overwrites them. Edit the source artwork, or
+the palette in the script, and re-run.
+
+Three details worth knowing before changing the script:
+
+- **The palette is hand-picked, not computed.** Median-cut quantisation allocates colours
+  by area, which spent five of twelve slots on indistinguishable navies and dropped the
+  traffic light and signal arcs entirely — small in pixels, essential to the mark.
+- **Each colour is traced as its own 1-bit potrace layer.** vtracer's colour mode
+  re-clusters and emits its own averaged shades, so even a palette-flattened input came
+  back as ~50 near-duplicate fills in 48 KB.
+- **iOS icons are flattened onto white.** An app icon with an alpha channel is rejected at
+  submission.
+
+The wordmark is cropped out of the in-app mark on purpose: the top bar and drawer already
+set "TracGo" in text next to it.
 
 ## Testing
 

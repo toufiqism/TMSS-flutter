@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../common/strings.dart';
 import '../common/synced_text_field.dart';
@@ -11,13 +10,33 @@ import '../common/tracgo_logo_mark.dart';
 import 'login_notifier.dart';
 import 'login_state.dart';
 
-/// Header logo edge length. Shared between the logo itself and the padding that
-/// reserves room for it, so the two cannot drift apart.
-const double _logoSize = 32;
+/// Palette for this screen only, taken from the "TracGo Sign In" design.
+///
+/// Deliberately *not* added to `theme/colors.dart`: these are close cousins of the app
+/// tokens rather than replacements — #2E5C34 against TmsGreen #2F5A3F, #12122B against
+/// TmsTextDark #16231A — and promoting them would leave two near-identical greens in the
+/// shared palette for every other screen to pick from by accident.
+const _loginBackground = Color(0xFFFBFBF7);
+const _loginInk = Color(0xFF12122B);
+const _loginBody = Color(0xFF6B7269);
+const _loginLabel = Color(0xFF8D948B);
+const _loginPlaceholder = Color(0xFF9AA39C);
+const _loginRule = Color(0xFFDDE0DA);
+const _loginAccent = Color(0xFF2E5C34);
 
-/// Ceiling on the header's text scaling. iOS accessibility sizes reach roughly 3.1x,
-/// at which the tagline alone is taller than the screen.
-const double _headerMaxTextScale = 1.3;
+/// Edge length of the centred brand mark.
+const double _logoSize = 108;
+
+/// Minimum height of a field's input row, set by the tallest thing that can sit in one
+/// — the reveal toggle, whose padding buys it a 44px tap target.
+const double _fieldContentHeight = 44;
+
+/// Ceiling on text scaling for the logo/headline block.
+///
+/// iOS accessibility sizes reach roughly 3.1x. The 40px headline at that scale is 124px
+/// per line and pushes the form off-screen; the fields and button below stay fully
+/// scalable, because those are the part the user actually has to operate.
+const double _headerMaxTextScale = 1.4;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, required this.onLoginSuccess});
@@ -38,7 +57,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // the Dart equivalent of Kotlin's Channel/receiveAsFlow collected in a LaunchedEffect.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _eventSub = ref.read(loginNotifierProvider.notifier).events.listen((event) {
+      _eventSub = ref.read(loginNotifierProvider.notifier).events.listen((
+        event,
+      ) {
         if (!mounted) return;
         if (event is NavigateToDashboard) widget.onLoginSuccess();
       });
@@ -55,193 +76,198 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final uiState = ref.watch(loginNotifierProvider);
     final notifier = ref.read(loginNotifierProvider.notifier);
-    final media = MediaQuery.of(context);
 
     return Scaffold(
-      backgroundColor: tracGoSurfaceWhite,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // The header was a hard SizedBox(height: 260), which overflowed once the
-            // tagline wrapped to more lines at large accessibility text scales. It is
-            // now a *minimum* that grows with its content instead.
-            //
-            // Nothing here uses Spacer or Expanded, and that is deliberate rather than
-            // stylistic: this Stack sits inside a SingleChildScrollView, so the incoming
-            // maxHeight is infinite. `minHeight` constrains the floor, not the ceiling —
-            // a flex child would be asked to divide infinite free space, which throws
-            // "RenderFlex children have non-zero flex but incoming height constraints
-            // are unbounded" and fails layout for the entire screen, painting nothing.
-            //
-            // So the tagline is bottom-pinned with Align (which adopts the incoming
-            // minHeight without needing a bounded max) and the logo is absolutely
-            // positioned at the top. The tagline's top padding reserves the logo's
-            // space so the two cannot collide as text scales up.
-            // The header's text scale is clamped, the form's is not. At the largest
-            // accessibility sizes the unclamped tagline grew past the full viewport and
-            // pushed the username, password and Sign In button entirely off-screen —
-            // the form was still there, but unreachable without a long scroll. Clamping
-            // only this decorative block keeps branding bounded while leaving the part
-            // the user actually needs fully scalable.
-            MediaQuery.withClampedTextScaling(
-              maxScaleFactor: _headerMaxTextScale,
-              child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/login_bg.jpg',
-                    fit: BoxFit.cover,
-                    // A missing or corrupt asset must not take the login screen down.
-                    errorBuilder: (context, error, stackTrace) =>
-                        const ColoredBox(color: tracGoGreenLight),
-                  ),
-                ),
-                Positioned.fill(
-                  child: ColoredBox(color: tracGoGreenLight.withValues(alpha: 0.4)),
-                ),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: 260.0 *
-                        media.textScaler.scale(1).clamp(1.0, _headerMaxTextScale),
-                  ),
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: media.padding.top + 24 + _logoSize + 16,
-                        left: 24,
-                        right: 24,
-                        bottom: 24,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(TracGoStrings.loginTaglineTitle, style: tracGoTextTheme.headlineSmall),
-                          const SizedBox(height: 10),
-                          Text(
-                            TracGoStrings.loginTaglineBody,
-                            style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextSubtle),
+      backgroundColor: _loginBackground,
+      // No AppBar on this screen, so the status bar is ours to clear — on both platforms.
+      body: SafeArea(
+        child: SingleChildScrollView(
+          // Keeps the last field clear of the keyboard once it opens.
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(30, 26, 30, 32),
+            child: AutofillGroup(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  MediaQuery.withClampedTextScaling(
+                    maxScaleFactor: _headerMaxTextScale,
+                    child: Column(
+                      children: [
+                        const TracGoLogoMark(size: _logoSize),
+                        const SizedBox(height: 44),
+                        Text(
+                          TracGoStrings.loginHeading,
+                          textAlign: TextAlign.center,
+                          style: tracGoTextTheme.headlineSmall?.copyWith(
+                            fontSize: 40,
+                            height: 1.0,
+                            letterSpacing: -1.2, // -0.03em at 40px
+                            color: _loginInk,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 10),
+                        // The design caps the subtitle at 290px so it breaks into two
+                        // balanced lines rather than one long one.
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 290),
+                          child: Text(
+                            TracGoStrings.loginSubheading,
+                            textAlign: TextAlign.center,
+                            style: tracGoTextTheme.bodyLarge?.copyWith(
+                              height: 1.5,
+                              color: _loginBody,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                Positioned(
-                  top: media.padding.top + 24,
-                  left: 24,
-                  child: const TracGoLogoMark(
-                    badgeColor: tracGoGreenDark,
-                    glyphColor: tracGoLoginAccentGreen,
-                    size: _logoSize,
-                  ),
-                ),
-              ],
-              ),
-            ),
-            const Divider(height: 1, indent: 28, endIndent: 28, color: tracGoDivider),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 32),
-              child: AutofillGroup(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(TracGoStrings.loginHeading, style: tracGoTextTheme.titleLarge),
-                    const SizedBox(height: 6),
-                    Text(
-                      TracGoStrings.loginSubheading,
-                      style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
-                    ),
-                    const SizedBox(height: 24),
-                    if (uiState.errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(
-                          uiState.errorMessage!,
-                          style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  const SizedBox(height: 40),
+                  if (uiState.errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Text(
+                        uiState.errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: tracGoTextTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    _LabeledField(
-                      label: TracGoStrings.loginUsernameLabel,
-                      value: uiState.username,
-                      onChanged: notifier.onUsernameChange,
-                      hint: TracGoStrings.loginUsernamePlaceholder,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.username],
-                      enabled: !uiState.isLoading,
                     ),
-                    const SizedBox(height: 14),
-                    _LabeledField(
-                      label: TracGoStrings.loginPasswordLabel,
-                      value: uiState.password,
-                      onChanged: notifier.onPasswordChange,
-                      hint: TracGoStrings.loginPasswordPlaceholder,
-                      obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      enabled: !uiState.isLoading,
-                      onSubmitted: () => unawaited(notifier.submit()),
-                    ),
-                    const SizedBox(height: 16),
-                    RichText(
-                      text: TextSpan(
-                        style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
-                        children: [
-                          TextSpan(text: '${TracGoStrings.loginForgotPassword} '),
-                          TextSpan(
-                            text: TracGoStrings.loginContactAdmin,
-                            style: const TextStyle(color: tracGoGreen, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        // minimumSize rather than a fixed height, so the label still
-                        // fits when the user scales text up.
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
+                  _UnderlinedField(
+                    label: TracGoStrings.loginUsernameLabel,
+                    value: uiState.username,
+                    onChanged: notifier.onUsernameChange,
+                    hint: TracGoStrings.loginUsernamePlaceholder,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.username],
+                    enabled: !uiState.isLoading,
+                  ),
+                  const SizedBox(height: 26),
+                  _UnderlinedField(
+                    label: TracGoStrings.loginPasswordLabel,
+                    value: uiState.password,
+                    onChanged: notifier.onPasswordChange,
+                    hint: TracGoStrings.loginPasswordPlaceholder,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    enabled: !uiState.isLoading,
+                    onSubmitted: () => unawaited(notifier.submit()),
+                  ),
+                  const SizedBox(height: 36),
+                  _SignInButton(
+                    isLoading: uiState.isLoading,
+                    onPressed: () => unawaited(notifier.submit()),
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    children: [
+                      Text(
+                        TracGoStrings.loginForgotPassword,
+                        style: tracGoTextTheme.bodyLarge?.copyWith(
+                          fontSize: 14,
+                          color: _loginBody,
                         ),
-                        onPressed: uiState.isLoading ? null : () => unawaited(notifier.submit()),
-                        child: uiState.isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: tracGoSurfaceWhite,
-                                ),
-                              )
-                            : Text(
-                                TracGoStrings.loginSignInButton,
-                                style: tracGoTextTheme.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15.5,
-                                  color: tracGoSurfaceWhite,
-                                ),
-                              ),
                       ),
-                    ),
-                  ],
-                ),
+                      Text(
+                        TracGoStrings.loginContactAdmin,
+                        style: tracGoTextTheme.bodyLarge?.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _loginAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// A labelled input. When [obscureText] is set it also gains a reveal toggle, because
-/// a masked field with no way to check what was typed is the usual cause of a login
-/// failure that is really a typo.
-class _LabeledField extends StatefulWidget {
-  const _LabeledField({
+/// The pill sign-in button from the design: flat green, no Material elevation, with a
+/// soft green-tinted drop shadow of its own.
+class _SignInButton extends StatelessWidget {
+  const _SignInButton({required this.isLoading, required this.onPressed});
+
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: isLoading
+            // The shadow reads as "raised, press me". Dropping it while the request is
+            // in flight is the same signal as the disabled fill.
+            ? const []
+            : const [
+                BoxShadow(
+                  color: Color(0x3D2E5C34), // rgba(46,92,52,0.24)
+                  blurRadius: 26,
+                  offset: Offset(0, 12),
+                ),
+              ],
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _loginAccent,
+          disabledBackgroundColor: _loginAccent.withValues(alpha: 0.55),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: const StadiumBorder(),
+          // minimumSize rather than a fixed height, so the label still fits when the
+          // user scales text up. 20px of padding each side matches the design's 60px
+          // resting height.
+          minimumSize: const Size.fromHeight(60),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+        ),
+        onPressed: isLoading ? null : onPressed,
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                TracGoStrings.loginSignInButton,
+                style: tracGoTextTheme.labelLarge?.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// A field drawn as a baseline rule rather than a filled box, per the design: uppercase
+/// caption, then the input, then a 1.5px underline.
+///
+/// When [obscureText] is set it also gains a reveal toggle, because a masked field with
+/// no way to check what was typed is the usual cause of a login failure that is really a
+/// typo.
+class _UnderlinedField extends StatefulWidget {
+  const _UnderlinedField({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -266,10 +292,10 @@ class _LabeledField extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<_LabeledField> createState() => _LabeledFieldState();
+  State<_UnderlinedField> createState() => _UnderlinedFieldState();
 }
 
-class _LabeledFieldState extends State<_LabeledField> {
+class _UnderlinedFieldState extends State<_UnderlinedField> {
   /// Starts masked, and is never persisted or lifted into [LoginUiState]: it is view
   /// state with no meaning outside this widget, and a revealed password surviving a
   /// rebuild — or worse, a navigation — is a shoulder-surfing hazard rather than a
@@ -278,11 +304,13 @@ class _LabeledFieldState extends State<_LabeledField> {
 
   /// Keeps the toggle out of the focus chain.
   ///
-  /// A plain [IconButton] in a `suffixIcon` takes focus when tapped, which closes the
-  /// keyboard — so every peek at the password would cost the user a tap to get back to
-  /// typing. Screen readers reach the button by touch exploration regardless, and it
-  /// carries a tooltip, so nothing is lost by making it unfocusable.
-  final FocusNode _toggleFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+  /// A focusable button here takes focus when tapped, which closes the keyboard — so
+  /// every peek at the password would cost the user a tap to get back to typing. Screen
+  /// readers reach it by touch exploration regardless, and it carries a semantics label.
+  final FocusNode _toggleFocusNode = FocusNode(
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
 
   @override
   void dispose() {
@@ -292,48 +320,127 @@ class _LabeledFieldState extends State<_LabeledField> {
 
   @override
   Widget build(BuildContext context) {
-    final showToggle = widget.obscureText;
-    final tooltip = _revealed
-        ? TracGoStrings.loginHidePassword
-        : TracGoStrings.loginShowPassword;
+    final inputStyle = tracGoTextTheme.bodyLarge?.copyWith(
+      fontSize: 18,
+      color: _loginInk,
+      letterSpacing: widget.obscureText ? 1.08 : null, // 0.06em at 18px
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label.toUpperCase(), style: tracGoTextTheme.labelMedium),
-        const SizedBox(height: 6),
-        SyncedTextField(
-          value: widget.value,
-          onChanged: widget.onChanged,
-          hintText: widget.hint,
-          obscureText: widget.obscureText && !_revealed,
-          // Explicit, and load-bearing: `obscureText` above goes false while the user
-          // is peeking, and this is what stops the keyboard learning the password in
-          // that window.
-          isSensitive: widget.obscureText,
-          keyboardType: widget.keyboardType,
-          textInputAction: widget.textInputAction,
-          autofillHints: widget.autofillHints,
-          onSubmitted: widget.onSubmitted,
-          enabled: widget.enabled,
-          suffixIcon: !showToggle
-              ? null
-              : IconButton(
+        Text(
+          widget.label.toUpperCase(),
+          style: tracGoTextTheme.labelMedium?.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.1, // 0.1em at 11px
+            color: _loginLabel,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // A floor, not a fixed height, so the row still grows with text scaling. It
+        // exists because the reveal toggle is taller than a bare input: without it the
+        // password's rule sat ~20px lower than the username's, and the two fields the
+        // design draws as a matched pair visibly disagreed.
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _fieldContentHeight),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: SyncedTextField(
+                  value: widget.value,
+                  onChanged: widget.onChanged,
+                  hintText: widget.hint,
+                  obscureText: widget.obscureText && !_revealed,
+                  // Explicit, and load-bearing: `obscureText` above goes false while the
+                  // user is peeking, and this is what stops the keyboard learning the
+                  // password in that window.
+                  isSensitive: widget.obscureText,
+                  keyboardType: widget.keyboardType,
+                  textInputAction: widget.textInputAction,
+                  autofillHints: widget.autofillHints,
+                  onSubmitted: widget.onSubmitted,
+                  enabled: widget.enabled,
+                  style: inputStyle,
+                  hintStyle: inputStyle?.copyWith(
+                    color: _loginPlaceholder,
+                    letterSpacing: null,
+                  ),
+                  // The rule below is drawn by this widget, so the field itself must not
+                  // add Material's own underline, fill or 48px content padding on top.
+                  bare: true,
+                ),
+              ),
+              if (widget.obscureText)
+                _RevealToggle(
                   focusNode: _toggleFocusNode,
+                  revealed: _revealed,
                   // Disabled alongside the field it belongs to: revealing the password
                   // during a sign-in attempt would toggle a field the user cannot edit.
                   onPressed: widget.enabled
                       ? () => setState(() => _revealed = !_revealed)
                       : null,
-                  tooltip: tooltip,
-                  icon: Icon(
-                    _revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    size: 20,
-                    color: tracGoTextMutedAlt,
-                  ),
                 ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        const ColoredBox(
+          color: _loginRule,
+          child: SizedBox(height: 1.5, width: double.infinity),
         ),
       ],
+    );
+  }
+}
+
+/// The design's uppercase SHOW / HIDE text button.
+class _RevealToggle extends StatelessWidget {
+  const _RevealToggle({
+    required this.focusNode,
+    required this.revealed,
+    required this.onPressed,
+  });
+
+  final FocusNode focusNode;
+  final bool revealed;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      // "SHOW" on its own describes nothing to a screen reader; this says what pressing
+      // it does.
+      label: revealed
+          ? TracGoStrings.loginHidePassword
+          : TracGoStrings.loginShowPassword,
+      excludeSemantics: true,
+      child: TextButton(
+        focusNode: focusNode,
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: _loginAccent,
+          // The design shows a bare word, but a 12px word is a 12px tap target. The
+          // padding restores a 48px-tall hit area without moving the text.
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.padded,
+          textStyle: tracGoTextTheme.labelMedium?.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.72, // 0.06em at 12px
+          ),
+        ),
+        child: Text(
+          (revealed
+                  ? TracGoStrings.loginHidePasswordShort
+                  : TracGoStrings.loginShowPasswordShort)
+              .toUpperCase(),
+        ),
+      ),
     );
   }
 }

@@ -3,10 +3,19 @@
          declares it for debug/profile, so a release build would have no network access
          at all once the app talks to https://tms.carcopolo.com/bt/api. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- android:enableOnBackInvokedCallback is load-bearing, not boilerplate. This app
+         targets SDK 36, where the platform uses the predictive back API and stops calling
+         the legacy Activity.onBackPressed() path. Flutter's engine only registers an
+         OnBackInvokedCallback when this flag is set, so without it the system back gesture
+         never reaches the framework at all: every PopScope in the app is inert, and "back
+         on the requisition list returns to the dashboard" silently does nothing on device
+         while still passing its widget test — tester.binding.handlePopRoute() drives the
+         framework directly and bypasses the platform. -->
     <application
         android:label="TracGo"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

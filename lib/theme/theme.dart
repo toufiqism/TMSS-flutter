@@ -31,7 +31,7 @@ ThemeData buildTracGoTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: tracGoPageBackground,
     textTheme: tracGoTextTheme,
-    fontFamily: interFontFamily,
+    fontFamily: bodyFontFamily,
     appBarTheme: const AppBarTheme(
       backgroundColor: tracGoSurfaceWhite,
       foregroundColor: tracGoTextDark,

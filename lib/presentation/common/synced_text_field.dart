@@ -31,6 +31,9 @@ class SyncedTextField extends StatefulWidget {
     this.fillColor,
     this.autofillHints,
     this.enabled = true,
+    this.style,
+    this.hintStyle,
+    this.bare = false,
   });
 
   final String value;
@@ -66,6 +69,19 @@ class SyncedTextField extends StatefulWidget {
   final Color? fillColor;
   final List<String>? autofillHints;
   final bool enabled;
+
+  /// Overrides for the typed text and the placeholder. Left null, both fall through to
+  /// the app theme, which is what every screen but Sign In wants.
+  final TextStyle? style;
+  final TextStyle? hintStyle;
+
+  /// Strips Material's border, fill and 48px content padding, leaving just the text.
+  ///
+  /// For layouts that draw their own affordance around the field — the Sign In screen
+  /// rules its own 1.5px underline, and Material's would sit under it as a second line.
+  /// Kept as a flag rather than an exposed `InputDecoration` so the counter suppression,
+  /// hint and error wiring below cannot be dropped by a caller building its own.
+  final bool bare;
 
   @override
   State<SyncedTextField> createState() => _SyncedTextFieldState();
@@ -115,15 +131,28 @@ class _SyncedTextFieldState extends State<SyncedTextField> {
       autocorrect: !isSensitive,
       smartDashesType: isSensitive ? SmartDashesType.disabled : SmartDashesType.enabled,
       smartQuotesType: isSensitive ? SmartQuotesType.disabled : SmartQuotesType.enabled,
+      style: widget.style,
       decoration: InputDecoration(
         // Empty, not null: null restores Material's default "12/200" counter, which is
         // what the fixed-height pill design cannot absorb.
         counterText: '',
         hintText: widget.hintText,
+        hintStyle: widget.hintStyle,
         errorText: widget.errorText,
         prefixIcon: widget.prefixIcon,
         suffixIcon: widget.suffixIcon,
         fillColor: widget.fillColor,
+        // Null, not a value, when not bare: these must keep falling through to the app's
+        // InputDecorationTheme for every other field in the app.
+        border: widget.bare ? InputBorder.none : null,
+        enabledBorder: widget.bare ? InputBorder.none : null,
+        focusedBorder: widget.bare ? InputBorder.none : null,
+        disabledBorder: widget.bare ? InputBorder.none : null,
+        errorBorder: widget.bare ? InputBorder.none : null,
+        focusedErrorBorder: widget.bare ? InputBorder.none : null,
+        isDense: widget.bare ? true : null,
+        filled: widget.bare ? false : null,
+        contentPadding: widget.bare ? EdgeInsets.zero : null,
       ),
     );
   }
