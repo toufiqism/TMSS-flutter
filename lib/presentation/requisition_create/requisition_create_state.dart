@@ -70,9 +70,25 @@ abstract class RequisitionCreateUiState with _$RequisitionCreateUiState {
     /// Passenger/Logistics toggle locks — the server rejects a `req_type` that differs
     /// from the stored one, so switching type mid-edit could only ever 422.
     String? editingRequisitionId,
+
+    /// Who raised the requisition being edited, for the read-only header. All four are
+    /// null while creating, and individually null when the server did not report them —
+    /// the header renders only the parts that exist rather than blank rows.
+    String? editingRequesterName,
+    String? editingRequesterCode,
+    String? editingRequesterDepartment,
+    String? editingRequesterCompany,
   }) = _RequisitionCreateUiState;
 
   bool get isEditing => editingRequisitionId != null;
+
+  /// Whether the requester header has anything to show. A `PUT`-only field set can come
+  /// back entirely empty, and an empty card is worse than no card.
+  bool get hasRequesterInfo =>
+      (editingRequesterName?.trim().isNotEmpty ?? false) ||
+      (editingRequesterCode?.trim().isNotEmpty ?? false) ||
+      (editingRequesterDepartment?.trim().isNotEmpty ?? false) ||
+      (editingRequesterCompany?.trim().isNotEmpty ?? false);
 }
 
 sealed class RequisitionCreateEvent {
@@ -106,6 +122,10 @@ class RequisitionFormField {
   static const customerName = 'customerName';
   static const numberOfPersons = 'numberOfPersons';
   static const purpose = 'purpose';
+
+  /// Optional on the wire, but it still carries a 200-character cap, so it needs an
+  /// error slot of its own.
+  static const remarks = 'remarks';
   static const employees = 'employees';
   static const userDepartment = 'userDepartment';
   static const goodsWeight = 'goodsWeight';

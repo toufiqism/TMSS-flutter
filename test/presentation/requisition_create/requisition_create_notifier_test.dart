@@ -4,10 +4,16 @@ import 'package:mocktail/mocktail.dart';
 import 'package:tracgo/core/api_result.dart';
 import 'package:tracgo/core/session_expiration_handler.dart';
 import 'package:tracgo/di/providers.dart';
+import 'package:tracgo/domain/model/employee.dart';
 import 'package:tracgo/domain/model/requisition.dart';
+import 'package:tracgo/domain/model/user.dart';
+import 'package:tracgo/domain/repository/requisition_repository.dart';
+import 'package:tracgo/domain/requisition_field_limits.dart';
+import 'package:tracgo/domain/usecase/get_user_account_use_case.dart';
 import 'package:tracgo/domain/usecase/search_employees_use_case.dart';
 import 'package:tracgo/domain/usecase/submit_requisition_use_case.dart';
 import 'package:tracgo/domain/usecase/update_requisition_use_case.dart';
+import 'package:tracgo/presentation/common/strings.dart';
 import 'package:tracgo/presentation/requisition_create/requisition_create_notifier.dart';
 import 'package:tracgo/presentation/requisition_create/requisition_create_state.dart';
 
@@ -19,11 +25,31 @@ class MockSearchEmployeesUseCase extends Mock implements SearchEmployeesUseCase 
 
 class MockSessionExpirationHandler extends Mock implements SessionExpirationHandler {}
 
+/// Only `invalidateEmployeeCache` is exercised — the notifier reaches the repository
+/// directly for exactly that one call, everything else goes through use cases.
+class MockRequisitionRepository extends Mock implements RequisitionRepository {}
+
+/// `GET /user`, which is how the create form finds the signed-in user's own row in the
+/// employee directory.
+class MockGetUserAccountUseCase extends Mock implements GetUserAccountUseCase {}
+
+/// Synthetic rider. Never the real directory — see CLAUDE.md.
+Employee rider({String id = '1036'}) => Employee(
+      id: id,
+      name: 'Synthetic Rider $id',
+      employeeCode: 'E-$id',
+      designation: 'Officer',
+      department: 'Operations',
+      company: 'Synthetic Co.',
+    );
+
 void main() {
   late MockSubmitRequisitionUseCase mockSubmit;
   late MockUpdateRequisitionUseCase mockUpdate;
   late MockSearchEmployeesUseCase mockSearch;
   late MockSessionExpirationHandler mockSessionExpirationHandler;
+  late MockRequisitionRepository mockRepository;
+  late MockGetUserAccountUseCase mockGetAccount;
   late ProviderContainer container;
 
   setUpAll(() {
@@ -44,12 +70,25 @@ void main() {
     mockUpdate = MockUpdateRequisitionUseCase();
     mockSearch = MockSearchEmployeesUseCase();
     mockSessionExpirationHandler = MockSessionExpirationHandler();
+    mockRepository = MockRequisitionRepository();
+    mockGetAccount = MockGetUserAccountUseCase();
+    // Reached by every "Own User" pre-selection; unstubbed it would throw inside an
+    // unawaited call.
+    when(mockGetAccount.call)
+        .thenAnswer((_) async => ApiResult.success(const UserAccount()));
     when(() => mockSessionExpirationHandler.handle()).thenAnswer((_) async {});
+    when(mockRepository.invalidateEmployeeCache).thenReturn(null);
+    // seedFrom resolves seeded rider ids against the directory, so this is reached by
+    // every edit-mode test. Unstubbed, mocktail would throw inside an unawaited call.
+    when(() => mockSearch(any()))
+        .thenAnswer((_) async => ApiResult.success(<Employee>[rider()]));
     container = ProviderContainer(overrides: [
       submitRequisitionUseCaseProvider.overrideWithValue(mockSubmit),
       updateRequisitionUseCaseProvider.overrideWithValue(mockUpdate),
       searchEmployeesUseCaseProvider.overrideWithValue(mockSearch),
       sessionExpirationHandlerProvider.overrideWithValue(mockSessionExpirationHandler),
+      requisitionRepositoryProvider.overrideWithValue(mockRepository),
+      getUserAccountUseCaseProvider.overrideWithValue(mockGetAccount),
     ]);
     addTearDown(container.dispose);
     // This provider is isAutoDispose, so without a listener it is torn down as soon as
@@ -78,11 +117,26 @@ void main() {
   void fillValidPassengerForm(RequisitionCreateNotifier notifier) {
     notifier
       ..onPassengerPickupDateTimeChange(DateTime(2026, 1, 1, 9, 0))
-      ..onPassengerPickupLocationChange('A')
-      ..onPassengerDropLocationChange('B')
+      ..onPassengerPickupLocationChange('Pickup')
+      ..onPassengerDropLocationChange('Drop')
       ..onPassengerCustomerNameChange('Test')
-      ..onNumberOfPersonsChange('1')
+      ..toggleEmployeeSelection(rider())
       ..onPurposeChange('Purpose');
+  }
+
+  /// Every value at least 3 characters, because the server's `min:3` rule applies to
+  /// all six required logistics strings and a shorter fixture would fail for the wrong
+  /// reason.
+  void fillValidLogisticsForm(RequisitionCreateNotifier notifier) {
+    notifier
+      ..onLogisticsPickupDateTimeChange(DateTime(2026, 1, 1, 9, 0))
+      ..onLogisticsPickupLocationChange('Pickup')
+      ..onLogisticsDropLocationChange('Drop')
+      ..onLogisticsCustomerNameChange('Customer')
+      ..onUserDepartmentChange('Logistics')
+      ..onGoodsWeightChange('500 kg')
+      ..onStoreNameChange('Store')
+      ..onGoodsDetailsChange('Spare parts');
   }
 
   test('submit with an empty passenger form sets field errors without calling the use case', () async {
@@ -99,10 +153,10 @@ void main() {
     final notifier = container.read(requisitionCreateNotifierProvider.notifier);
     notifier
       ..onPassengerPickupDateTimeChange(DateTime(2026, 1, 1, 9, 0))
-      ..onPassengerPickupLocationChange('A')
-      ..onPassengerDropLocationChange('B')
+      ..onPassengerPickupLocationChange('Pickup')
+      ..onPassengerDropLocationChange('Drop')
       ..onPassengerCustomerNameChange('Test')
-      ..onNumberOfPersonsChange('1')
+      ..toggleEmployeeSelection(rider())
       ..onPurposeChange('Purpose');
 
     final events = <RequisitionCreateEvent>[];
@@ -139,10 +193,10 @@ void main() {
     final notifier = container.read(requisitionCreateNotifierProvider.notifier);
     notifier
       ..onPassengerPickupDateTimeChange(DateTime(2026, 1, 1, 9, 0))
-      ..onPassengerPickupLocationChange('A')
-      ..onPassengerDropLocationChange('B')
+      ..onPassengerPickupLocationChange('Pickup')
+      ..onPassengerDropLocationChange('Drop')
       ..onPassengerCustomerNameChange('Test')
-      ..onNumberOfPersonsChange('1')
+      ..toggleEmployeeSelection(rider())
       ..onPurposeChange('Purpose');
 
     await notifier.submit();
@@ -157,10 +211,10 @@ void main() {
     final notifier = container.read(requisitionCreateNotifierProvider.notifier);
     notifier
       ..onPassengerPickupDateTimeChange(DateTime(2026, 1, 1, 9, 0))
-      ..onPassengerPickupLocationChange('A')
-      ..onPassengerDropLocationChange('B')
+      ..onPassengerPickupLocationChange('Pickup')
+      ..onPassengerDropLocationChange('Drop')
       ..onPassengerCustomerNameChange('Test')
-      ..onNumberOfPersonsChange('1')
+      ..toggleEmployeeSelection(rider())
       ..onPurposeChange('Purpose');
 
     final events = <RequisitionCreateEvent>[];
@@ -255,12 +309,23 @@ void main() {
           details: const RequisitionDetails.passenger(
             usedType: UsedType.drop,
             customerName: 'Bangla Trac',
-            numberOfPersons: 3,
+            numberOfPersons: 1,
             requiredFor: RequiredFor.ownUser,
             userType: RequisitionUserType.internal,
+            riders: [
+              RequisitionRider(
+                id: '1036',
+                name: 'Md. Tofiq Akbar',
+                employeeCode: '2-765',
+              ),
+            ],
             purpose: 'Client meeting',
           ),
           createdAt: DateTime(2026, 8, 14),
+          requesterName: 'Md. Tofiq Akbar',
+          requesterCode: '2-765',
+          departmentName: 'IT',
+          companyName: 'Bangla Trac Ltd.',
         );
 
     test('seedFrom fills the form from the requisition', () async {
@@ -274,10 +339,84 @@ void main() {
       expect(state.formType, RequisitionFormType.passenger);
       expect(state.passengerForm.pickupLocation, 'Head Office');
       expect(state.passengerForm.dropLocation, 'Gulshan');
-      expect(state.passengerForm.numberOfPersons, '3');
+      // Derived from the seeded rider list, not copied from the stored
+      // no_of_person — the two must agree on submit.
+      expect(state.passengerForm.numberOfPersons, '1');
+      expect(state.passengerForm.selectedEmployees.single.id, '1036');
       expect(state.passengerForm.usedType, UsedType.drop);
       expect(state.passengerForm.purpose, 'Client meeting');
       expect(state.passengerForm.remarks, 'Bring an AC vehicle');
+    });
+
+    test('seeded riders carry the names the response gave, before the directory answers',
+        () async {
+      // The point of the assertion running before any await: the directory fetch is
+      // 92KB and may fail outright, so a chip that only reads correctly *after* it
+      // lands is the bug this seeding exists to avoid.
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.seedFrom(existingPassenger());
+
+      final seeded =
+          container.read(requisitionCreateNotifierProvider).passengerForm.selectedEmployees;
+      expect(seeded.single.name, 'Md. Tofiq Akbar');
+      expect(seeded.single.employeeCode, '2-765');
+    });
+
+    test('a rider the response named only by id keeps the unresolved label', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.seedFrom(
+        existingPassenger().copyWith(
+          details: const RequisitionDetails.passenger(
+            usedType: UsedType.drop,
+            customerName: 'Bangla Trac',
+            numberOfPersons: 1,
+            requiredFor: RequiredFor.ownUser,
+            // The older bare-id wire shape: submittable, but with nothing to display.
+            riders: [RequisitionRider(id: '99999')],
+            purpose: 'Client meeting',
+          ),
+        ),
+      );
+
+      final seeded =
+          container.read(requisitionCreateNotifierProvider).passengerForm.selectedEmployees;
+      expect(seeded.single.id, '99999', reason: 'the submittable id is never lost');
+      expect(seeded.single.name, TracGoStrings.newRequisitionRiderUnresolved);
+    });
+
+    test('seedFrom captures the requester for the read-only header', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.seedFrom(existingPassenger());
+
+      final state = container.read(requisitionCreateNotifierProvider);
+      expect(state.editingRequesterName, 'Md. Tofiq Akbar');
+      expect(state.editingRequesterCode, '2-765');
+      expect(state.editingRequesterDepartment, 'IT');
+      expect(state.editingRequesterCompany, 'Bangla Trac Ltd.');
+      expect(state.hasRequesterInfo, isTrue);
+    });
+
+    test('a requisition with no requester fields reports nothing to show', () async {
+      // `created_by_name` is a detail-response field; a requisition reached without it
+      // must not render an empty header card.
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.seedFrom(
+        existingPassenger().copyWith(
+          requesterName: null,
+          requesterCode: null,
+          departmentName: null,
+          companyName: null,
+        ),
+      );
+
+      expect(
+        container.read(requisitionCreateNotifierProvider).hasRequesterInfo,
+        isFalse,
+      );
     });
 
     test('seeding a logistics requisition selects the logistics form', () async {
@@ -361,6 +500,278 @@ void main() {
       expect(container.read(requisitionCreateNotifierProvider).fieldErrors, isNotEmpty);
       verifyNever(() => mockUpdate(any(), any()));
     });
+  });
+
+  // Every rule below was read off the live server's own 422 and none of it is in either
+  // API contract, so these tests are the only thing keeping the form's idea of "valid"
+  // attached to the server's.
+  group('server length and range rules', () {
+    test('a required field under 3 characters is rejected before submitting', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+      notifier.onPurposeChange('ab');
+
+      await notifier.submit();
+
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.purpose],
+        TracGoStrings.newRequisitionErrorTooShort(RequisitionFieldLimits.minTextLength),
+      );
+      verifyNever(() => mockSubmit(any()));
+    });
+
+    test('length is measured after trimming, so spaces do not pass as characters',
+        () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+      notifier.onPurposeChange('     ');
+
+      await notifier.submit();
+
+      // Empty after trimming, so this is the "required" case rather than "too short" —
+      // and either way it must not reach the network.
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.purpose],
+        TracGoStrings.newRequisitionErrorRequired,
+      );
+      verifyNever(() => mockSubmit(any()));
+    });
+
+    test('a field over its cap is rejected, with the per-field cap applied', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+      notifier.onPurposeChange('A' * (RequisitionFieldLimits.defaultMaxLength + 1));
+
+      await notifier.submit();
+
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.purpose],
+        TracGoStrings.newRequisitionErrorTooLong(RequisitionFieldLimits.defaultMaxLength),
+      );
+      verifyNever(() => mockSubmit(any()));
+    });
+
+    test('goods_weight has a much tighter cap and no minimum', () async {
+      // The 1-character half of this test is expected to pass validation and reach the
+      // network, so the submit call needs an answer.
+      when(() => mockSubmit(any()))
+          .thenAnswer((_) async => ApiResult.success(createdRequisition()));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      notifier.switchFormType(RequisitionFormType.logistics);
+      fillValidLogisticsForm(notifier);
+
+      // One character: accepted by the server, so it must be accepted here.
+      notifier.onGoodsWeightChange('1');
+      await notifier.submit();
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.goodsWeight],
+        isNull,
+      );
+
+      notifier.onGoodsWeightChange('A' * (RequisitionFieldLimits.goodsWeightMaxLength + 1));
+      await notifier.submit();
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.goodsWeight],
+        TracGoStrings.newRequisitionErrorTooLong(
+          RequisitionFieldLimits.goodsWeightMaxLength,
+        ),
+      );
+    });
+
+    test('remarks is optional but still capped', () async {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+      notifier.onPassengerRemarksChange('A' * (RequisitionFieldLimits.defaultMaxLength + 1));
+
+      await notifier.submit();
+
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.remarks],
+        TracGoStrings.newRequisitionErrorTooLong(RequisitionFieldLimits.defaultMaxLength),
+      );
+      verifyNever(() => mockSubmit(any()));
+    });
+
+    test('the rider picker stops at the server cap on no_of_person', () {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      for (var i = 0; i < RequisitionFieldLimits.maxPassengers; i++) {
+        notifier.toggleEmployeeSelection(rider(id: '$i'));
+      }
+      expect(
+        container.read(requisitionCreateNotifierProvider).passengerForm.selectedEmployees,
+        hasLength(RequisitionFieldLimits.maxPassengers),
+      );
+
+      notifier.toggleEmployeeSelection(rider(id: 'one-too-many'));
+
+      final state = container.read(requisitionCreateNotifierProvider);
+      expect(state.passengerForm.selectedEmployees,
+          hasLength(RequisitionFieldLimits.maxPassengers));
+      expect(
+        state.fieldErrors[RequisitionFormField.employees],
+        TracGoStrings.newRequisitionErrorTooManyEmployees(
+          RequisitionFieldLimits.maxPassengers,
+        ),
+      );
+    });
+
+    test('deselection still works at the cap, so an over-full form can be fixed', () {
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      for (var i = 0; i < RequisitionFieldLimits.maxPassengers; i++) {
+        notifier.toggleEmployeeSelection(rider(id: '$i'));
+      }
+
+      notifier.toggleEmployeeSelection(rider(id: '0'));
+
+      expect(
+        container.read(requisitionCreateNotifierProvider).passengerForm.selectedEmployees,
+        hasLength(RequisitionFieldLimits.maxPassengers - 1),
+      );
+    });
+  });
+
+  // This never once fired before: it compared the session's `user.id` — which is the
+  // *email*, because the login response carries no id at all — against directory ids
+  // and staff numbers. `GET /user.employee_id` is the only value that bridges the two.
+  group('requester pre-selection on an "Own User" trip', () {
+    test('pre-selects the directory row matching GET /user.employee_id', () async {
+      when(mockGetAccount.call)
+          .thenAnswer((_) async => ApiResult.success(const UserAccount(id: '864', employeeId: '3035')));
+      when(() => mockSearch(any())).thenAnswer(
+        (_) async => ApiResult.success([rider(id: '670'), rider(id: '3035')]),
+      );
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.onRequiredForChange(RequiredFor.ownUser);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .passengerForm.selectedEmployees.map((e) => e.id),
+        ['3035'],
+      );
+    });
+
+    test('the account id is never used as a fallback — it is a different key space',
+        () async {
+      // 864 exists in this fake directory purely to prove it is not picked: matching on
+      // it would put a stranger on the trip.
+      when(mockGetAccount.call)
+          .thenAnswer((_) async => ApiResult.success(const UserAccount(id: '864')));
+      when(() => mockSearch(any())).thenAnswer(
+        (_) async => ApiResult.success([rider(id: '864'), rider(id: '3035')]),
+      );
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.onRequiredForChange(RequiredFor.ownUser);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        container.read(requisitionCreateNotifierProvider).passengerForm.selectedEmployees,
+        isEmpty,
+      );
+    });
+
+    test('a failed account lookup leaves the picker empty rather than guessing',
+        () async {
+      when(mockGetAccount.call)
+          .thenAnswer((_) async => ApiResult.error('boom', 500));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+
+      notifier.onRequiredForChange(RequiredFor.ownUser);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        container.read(requisitionCreateNotifierProvider).passengerForm.selectedEmployees,
+        isEmpty,
+      );
+    });
+  });
+
+  group('employee_id 422 handling', () {
+    // The server reports these per item — `employee_id.0`, not `employee_id` — and the
+    // "inactive" case arrives as plain `exists`-rule wording. Both details defeated the
+    // original stale-cache check, so both are pinned here.
+    test('an indexed "is invalid" error drops the cached directory', () async {
+      when(() => mockSubmit(any())).thenAnswer((_) async => ApiResult.error(
+            'The given data was invalid.',
+            422,
+            const {'employee_id.0': 'The selected employee_id.0 is invalid.'},
+          ));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+
+      await notifier.submit();
+
+      verify(() => mockRepository.invalidateEmployeeCache()).called(1);
+      // It must also reach the picker, indexed key notwithstanding.
+      expect(
+        container.read(requisitionCreateNotifierProvider)
+            .fieldErrors[RequisitionFormField.employees],
+        isNotNull,
+      );
+    });
+
+    test('a count mismatch does not, because it says nothing about staleness', () async {
+      when(() => mockSubmit(any())).thenAnswer((_) async => ApiResult.error(
+            'The given data was invalid.',
+            422,
+            const {
+              'employee_id':
+                  'The number of selected employees must equal no_of_person (3).',
+            },
+          ));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+
+      await notifier.submit();
+
+      verifyNever(() => mockRepository.invalidateEmployeeCache());
+    });
+
+    test('a duplicate-value error does not either', () async {
+      when(() => mockSubmit(any())).thenAnswer((_) async => ApiResult.error(
+            'The given data was invalid.',
+            422,
+            const {'employee_id.1': 'The employee_id.1 field has a duplicate value.'},
+          ));
+      final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+      fillValidPassengerForm(notifier);
+
+      await notifier.submit();
+
+      verifyNever(() => mockRepository.invalidateEmployeeCache());
+    });
+  });
+
+  test('logistics-only 422 keys reach their own inputs, not just the banner', () async {
+    when(() => mockSubmit(any())).thenAnswer((_) async => ApiResult.error(
+          'The given data was invalid.',
+          422,
+          const {
+            'user_department': 'The user department may not be greater than 100 characters.',
+            'goods_weight': 'The goods weight may not be greater than 25 characters.',
+            'store_name': 'The store name must be at least 3 characters.',
+            'goods_details': 'The goods details must be at least 3 characters.',
+          },
+        ));
+    final notifier = container.read(requisitionCreateNotifierProvider.notifier);
+    notifier.switchFormType(RequisitionFormType.logistics);
+    fillValidLogisticsForm(notifier);
+
+    await notifier.submit();
+
+    final errors = container.read(requisitionCreateNotifierProvider).fieldErrors;
+    expect(errors[RequisitionFormField.userDepartment], isNotNull);
+    expect(errors[RequisitionFormField.goodsWeight], isNotNull);
+    expect(errors[RequisitionFormField.storeName], isNotNull);
+    expect(errors[RequisitionFormField.goodsDetails], isNotNull);
   });
 
   test('switchFormType resets both forms and clears errors', () async {

@@ -12,7 +12,9 @@ import 'package:dio/dio.dart';
 import 'package:tracgo/core/api_config.dart';
 import 'package:tracgo/core/api_result.dart';
 import 'package:tracgo/data/remote/tracgo_api_client.dart';
+import 'package:tracgo/data/remote/dto/user_mapper.dart';
 import 'package:tracgo/data/repository/remote_requisition_repository.dart';
+import 'package:tracgo/domain/model/employee.dart';
 import 'package:tracgo/domain/model/requisition.dart';
 
 void main(List<String> args) async {
@@ -62,21 +64,73 @@ void main(List<String> args) async {
   final summary = await repository.getDashboardSummary();
   check('dashboard summary parses', summary is ApiSuccess<DashboardSummary>);
 
-  // --- create (passenger) ------------------------------------------------------
-  final passenger = await repository.submitRequisition(
-    NewRequisitionRequest.passenger(
-      pickupDateTime: DateTime.now().add(const Duration(days: 7)),
-      pickupLocation: 'Test',
-      dropLocation: 'Test',
-      remarks: 'Test',
-      usedType: UsedType.pickupAndDrop,
-      customerName: 'Test',
-      numberOfPersons: 1,
-      requiredFor: RequiredFor.ownUser,
-      userType: RequisitionUserType.internal,
-      purpose: 'Test',
-    ),
+  // --- employee directory ------------------------------------------------------
+  final directory = await repository.searchEmployees('');
+  check('employee directory parses', directory is ApiSuccess<List<Employee>>,
+      directory is ApiError<List<Employee>> ? '${directory.message}' : '');
+  var riderIds = const <String>[];
+  if (directory is ApiSuccess<List<Employee>>) {
+    final all = directory.response;
+    check('directory is the whole staff list', all.length > 100, '${all.length} rows');
+    check('directory rows carry a staff number',
+        all.every((e) => e.id.isNotEmpty && e.employeeCode.isNotEmpty));
+
+    // The picker's only search: the endpoint ignores query parameters, so this must be
+    // a local filter or it is nothing.
+    final byCode = await repository.searchEmployees(all.first.employeeCode);
+    check(
+      'search matches on staff number, not just name',
+      byCode is ApiSuccess<List<Employee>> &&
+          byCode.response.any((e) => e.id == all.first.id),
+      'searched ${all.first.employeeCode}',
+    );
+
+    // Nothing in the directory matches this, so it exercises the empty-result path the
+    // picker has to render as "no matches" rather than as a silent nothing.
+    final noMatch = await repository.searchEmployees('ZZQXNOMATCH');
+    check('a search with no matches returns an empty list, not an error',
+        noMatch is ApiSuccess<List<Employee>> && noMatch.response.isEmpty);
+
+    // GET /user.employee_id is the only bridge from the session to a directory row.
+    // If this stops resolving, the create form silently stops pre-selecting the
+    // requester — a failure with no visible symptom other than an empty picker.
+    // Called through the raw client rather than the auth repository, which would drag
+    // in secure storage this script has no plugin bindings for.
+    final accountRes = await api.getAuthenticatedUser();
+    final accountBody = accountRes.data;
+    if (accountBody is Map<String, dynamic>) {
+      final employeeId = UserMapper.accountFromJson(accountBody).employeeId;
+      check('GET /user.employee_id resolves to a directory row',
+          employeeId != null && all.any((e) => e.id == employeeId), 'employee_id=$employeeId');
+    } else {
+      check('GET /user returns a bare JSON object', false, '${accountRes.statusCode}');
+    }
+
+    riderIds = all.take(2).map((e) => e.id).toList();
+  }
+
+  // --- length rules ------------------------------------------------------------
+  // Not decoration: these are enforced only by the server, so a silent relaxation or
+  // tightening would otherwise surface as a 422 in a user's face.
+  final tooShort = await repository.submitRequisition(
+    _passengerRequest(riderIds, purpose: 'ab'),
   );
+  check(
+    'purpose under 3 characters is rejected',
+    tooShort is ApiError<Requisition> && tooShort.errorCode == 422,
+    tooShort is ApiError<Requisition> ? '${tooShort.fieldErrors}' : 'accepted',
+  );
+  final tooLong = await repository.submitRequisition(
+    _passengerRequest(riderIds, purpose: 'A' * 201),
+  );
+  check(
+    'purpose over 200 characters is rejected',
+    tooLong is ApiError<Requisition> && tooLong.errorCode == 422,
+    tooLong is ApiError<Requisition> ? '${tooLong.fieldErrors}' : 'accepted',
+  );
+
+  // --- create (passenger) ------------------------------------------------------
+  final passenger = await repository.submitRequisition(_passengerRequest(riderIds));
   check('passenger create accepted', passenger is ApiSuccess<Requisition>,
       passenger is ApiError<Requisition> ? '${passenger.message} ${passenger.fieldErrors ?? ''}' : '');
 
@@ -116,6 +170,16 @@ void main(List<String> args) async {
           '${detail.auditLog.length} entries');
       check('detail carries the requester department (${row.type.name})',
           detail.departmentName != null, '${detail.departmentName}');
+      // The rider list comes back under `employees`, not the `employee_id` it was sent
+      // as. If that key is ever renamed this is the check that catches it — and the
+      // consequence of missing it is severe, because PUT replaces the whole list, so an
+      // edit form seeded from an empty read wipes the riders off someone's trip.
+      final details = detail.details;
+      if (details is PassengerDetails) {
+        check('detail reads the riders back (${row.type.name})',
+            details.employeeIds.length == riderIds.length,
+            'sent ${riderIds.length}, read ${details.employeeIds.length}');
+      }
     }
 
     // --- PUT ---------------------------------------------------------------------
@@ -147,12 +211,57 @@ void main(List<String> args) async {
   final missing = await repository.getRequisition('99999999');
   check('unknown id maps to 404', missing is ApiError<Requisition> && missing.errorCode == 404);
 
-  await api.logout();
+  // --- logout ------------------------------------------------------------------
+  // Last, and it has to be: it destroys the token every check above depends on. The
+  // contract (`Auth > Logout`) claims a 200 and that the same token 401s afterwards —
+  // both halves are asserted, because a 200 alone would not prove the revoke happened.
+  final logoutRes = await api.logout();
+  check('logout answers 200', logoutRes.statusCode == 200, 'got ${logoutRes.statusCode}');
+  final logoutBody = logoutRes.data;
+  check(
+    'logout returns the standard success envelope',
+    logoutBody is Map && logoutBody['success'] == true,
+    'body=$logoutBody',
+  );
+
   final afterLogout = await repository.getRequisitions(const RequisitionListFilter());
-  check('logout revokes the token server-side', afterLogout is ApiLogout<List<Requisition>>);
+  check('logout revokes the token server-side', afterLogout is ApiLogout<List<Requisition>>,
+      'a request with the revoked token must map to ApiLogout (401)');
+
+  // The app can reach this: two sign-out taps, or a sign-out while a 401 is already in
+  // flight. It must stay a clean 401 rather than a 500 the client would surface as an
+  // unexplained error.
+  final secondLogout = await api.logout();
+  check('logging out twice is a 401, not a server error',
+      secondLogout.statusCode == 401, 'got ${secondLogout.statusCode}');
 
   stdout.writeln(failures == 0 ? '\nall checks passed' : '\n$failures check(s) failed');
   exit(failures == 0 ? 0 : 1);
+}
+
+/// The baseline passenger body, with the riders the directory actually returned.
+///
+/// `employee_id` is required on every passenger requisition now, and must hold exactly
+/// `no_of_person` distinct active ids — so both come from one list and cannot disagree.
+/// Every string is at least 3 characters because the server's `min:3` rule would
+/// otherwise mask whatever this call was meant to test.
+NewRequisitionRequest _passengerRequest(
+  List<String> riderIds, {
+  String purpose = 'Test',
+}) {
+  return NewRequisitionRequest.passenger(
+    pickupDateTime: DateTime.now().add(const Duration(days: 7)),
+    pickupLocation: 'Test',
+    dropLocation: 'Test',
+    remarks: 'Test',
+    usedType: UsedType.pickupAndDrop,
+    customerName: 'Test',
+    numberOfPersons: riderIds.length,
+    requiredFor: RequiredFor.ownUser,
+    userType: RequisitionUserType.internal,
+    employeeIds: riderIds,
+    purpose: purpose,
+  );
 }
 
 /// Rebuilds a write request from an existing requisition with one field changed, so a
@@ -167,9 +276,13 @@ NewRequisitionRequest _editedRequest(Requisition row) {
         remarks: row.remarks,
         usedType: details.usedType,
         customerName: details.customerName,
-        numberOfPersons: details.numberOfPersons,
+        // Both from the same list, and both mandatory: PUT replaces the rider list
+        // outright, so omitting `employee_id` here would not "leave them alone" — it
+        // would be a 422 for a zero-rider trip.
+        numberOfPersons: details.employeeIds.length,
         requiredFor: details.requiredFor,
         userType: details.userType,
+        employeeIds: details.employeeIds,
         purpose: details.purpose,
       ),
     LogisticsDetails() => NewRequisitionRequest.logistics(

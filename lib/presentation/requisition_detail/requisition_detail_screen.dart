@@ -229,6 +229,7 @@ class _Content extends StatelessWidget {
                 if (details.userType != null)
                   _Row(TracGoStrings.newRequisitionFieldUserType, details.userType!.label),
                 _Row(TracGoStrings.newRequisitionFieldPurpose, details.purpose),
+                ..._riderRows(details.riders),
               ],
             ),
           LogisticsDetails() => _Section(
@@ -249,21 +250,26 @@ class _Content extends StatelessWidget {
               ],
             ),
         },
-        if (requisition.departmentName != null || requisition.companyName != null) ...[
-          const SizedBox(height: 16),
-          _Section(
-            title: TracGoStrings.requisitionDetailSectionRequester,
-            rows: [
-              if (requisition.departmentName != null)
-                _Row(
-                  TracGoStrings.requisitionDetailDepartment,
-                  requisition.departmentName!,
-                ),
-              if (requisition.companyName != null)
-                _Row(TracGoStrings.requisitionDetailCompany, requisition.companyName!),
-            ],
-          ),
-        ],
+        const SizedBox(height: 16),
+        // Rendered for both requisition types, and unconditionally: the requester is
+        // part of what a requisition *is*, so an absent name reads as an em dash rather
+        // than as a section that quietly disappears.
+        _Section(
+          title: TracGoStrings.requisitionDetailSectionRequester,
+          rows: [
+            _Row(
+              TracGoStrings.requisitionDetailRequestedBy,
+              _personLabel(requisition.requesterName, requisition.requesterCode),
+            ),
+            if (requisition.departmentName != null)
+              _Row(
+                TracGoStrings.requisitionDetailDepartment,
+                requisition.departmentName!,
+              ),
+            if (requisition.companyName != null)
+              _Row(TracGoStrings.requisitionDetailCompany, requisition.companyName!),
+          ],
+        ),
         const SizedBox(height: 16),
         _AssignmentSection(requisition: requisition),
         const SizedBox(height: 16),
@@ -278,6 +284,40 @@ class _Content extends StatelessWidget {
       ],
     );
   }
+}
+
+/// One row per rider, numbered so a repeated name (or a pair of unresolved ids) is
+/// still countable against `No. of Persons`.
+///
+/// An empty list is not silently dropped: the list endpoint omits `employees[]`
+/// entirely, so "no riders returned" would otherwise look identical to a trip nobody
+/// is riding on. It renders as a single placeholder row instead.
+List<Widget> _riderRows(List<RequisitionRider> riders) {
+  if (riders.isEmpty) {
+    return const [_Row(TracGoStrings.requisitionDetailPassengers, '')];
+  }
+  return [
+    for (var i = 0; i < riders.length; i++)
+      _Row(
+        TracGoStrings.requisitionDetailPassengerNumbered(i + 1),
+        riders[i].hasName
+            ? _personLabel(riders[i].name, riders[i].employeeCode)
+            // Id-only rider: the server gave no name, and the raw surrogate id means
+            // nothing to the user, so it is not shown in its place.
+            : TracGoStrings.newRequisitionRiderUnresolved,
+      ),
+  ];
+}
+
+/// `Name · 2-765`, or just the name when there is no staff number — never a bare
+/// separator. Returns an empty string when there is no name at all, which [_Row]
+/// renders as an em dash.
+String _personLabel(String? name, String? code) {
+  final trimmedName = name?.trim() ?? '';
+  final trimmedCode = code?.trim() ?? '';
+  if (trimmedName.isEmpty) return trimmedCode;
+  if (trimmedCode.isEmpty) return trimmedName;
+  return '$trimmedName · $trimmedCode';
 }
 
 class _HeaderCard extends StatelessWidget {

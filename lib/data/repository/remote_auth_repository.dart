@@ -14,10 +14,14 @@ import '../remote/tracgo_api_client.dart';
 ///
 /// Login is a single round-trip. The contract implied two would be needed — it recorded
 /// only `data.token` as confirmed — but the live response also carries `name` and
-/// `designation`, which is everything the domain [Session] needs. `GET /user` is not
-/// called here: it returns the account row (id, `user_name`, `employee_id`) and no
-/// display name, so it would add a request and a failure mode for a user id nothing
-/// sends anywhere.
+/// `designation`, which is everything the domain [Session] needs.
+///
+/// `GET /user` is deliberately still not called on the login path. It returns the
+/// account row (`id`, `user_name`, `employee_id`) and no display name, so it would buy
+/// nothing the drawer or the router needs while adding a request and a failure mode to
+/// the one flow that must not acquire either. Its `employee_id` *is* useful — it is the
+/// only link between the session and a row in the employee directory — but only on the
+/// create form, which fetches it through [getAccount] at the moment it needs it.
 class RemoteAuthRepository implements AuthRepository {
   RemoteAuthRepository(
     this._apiClient,
@@ -101,23 +105,36 @@ class RemoteAuthRepository implements AuthRepository {
 
   /// Revokes the token server-side, then clears it locally.
   ///
-  /// `POST /logout` is undocumented — it appears nowhere in the contract, which lists
-  /// "is there a refresh or logout endpoint?" as an open question — but it exists and
-  /// works. That matters: tokens are long-lived (a year), so without this call a
-  /// signed-out device's token stayed valid for anyone who had captured it.
+  /// `POST /logout` is documented in the updated contract (`Auth > Logout`): it nulls
+  /// `acc_user_info.api_token` and `api_token_expires_at`, and the same token 401s on
+  /// any request afterwards. That matters because tokens are long-lived — roughly a
+  /// year — so without this call a signed-out device's token stayed valid for anyone
+  /// who had captured it.
   ///
-  /// The local clear runs regardless of what the server says. A failed revoke is worth
-  /// nothing to the user standing there trying to sign out, and leaving them logged in
-  /// because the network hiccuped would be strictly worse than a token that outlives
+  /// The local clear runs regardless of what the server says, and the result is
+  /// returned rather than swallowed so the caller can say so. Leaving the user signed
+  /// in because the network hiccuped would be strictly worse than a token that outlives
   /// the session.
   @override
-  Future<void> logout() async {
-    await safeApiCall<void>(
+  Future<ApiResult<void>> logout() async {
+    final result = await safeApiCall<void>(
       _apiClient.logout,
       decode: (_) {},
       reporter: _reporter,
       operation: 'POST /logout',
     );
     await _sessionLocalDataSource.clear();
+
+    // A 401 here is not a failure to report: it means the token was already dead, which
+    // is precisely the state this call exists to reach. Reported as an error it would
+    // warn the user about a revoke that did not need doing — and `safeApiCall` maps 401
+    // to `logout`, which the caller would otherwise have to special-case anyway.
+    if (result is ApiLogout<void>) return const ApiResult.success(null);
+    return result;
   }
+
+  /// Local-only clear for the session-expired path. No network call: see
+  /// [AuthRepository.clearSession].
+  @override
+  Future<void> clearSession() => _sessionLocalDataSource.clear();
 }

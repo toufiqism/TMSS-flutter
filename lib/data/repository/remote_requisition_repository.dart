@@ -1,10 +1,10 @@
 import '../../core/api_config.dart';
 import '../../core/api_result.dart';
-import '../../core/network_messages.dart';
 import '../../core/telemetry/crash_reporter.dart';
 import '../../domain/model/employee.dart';
 import '../../domain/model/requisition.dart';
 import '../../domain/repository/requisition_repository.dart';
+import '../remote/dto/employee_mapper.dart';
 import '../remote/dto/json_reader.dart';
 import '../remote/dto/requisition_mapper.dart';
 import '../remote/dto/wire_date_time.dart';
@@ -43,6 +43,14 @@ class RemoteRequisitionRepository implements RequisitionRepository {
 
   final TracGoApiClient _apiClient;
   final CrashReporter _reporter;
+
+  /// The whole active-employee directory, once fetched. Null means "not fetched yet",
+  /// which is distinct from an empty list ("fetched, nobody active").
+  List<Employee>? _employeeCache;
+
+  /// The in-flight directory fetch, shared by concurrent callers and cleared as soon as
+  /// it settles.
+  Future<ApiResult<List<Employee>>>? _employeeFetch;
 
   /// How far back the dashboard looks. The server defaults to one month when no dates
   /// are sent, which would silently under-count the tiles, so a window is always sent
@@ -126,17 +134,83 @@ class RemoteRequisitionRepository implements RequisitionRepository {
     );
   }
 
-  /// No employee directory endpoint exists in the contract.
+  /// Searches the employee directory, served from a session-lifetime cache.
   ///
-  /// This returns a failure rather than an empty list on purpose: an empty list would
-  /// render as "no employees matched", which is a lie. The picker that calls this is
-  /// itself disabled via `ApiCapabilities.employeeDirectory`, so in practice this is
-  /// unreachable — it exists so the interface stays honest.
+  /// `GET /requisitions/employees` is unpaginated and has no search parameter — it
+  /// returns every active employee in one response (537 rows / ~146KB in the sample).
+  /// So the list is fetched once and filtered in memory: searching per keystroke over
+  /// the network would re-download the whole directory each time.
+  ///
+  /// The cache lives as long as the repository, which is as long as the **app** — the
+  /// provider is a plain `Provider` over the Dio client, and nothing rebuilds it when
+  /// the session changes. It therefore has to be dropped explicitly at sign-out and at
+  /// session expiry, which `LogoutUseCase` and `SessionExpirationHandler` do; an
+  /// earlier version of this comment claimed the rebuild happened by itself, and the
+  /// next user to sign in on the device inherited the previous user's directory.
+  ///
+  /// It is deliberately not persisted to disk: this is real staff data, and keeping it
+  /// at rest on the device is a bigger commitment than a picker needs.
+  ///
+  /// An in-flight fetch is shared rather than duplicated. Without that, a user typing
+  /// three characters before the first response lands would start three concurrent
+  /// 146KB downloads.
   @override
-  Future<ApiResult<List<Employee>>> searchEmployees(String query) {
-    return Future.value(
-      const ApiResult<List<Employee>>.error(NetworkMessages.unsupportedOperation),
+  Future<ApiResult<List<Employee>>> searchEmployees(String query) async {
+    final cached = _employeeCache;
+    if (cached != null) return ApiResult.success(_filter(cached, query));
+
+    final result = await (_employeeFetch ??= _fetchEmployees());
+    switch (result) {
+      case ApiSuccess<List<Employee>>(:final response):
+        _employeeCache = response;
+        return ApiResult.success(_filter(response, query));
+      case ApiError<List<Employee>>(:final message, :final errorCode, :final fieldErrors):
+        return ApiResult.error(message, errorCode, fieldErrors);
+      case ApiLogout<List<Employee>>(:final message, :final code):
+        return ApiResult.logout(message, code);
+      case ApiMaintenance<List<Employee>>(:final message, :final code):
+        return ApiResult.maintenance(message, code);
+      case ApiOffline<List<Employee>>(:final message):
+        return ApiResult.offline(message);
+    }
+  }
+
+  /// Drops the cached directory so the next search refetches.
+  ///
+  /// Called when the server rejects a submission because a selected employee is
+  /// inactive: that 422 is proof the cache has gone stale mid-session, and retrying
+  /// against the same stale list would fail identically.
+  @override
+  void invalidateEmployeeCache() {
+    _employeeCache = null;
+    _employeeFetch = null;
+  }
+
+  Future<ApiResult<List<Employee>>> _fetchEmployees() async {
+    final result = await safeApiCall<List<Employee>>(
+      _apiClient.listEmployees,
+      decode: EmployeeMapper.listFromResponse,
+      reporter: _reporter,
+      operation: 'GET /requisitions/employees',
     );
+    // Cleared unconditionally: leaving a completed failure in place would cache the
+    // failure itself and make every later search return the same stale error.
+    _employeeFetch = null;
+    return result;
+  }
+
+  /// Case-insensitive substring match over the fields a person would actually search
+  /// by. An empty query returns everything, which is what an unfiltered picker wants.
+  static List<Employee> _filter(List<Employee> employees, String query) {
+    final needle = query.trim().toLowerCase();
+    if (needle.isEmpty) return employees;
+    return employees
+        .where((e) =>
+            e.name.toLowerCase().contains(needle) ||
+            e.employeeCode.toLowerCase().contains(needle) ||
+            e.designation.toLowerCase().contains(needle) ||
+            e.department.toLowerCase().contains(needle))
+        .toList(growable: false);
   }
 
   /// Walks the server's pages for a date window and returns everything in it.

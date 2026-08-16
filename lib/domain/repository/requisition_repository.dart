@@ -21,5 +21,19 @@ abstract interface class RequisitionRepository {
   );
 
   Future<ApiResult<void>> cancelRequisition(String id);
+  /// Matches [query] against the active-employee directory. An empty query returns the
+  /// full list.
+  ///
+  /// Implementations are expected to serve this from a cache: the endpoint behind it is
+  /// unpaginated and has no search parameter, so a per-keystroke round trip would
+  /// re-download the entire directory.
   Future<ApiResult<List<Employee>>> searchEmployees(String query);
+
+  /// Discards any cached employee directory so the next [searchEmployees] refetches.
+  ///
+  /// Exists because the server can reject a submission for naming an employee who has
+  /// since gone inactive — a 422 that is itself the evidence the cache is stale.
+  /// Synchronous and returning nothing: it only drops state, and there is no failure
+  /// mode for a caller to handle.
+  void invalidateEmployeeCache();
 }

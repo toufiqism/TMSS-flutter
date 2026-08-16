@@ -35,6 +35,9 @@ class RequisitionMapper {
 
     final isLogistics = json.stringOrNull('req_type') == reqTypeLogisticSupport;
 
+    final auditLog =
+        json.objectListOrEmpty('audit_logs').map(_auditEntry).nonNulls.toList();
+
     return Requisition(
       id: id,
       pickupDateTime: pickupDateTime ?? createdAt,
@@ -50,14 +53,63 @@ class RequisitionMapper {
       endDateTime: WireDateTime.parse(json.stringOrNull('end_time')),
       departmentName: json.stringOrNull('department_name'),
       companyName: json.stringOrNull('company_name'),
+      requesterName: _requesterName(json, auditLog),
+      requesterCode: _requesterCode(json, auditLog),
       driver: _driver(json.mapOrNull('driver')),
       vehicle: _vehicle(json.mapOrNull('vehicle')),
-      auditLog: json
-          .objectListOrEmpty('audit_logs')
-          .map(_auditEntry)
-          .nonNulls
-          .toList(),
+      auditLog: auditLog,
     );
+  }
+
+  /// Who raised the requisition.
+  ///
+  /// `created_by_name` is a real top-level field on `GET /requisitions/{id}` — the
+  /// alternative spellings after it are a cheap hedge, not evidence of another shape.
+  ///
+  /// The fallback is the **creating** audit entry, which carries the same
+  /// `created_by_name` per-entry: a list row has no requester field at all, and the
+  /// entry that opened the requisition names the same person. [_creatingEntry] is used
+  /// rather than the newest entry, because a later approval or cancellation is written
+  /// by somebody else and naming *them* as the requester would be worse than showing
+  /// nothing.
+  static String? _requesterName(
+    Map<String, dynamic> json,
+    List<AuditLogEntry> auditLog,
+  ) =>
+      json.stringFrom([
+        'created_by_name',
+        'requested_by_name',
+        'employee_name',
+        'user_name',
+      ]) ??
+      _creatingEntry(auditLog)?.actorName;
+
+  static String? _requesterCode(
+    Map<String, dynamic> json,
+    List<AuditLogEntry> auditLog,
+  ) =>
+      json.stringFrom([
+        'created_by_id_no',
+        'created_by_code',
+        'requested_by_id_no',
+      ]) ??
+      _creatingEntry(auditLog)?.actorCode;
+
+  /// The entry that opened the requisition: the earliest by timestamp, or — when no
+  /// entry carries one — the first in the response, which arrives oldest-first.
+  ///
+  /// Returns null for an empty log rather than throwing, so a list row (no audit log at
+  /// all) simply yields no requester.
+  static AuditLogEntry? _creatingEntry(List<AuditLogEntry> auditLog) {
+    if (auditLog.isEmpty) return null;
+    AuditLogEntry earliest = auditLog.first;
+    for (final entry in auditLog) {
+      final at = entry.at;
+      final earliestAt = earliest.at;
+      if (at == null) continue;
+      if (earliestAt == null || at.isBefore(earliestAt)) earliest = entry;
+    }
+    return earliest;
   }
 
   /// Field names here are guesses over an unverified shape (see [AssignedDriver]), so
@@ -111,15 +163,87 @@ class RequisitionMapper {
       numberOfPersons: json.intOrNull('no_of_person') ?? 1,
       requiredFor: RequiredFor.fromWire(json.stringOrNull('requisition_for')),
       userType: RequisitionUserType.fromWire(json.stringOrNull('requisition_for_user')),
+      riders: _riders(json),
       purpose: json.stringOrNull('purpose') ?? '',
     );
   }
 
+  /// Reads back the rider list.
+  ///
+  /// **Confirmed against the live server.** The key is `employees`, and it carries
+  /// objects, not ids:
+  ///
+  /// ```json
+  /// "employees": [{"id": 3035, "id_no": "2-765", "full_name": "Md. Tofiq Akbar"}]
+  /// ```
+  ///
+  /// Three properties of it are worth stating, because each one has a way of biting:
+  ///
+  /// - It appears on the **detail, create and update** responses, and **not on list
+  ///   rows** — so a requisition mapped from the list always reads back zero riders.
+  ///   That is the response's shape, not the requisition's state.
+  /// - The name is asymmetric with the request, which sends `employee_id`. Reading and
+  ///   writing use different keys.
+  /// - It is `[]`, never null, on a logistics requisition. Riders are a passenger-only
+  ///   concept.
+  ///
+  /// The alternative spellings below are kept as a cheap hedge against a rename, since
+  /// a wrong guess here costs nothing and a missed rename costs the rider list.
+  ///
+  /// Empty is the safe default *for reading*, but it is not safe to act on blindly:
+  /// `employee_id` **replaces** the whole rider list on update, so an edit form seeded
+  /// from an empty read would silently wipe the riders. The create/edit notifier
+  /// therefore distinguishes "no riders returned" from "requisition has no riders" and
+  /// warns rather than submitting an unintended replacement.
+  /// The object form also carries `full_name` and `id_no`, which are kept: they are
+  /// what the detail screen shows and what seeds the edit form's chips, and without
+  /// them the edit form can only display "details unavailable" until the whole 537-row
+  /// directory downloads. A bare-id entry yields a rider with no name — still
+  /// submittable, and the UI labels it as unresolved rather than blank.
+  static List<RequisitionRider> _riders(Map<String, dynamic> json) {
+    for (final key in const [
+      // Verified first, guesses after.
+      'employees',
+      'employee_id',
+      'employee_ids',
+      'riders',
+      'requisition_employees',
+    ]) {
+      final raw = json[key];
+      if (raw is! List || raw.isEmpty) continue;
+
+      final riders = <RequisitionRider>[];
+      for (final entry in raw) {
+        if (entry is num) {
+          riders.add(RequisitionRider(id: entry.toInt().toString()));
+        } else if (entry is String && entry.trim().isNotEmpty) {
+          riders.add(RequisitionRider(id: entry.trim()));
+        } else if (entry is Map<String, dynamic>) {
+          // A list of employee objects: take the surrogate `id`, never `id_no` — only
+          // `id` is accepted back in `employee_id[]`. An entry with no `id` is dropped
+          // rather than kept for its name: it could not be re-submitted, so keeping it
+          // would show a rider that any subsequent edit would silently remove.
+          final id = entry.idOrNull('id') ?? entry.idOrNull('employee_id');
+          if (id == null) continue;
+          riders.add(RequisitionRider(
+            id: id,
+            name: entry.stringFrom(['full_name', 'name', 'employee_name']) ?? '',
+            employeeCode: entry.stringFrom(['id_no', 'employee_code', 'code']) ?? '',
+          ));
+        }
+      }
+      if (riders.isNotEmpty) return riders;
+    }
+    return const <RequisitionRider>[];
+  }
+
   static RequisitionDetails _logisticsDetails(Map<String, dynamic> json) {
     return RequisitionDetails.logistics(
-      // The server has no vehicle_type field, so nothing can be read back into it.
-      // The domain model still requires one; the form's own default stands in.
-      vehicleType: VehicleType.coverVan,
+      // `requisition_for` carries the vehicle type for logistics. This used to be
+      // hardcoded to coverVan because no field was known to hold it, which meant an
+      // Open Truck requisition always read back — and re-submitted on edit — as a
+      // Cover Van.
+      vehicleType: VehicleType.fromWire(json.stringOrNull('requisition_for')),
       customerName: json.stringOrNull('customer_name') ?? '',
       userDepartment: json.stringOrNull('user_department') ?? '',
       loadingCapacity: LoadingCapacity.fromWire(json.stringOrNull('loading_capacity')),
@@ -154,6 +278,7 @@ class RequisitionMapper {
         :final numberOfPersons,
         :final requiredFor,
         :final userType,
+        :final employeeIds,
         :final purpose,
       ) =>
         <String, dynamic>{
@@ -167,6 +292,16 @@ class RequisitionMapper {
           'drop_location': dropLocation,
           'pick_up_date_time': WireDateTime.format(pickupDateTime),
           'no_of_person': numberOfPersons,
+          // Integers, not the strings the domain carries: the server's `distinct` and
+          // count rules compare numerically, and a list of quoted ids fails them.
+          //
+          // Ids that are not numeric are dropped rather than coerced — they cannot be
+          // real `employee_id` values, and sending a 0 or a null in their place would
+          // turn a client bug into a wrong rider on someone's trip.
+          'employee_id': employeeIds
+              .map(int.tryParse)
+              .nonNulls
+              .toList(growable: false),
           if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim(),
         },
       LogisticsRequest(
@@ -174,6 +309,7 @@ class RequisitionMapper {
         :final pickupLocation,
         :final dropLocation,
         :final remarks,
+        :final vehicleType,
         :final customerName,
         :final userDepartment,
         :final loadingCapacity,
@@ -183,9 +319,11 @@ class RequisitionMapper {
       ) =>
         <String, dynamic>{
           'req_type': reqTypeLogisticSupport,
-          // Required by the server for logistics too, though the form does not ask:
-          // a logistics run is always raised by the requester for their own department.
-          'requisition_for': RequiredFor.ownUser.label,
+          // For logistics, `requisition_for` **is** the vehicle type — the web UI labels
+          // this same field "Vehicle Type" and accepts only `Cover Van` | `Open Truck`.
+          // It previously sent `Own User`, borrowed from the passenger meaning of the
+          // field; the updated contract rejects that with a 422.
+          'requisition_for': vehicleType.label,
           'customer_name': customerName,
           'user_department': userDepartment,
           'pickup_location': pickupLocation,

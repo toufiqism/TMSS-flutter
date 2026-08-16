@@ -163,7 +163,10 @@ final requisitionRepositoryProvider = Provider<RequisitionRepository>((ref) {
 });
 
 final sessionExpirationHandlerProvider = Provider<SessionExpirationHandler>((ref) {
-  return SessionExpirationHandler(ref.watch(authRepositoryProvider));
+  return SessionExpirationHandler(
+    ref.watch(authRepositoryProvider),
+    ref.watch(requisitionRepositoryProvider),
+  );
 });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
@@ -179,7 +182,12 @@ final observeSessionUseCaseProvider = Provider<ObserveSessionUseCase>((ref) {
 });
 
 final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
-  return LogoutUseCase(ref.watch(authRepositoryProvider));
+  return LogoutUseCase(
+    ref.watch(authRepositoryProvider),
+    // Second dependency so signing out also drops the cached staff directory — the
+    // repository provider is not rebuilt when the session clears. See [LogoutUseCase].
+    ref.watch(requisitionRepositoryProvider),
+  );
 });
 
 final getDashboardSummaryUseCaseProvider = Provider<GetDashboardSummaryUseCase>((ref) {

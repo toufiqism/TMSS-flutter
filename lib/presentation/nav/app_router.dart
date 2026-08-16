@@ -30,6 +30,13 @@ class _SessionRefreshListenable extends ChangeNotifier {
       if (previous?.value != null && next.value == null) {
         _resetFeatureState(ref);
       }
+      // Signing *in* matters as much as signing out. Both notifiers are kept alive, so
+      // one that already exists — holding another session's data, or stranded mid-load
+      // — is what the newly signed-in user lands on, and nothing else would ever move
+      // it. Reloading is not merely a freshness nicety here; it is the only exit.
+      if (previous?.value == null && next.value != null) {
+        _reloadFeatureState(ref);
+      }
       notifyListeners();
     });
   }
@@ -53,6 +60,36 @@ void _resetFeatureState(Ref ref) {
   }
   if (ref.exists(requisitionListNotifierProvider)) {
     ref.invalidate(requisitionListNotifierProvider);
+  }
+}
+
+/// Reloads the kept-alive notifiers for a session that has just begun.
+///
+/// [_resetFeatureState] handles the tidy case — session ends, state is discarded — but
+/// it is not enough on its own, and this is the failure it misses:
+///
+/// 1. A stale token is hydrated from secure storage at launch, so the router treats the
+///    user as signed in and goes straight to the dashboard.
+/// 2. The dashboard's first load 401s. The session is cleared and the user is sent to
+///    login — but the notifier is left behind, alive.
+/// 3. The user signs in. `build()` does not re-run for a kept-alive notifier, so no
+///    load is triggered, and the dashboard shows its spinner indefinitely.
+///
+/// Observed end to end against the live server. The notifier-state fix (settling on an
+/// error instead of staying on `loading`) removes the spinner; this removes the
+/// staleness — without it the user would land on the *previous* session's error screen
+/// and have to press Retry to see their own data.
+///
+/// Calls a method rather than `ref.invalidate`, deliberately. Invalidation closes the
+/// notifier's event stream (see `NotifierLifecycle`), and unlike the sign-out path
+/// there is no unmount here to make that safe — the screens are about to be shown, not
+/// torn down. `ref.exists` keeps this from creating a notifier nobody has opened.
+void _reloadFeatureState(Ref ref) {
+  if (ref.exists(dashboardNotifierProvider)) {
+    unawaited(ref.read(dashboardNotifierProvider.notifier).load());
+  }
+  if (ref.exists(requisitionListNotifierProvider)) {
+    unawaited(ref.read(requisitionListNotifierProvider.notifier).refresh());
   }
 }
 

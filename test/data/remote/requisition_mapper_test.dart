@@ -36,6 +36,153 @@ void main() {
       expect(details.customerName, 'Bangla Trac Ltd.');
     });
 
+    // Verified against the live server: riders come back under `employees`, as objects,
+    // on the detail/create/update responses only. Written down here because PUT
+    // replaces the rider list outright — a mapper that reads zero riders makes the edit
+    // form wipe them off someone's trip on save.
+    test('reads riders back from the `employees` objects, taking `id` not `id_no`', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Pending',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+        'no_of_person': 2,
+        'employees': [
+          {'id': 3035, 'id_no': '2-765', 'full_name': 'Md. Tofiq Akbar'},
+          {'id': 670, 'id_no': '2-506', 'full_name': 'G. M. Bellal Hossain'},
+        ],
+      });
+
+      final details = requisition!.details as PassengerDetails;
+      expect(details.employeeIds, ['3035', '670'],
+          reason: 'only `id` is accepted back in employee_id[]; `id_no` is not submittable');
+      // Names and staff numbers are kept as well: they are what the detail screen shows
+      // and what seeds the edit form's chips without waiting on the 92KB directory.
+      expect(details.riders.first.name, 'Md. Tofiq Akbar');
+      expect(details.riders.first.employeeCode, '2-765');
+      expect(details.riders.first.hasName, isTrue);
+    });
+
+    test('a bare-id rider list still yields submittable, unnamed riders', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Pending',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+        // The request shape, echoed back: ids with no objects around them.
+        'employee_id': [3035, '670'],
+      });
+
+      final details = requisition!.details as PassengerDetails;
+      expect(details.employeeIds, ['3035', '670']);
+      expect(details.riders.every((r) => !r.hasName), isTrue,
+          reason: 'no name was sent, so none is invented');
+    });
+
+    test('an `employees` entry with no id is dropped rather than shown', () {
+      // It could not be re-submitted in employee_id[], so displaying it would show a
+      // rider that the next save would silently remove.
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Pending',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+        'employees': [
+          {'id_no': '2-765', 'full_name': 'Md. Tofiq Akbar'},
+          {'id': 670, 'id_no': '2-506', 'full_name': 'G. M. Bellal Hossain'},
+        ],
+      });
+
+      final details = requisition!.details as PassengerDetails;
+      expect(details.employeeIds, ['670']);
+    });
+
+    test('reads the requester from the detail response`s created_by_name', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Pending',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+        'created_by_name': 'Md. Tofiq Akbar',
+        'created_by_id_no': '2-765',
+      });
+
+      expect(requisition!.requesterName, 'Md. Tofiq Akbar');
+      expect(requisition.requesterCode, '2-765');
+    });
+
+    test('falls back to the creating audit entry, not the newest one', () {
+      // The newest entry is written by whoever acted last — an approver or a canceller.
+      // Naming them as the requester would be worse than naming nobody.
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Cancel',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+        'audit_logs': [
+          {
+            'id': 2,
+            'requisition_status': 'Cancel',
+            'created_by_name': 'Dispatch Desk',
+            'created_by_id_no': '9-001',
+            'created_at': '2026-08-30 12:00:00',
+          },
+          {
+            'id': 1,
+            'requisition_status': 'Pending',
+            'created_by_name': 'Md. Tofiq Akbar',
+            'created_by_id_no': '2-765',
+            'created_at': '2026-08-29 06:00:00',
+          },
+        ],
+      });
+
+      expect(requisition!.requesterName, 'Md. Tofiq Akbar');
+      expect(requisition.requesterCode, '2-765');
+    });
+
+    test('a list row, carrying neither field, has no requester', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Pending',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+      });
+
+      expect(requisition!.requesterName, isNull,
+          reason: 'absent on the list response is not the same as "nobody"');
+      expect(requisition.requesterCode, isNull);
+    });
+
+    test('a list row, which carries no `employees` key, reads back no riders', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2846,
+        'status': 'Pending',
+        'req_type': 'passenger_vehicle',
+        'start_time': '2026-09-01 10:00:00',
+        'no_of_person': 2,
+      });
+
+      final details = requisition!.details as PassengerDetails;
+      expect(details.employeeIds, isEmpty,
+          reason: 'absence is a property of the list response, not of the requisition');
+    });
+
+    test('a logistics requisition carries an empty `employees` array', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 2847,
+        'status': 'Pending',
+        'req_type': 'logistic_support',
+        'requisition_for': 'Open Truck',
+        'loading_capacity': '3 Ton',
+        'start_time': '2026-09-01 11:00:00',
+        'employees': <dynamic>[],
+      });
+
+      expect(requisition!.type, RequisitionType.logistics);
+      expect((requisition.details as LogisticsDetails).vehicleType, VehicleType.openTruck);
+    });
+
     test('accepts a string id, which the contract says is equally possible', () {
       final requisition = RequisitionMapper.fromJson({
         'id': 'a3f-9921',
@@ -281,9 +428,11 @@ void main() {
       expect(json['store_name'], 'Test');
       expect(json['goods_details'], 'Test');
       expect(json['pick_up_date_time'], '2026-07-25 09:30:00');
-      // requisition_for is required for logistics too, even though the form never asks.
-      expect(json['requisition_for'], 'Own User');
-      // The server neither requires nor validates vehicle_type; sending it is noise.
+      // For logistics, requisition_for IS the vehicle type — the web UI labels this
+      // same field "Vehicle Type". It used to send 'Own User', borrowed from the
+      // passenger meaning, which the updated contract rejects with a 422.
+      expect(json['requisition_for'], 'Cover Van');
+      // Still no separate vehicle_type key: the value travels in requisition_for.
       expect(json.containsKey('vehicle_type'), isFalse);
     });
   });

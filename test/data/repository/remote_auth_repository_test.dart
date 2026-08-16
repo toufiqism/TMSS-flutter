@@ -163,11 +163,52 @@ void main() {
         ),
       );
 
-      await repository.logout();
+      final result = await repository.logout();
 
       // Leaving the user signed in because the network hiccuped would be worse than a
       // token that outlives the session.
       verify(storage.clear).called(1);
+      // ...but the caller is told, so the drawer can say the token may still be live.
+      expect(result, isA<ApiOffline<void>>());
+    });
+
+    test('a successful revoke reports success', () async {
+      expect(await repository.logout(), isA<ApiSuccess<void>>());
+    });
+
+    test('a 401 revoke is success, not a failure worth warning about', () async {
+      // The token was already dead — which is the state logout exists to reach. Warning
+      // here would tell the user something went wrong when nothing did.
+      when(api.logout).thenAnswer(
+        (_) async => _response(401, {'success': false, 'message': 'Unauthenticated.'}),
+      );
+
+      final result = await repository.logout();
+
+      expect(result, isA<ApiSuccess<void>>());
+      verify(storage.clear).called(1);
+    });
+
+    test('a 500 revoke is reported, and the session is still cleared', () async {
+      when(api.logout).thenAnswer(
+        (_) async => _response(500, {'success': false, 'message': 'Server error'}),
+      );
+
+      final result = await repository.logout();
+
+      expect(result, isA<ApiError<void>>());
+      verify(storage.clear).called(1);
+    });
+  });
+
+  group('clearSession', () {
+    test('clears locally without calling the server', () async {
+      // The 401 path: the token in hand is the one the server just rejected, so posting
+      // it to /logout could only ever 401 a second time.
+      await repository.clearSession();
+
+      verify(storage.clear).called(1);
+      verifyNever(api.logout);
     });
   });
 }

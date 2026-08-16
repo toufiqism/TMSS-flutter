@@ -58,7 +58,21 @@ class DashboardNotifier extends Notifier<DashboardUiState>
       case ApiLogout<DashboardSummary>(:final message):
         await ref.read(sessionExpirationHandlerProvider).handle();
         if (isDisposed) return;
-        _clearRefreshingFlag();
+        // A terminal state, not just a cleared flag. `_clearRefreshingFlag` alone was a
+        // no-op on the *initial* load — it only touches a `DashboardSuccess` — so a 401
+        // there left this notifier on `DashboardLoading` with nothing able to move it
+        // off again. That is a permanent spinner: the notifier is kept alive, so
+        // `build()` never re-runs, and the only other entry points are pull-to-refresh
+        // (unreachable, the content is not on screen) and the create-flow refresh.
+        //
+        // Observed exactly that: a stale token hydrated from secure storage 401'd the
+        // first dashboard load, and signing back in returned the user to the spinner
+        // this branch had stranded.
+        if (hadDataBeforeFetch) {
+          _clearRefreshingFlag();
+        } else {
+          setStateIfAlive(DashboardUiState.error(message));
+        }
         emitEvent(DashboardSessionExpired(message));
     }
   }

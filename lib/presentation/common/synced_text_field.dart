@@ -20,10 +20,12 @@ class SyncedTextField extends StatefulWidget {
     this.hintText,
     this.errorText,
     this.obscureText = false,
+    this.isSensitive,
     this.keyboardType,
     this.textInputAction,
     this.onSubmitted,
     this.maxLines = 1,
+    this.maxLength,
     this.prefixIcon,
     this.suffixIcon,
     this.fillColor,
@@ -36,10 +38,29 @@ class SyncedTextField extends StatefulWidget {
   final String? hintText;
   final String? errorText;
   final bool obscureText;
+
+  /// Whether the content must be kept out of the keyboard's learning dictionary,
+  /// autocorrect and smart punctuation, independently of whether it is currently
+  /// masked.
+  ///
+  /// Defaults to [obscureText], which is right for a field that is always masked. A
+  /// field with a reveal toggle **must** pass `true` explicitly: otherwise the moment
+  /// the user unmasks their password, suggestions and autocorrect switch back on and
+  /// the keyboard starts learning it — a leak that outlives the app, and one that is
+  /// completely invisible while it happens.
+  final bool? isSensitive;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final VoidCallback? onSubmitted;
   final int maxLines;
+
+  /// Hard character limit, matching the server's own `max:` rule for the field.
+  ///
+  /// Enforced at the keyboard so the limit is unreachable by typing, rather than only
+  /// reported after a failed submit. The counter is suppressed in [build]: this app's
+  /// inputs are fixed-height pills, and Material's counter line would push the layout
+  /// around on every field that has one.
+  final int? maxLength;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final Color? fillColor;
@@ -75,6 +96,7 @@ class _SyncedTextFieldState extends State<SyncedTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final isSensitive = widget.isSensitive ?? widget.obscureText;
     return TextField(
       controller: _controller,
       onChanged: widget.onChanged,
@@ -82,15 +104,21 @@ class _SyncedTextFieldState extends State<SyncedTextField> {
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       onSubmitted: widget.onSubmitted == null ? null : (_) => widget.onSubmitted!(),
-      maxLines: widget.obscureText ? 1 : widget.maxLines,
+      // Keyed off sensitivity, not masking: a revealed password is still one line.
+      maxLines: isSensitive ? 1 : widget.maxLines,
+      maxLength: widget.maxLength,
       enabled: widget.enabled,
       autofillHints: widget.autofillHints,
-      // Passwords must never be logged to a keyboard's learning dictionary.
-      enableSuggestions: !widget.obscureText,
-      autocorrect: !widget.obscureText,
-      smartDashesType: widget.obscureText ? SmartDashesType.disabled : SmartDashesType.enabled,
-      smartQuotesType: widget.obscureText ? SmartQuotesType.disabled : SmartQuotesType.enabled,
+      // Passwords must never be logged to a keyboard's learning dictionary — including
+      // while the user has them on screen.
+      enableSuggestions: !isSensitive,
+      autocorrect: !isSensitive,
+      smartDashesType: isSensitive ? SmartDashesType.disabled : SmartDashesType.enabled,
+      smartQuotesType: isSensitive ? SmartQuotesType.disabled : SmartQuotesType.enabled,
       decoration: InputDecoration(
+        // Empty, not null: null restores Material's default "12/200" counter, which is
+        // what the fixed-height pill design cannot absorb.
+        counterText: '',
         hintText: widget.hintText,
         errorText: widget.errorText,
         prefixIcon: widget.prefixIcon,

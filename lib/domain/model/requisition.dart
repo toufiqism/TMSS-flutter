@@ -74,9 +74,10 @@ enum RequiredFor {
   ownUser('Own User'),
 
   /// Confirmed valid by a live probe, despite the contract listing only `Own User`.
-  /// Note the server requires no employee field alongside it — there is still nowhere
-  /// on the wire to send *who* the requisition is for, which is why the employee
-  /// picker stays gated behind [ApiCapabilities.employeeDirectory].
+  ///
+  /// Riders are named on the wire via `employee_id[]` for both values now, so the
+  /// picker is no longer gated — the note that once stood here, saying there was
+  /// nowhere to send *who* the requisition is for, is obsolete.
   someoneElse('Someone Else');
 
   const RequiredFor(this.label);
@@ -109,6 +110,18 @@ enum VehicleType {
 
   const VehicleType(this.label);
   final String label;
+
+  /// Reads a logistics requisition's `requisition_for`, which is where the server keeps
+  /// the vehicle type. Falls back to [coverVan] for an unrecognised or absent value, so
+  /// a row still renders rather than failing to parse over one field.
+  static VehicleType fromWire(String? raw) {
+    if (raw == null) return coverVan;
+    final normalised = raw.toLowerCase().replaceAll(' ', '');
+    for (final type in values) {
+      if (type.label.toLowerCase().replaceAll(' ', '') == normalised) return type;
+    }
+    return coverVan;
+  }
 }
 
 /// Server-validated `in:` list. Probed exhaustively against the live API: these four
@@ -118,6 +131,20 @@ enum VehicleType {
 /// the server, so every logistics submission built on the default would have failed
 /// validation.
 enum LoadingCapacity {
+  /// Written `1∙5 Ton` — a BULLET OPERATOR (U+2219), **not** a full stop.
+  ///
+  /// That is the literal value the API accepts, taken verbatim from the updated
+  /// contract's documented option list; anything else earns a 422.
+  ///
+  /// The character is stored literally, so an editor, terminal or diff tool that
+  /// normalises it to `.` or `·` would break submission at runtime — and a test
+  /// comparing against this same constant would still pass, because both sides would
+  /// have changed together. `loading_capacity 1.5 Ton keeps its U+2219` in
+  /// `requisition_model_test.dart` therefore asserts the raw code unit instead.
+  ///
+  /// Named `ton1Point5` rather than `ton1_5` only because `constant_identifier_names`
+  /// rejects the underscore.
+  ton1Point5('1∙5 Ton'),
   ton2('2 Ton'),
   ton3('3 Ton'),
   ton5('5 Ton'),
@@ -126,14 +153,26 @@ enum LoadingCapacity {
   const LoadingCapacity(this.label);
   final String label;
 
+  /// Reads leniently in both directions: the separator is normalised on the wire value
+  /// *and* on the label, so a server that ever returns the sane `1.5 Ton` — or the
+  /// middle dot `1·5 Ton` — still maps to [ton1_5] instead of silently falling back to
+  /// [ton2] and showing the user a capacity they never chose.
   static LoadingCapacity fromWire(String? raw) {
     if (raw == null) return ton2;
-    final normalised = raw.toLowerCase().replaceAll(' ', '');
+    final normalised = _normalise(raw);
     for (final capacity in values) {
-      if (capacity.label.toLowerCase().replaceAll(' ', '') == normalised) return capacity;
+      if (_normalise(capacity.label) == normalised) return capacity;
     }
     return ton2;
   }
+
+  static String _normalise(String value) => value
+      .toLowerCase()
+      .replaceAll(' ', '')
+      // U+2219 BULLET OPERATOR and U+00B7 MIDDLE DOT, escaped for the same reason the
+      // label above is.
+      .replaceAll('∙', '.')
+      .replaceAll('·', '.');
 }
 
 /// One entry in a requisition's history. Shape confirmed against a live response:
@@ -180,6 +219,31 @@ abstract class AssignedVehicle with _$AssignedVehicle {
   bool get hasAnything => registrationNumber != null || model != null || type != null;
 }
 
+/// One rider on a passenger requisition, exactly as the server reports them.
+///
+/// Deliberately not an [Employee]: the requisition's `employees[]` carries only
+/// `{id, id_no, full_name}`, so designation, department and company are unknown here.
+/// Modelling this as an `Employee` would mean inventing three empty strings and letting
+/// the UI render them as though the server had said they were blank.
+///
+/// [name] and [employeeCode] are empty when the wire entry was a bare id (the older
+/// `employee_id: [3035]` shape) rather than an object — the id is still submittable,
+/// which is the part that must never be lost.
+@freezed
+abstract class RequisitionRider with _$RequisitionRider {
+  const RequisitionRider._();
+
+  const factory RequisitionRider({
+    required String id,
+    @Default('') String name,
+    @Default('') String employeeCode,
+  }) = _RequisitionRider;
+
+  /// Whether the server gave a name to show. False for an id-only rider, which the UI
+  /// labels as unresolved rather than rendering a blank row.
+  bool get hasName => name.trim().isNotEmpty;
+}
+
 @freezed
 sealed class RequisitionDetails with _$RequisitionDetails {
   const factory RequisitionDetails.passenger({
@@ -188,7 +252,7 @@ sealed class RequisitionDetails with _$RequisitionDetails {
     required int numberOfPersons,
     required RequiredFor requiredFor,
     RequisitionUserType? userType,
-    @Default(<String>[]) List<String> employeeIds,
+    @Default(<RequisitionRider>[]) List<RequisitionRider> riders,
     required String purpose,
   }) = PassengerDetails;
 
@@ -201,6 +265,16 @@ sealed class RequisitionDetails with _$RequisitionDetails {
     required String storeName,
     required String goodsDetails,
   }) = LogisticsDetails;
+}
+
+/// The rider ids in submission order.
+///
+/// An extension rather than a member because the getter belongs to one branch of the
+/// union, and Freezed generates the branches. Ids are what `employee_id[]` takes; the
+/// names alongside them are read-only decoration.
+extension PassengerRiderIds on PassengerDetails {
+  List<String> get employeeIds =>
+      riders.map((rider) => rider.id).toList(growable: false);
 }
 
 @freezed
@@ -221,6 +295,14 @@ abstract class Requisition with _$Requisition {
     DateTime? endDateTime,
     String? departmentName,
     String? companyName,
+
+    /// Who raised the requisition. `created_by_name` on the detail response, falling
+    /// back to the creating audit entry; null on a list row, which carries neither.
+    String? requesterName,
+
+    /// The requester's staff number (`created_by_id_no`), when the response carries it.
+    /// Independent of [requesterName] — either can arrive without the other.
+    String? requesterCode,
     AssignedDriver? driver,
     AssignedVehicle? vehicle,
     @Default(<AuditLogEntry>[]) List<AuditLogEntry> auditLog,

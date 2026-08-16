@@ -20,14 +20,33 @@ class ApiCapabilities {
   /// `requisition_for_user: "External User"` — both of which the contract listed as
   /// unverified.
   ///
-  /// Note this only covers the *choice*. There is still no wire field naming which
-  /// employees the requisition is for, and the server does not ask for one, so the
-  /// picker stays gated behind [employeeDirectory].
+  /// The picker is no longer gated: `employee_id[]` names the riders on the wire, and
+  /// the server now requires it on every passenger requisition regardless of this
+  /// choice.
   static const requisitionsForOthers = true;
 
-  /// Still unsupported: no employee directory endpoint exists. Probes for `/employees`,
-  /// `/employee`, `/users` and `/user-list` all fall through to the auth middleware.
-  static const employeeDirectory = false;
+  /// Supported since the updated contract: `GET /requisitions/employees` returns every
+  /// employee with an active `acc_user_info` account.
+  ///
+  /// The earlier probes that found nothing were looking in the wrong place — they tried
+  /// `/employees`, `/employee`, `/users` and `/user-list`, while the real route is
+  /// nested under `/requisitions/`.
+  ///
+  /// The directory is a **whole-list** endpoint, not a search one: twelve candidate
+  /// query parameters were probed and all twelve were ignored. See
+  /// [serverSideEmployeeSearch].
+  static const employeeDirectory = true;
+
+  /// `GET /requisitions/employees` has no search parameter. Probed exhaustively —
+  /// `search`, `q`, `keyword`, `name`, `term`, `filter`, `search_text`, `id_no`,
+  /// `employee_id`, `id`, `per_page`, `page`, `limit` — and every one returned the same
+  /// 537-row body byte for byte.
+  ///
+  /// So the picker filters the cached list in memory, over `full_name`, `id_no`,
+  /// `designation_name` and `department_name`. Matching `id_no` matters: staff numbers
+  /// like `2-765` are how people identify each other here, and they are not derivable
+  /// from the name.
+  static const serverSideEmployeeSearch = false;
 
   /// No summary/statistics endpoint exists. Counts are derived client-side from the
   /// requisition list instead, which is accurate but bounded by

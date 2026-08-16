@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/api_capabilities.dart';
 import '../../domain/model/employee.dart';
 import '../../domain/model/requisition.dart';
+import '../../domain/requisition_field_limits.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
@@ -112,6 +113,13 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Editing only, and only when the server actually reported a
+                  // requester: it answers "whose requisition am I changing?" before the
+                  // first field, and there is nobody to name on a fresh create.
+                  if (uiState.isEditing && uiState.hasRequesterInfo) ...[
+                    _RequesterHeader(uiState: uiState),
+                    const SizedBox(height: 16),
+                  ],
                   if (uiState.submitError != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -154,6 +162,73 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Read-only requester card shown above the edit form.
+///
+/// Purely informational — none of it is editable, because none of it is in the `PUT`
+/// body. Every line is conditional: the fields arrive independently, and a row for a
+/// value the server never sent would read as an empty department rather than an unknown
+/// one.
+class _RequesterHeader extends StatelessWidget {
+  const _RequesterHeader({required this.uiState});
+
+  final RequisitionCreateUiState uiState;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = uiState.editingRequesterName?.trim() ?? '';
+    final code = uiState.editingRequesterCode?.trim() ?? '';
+    final department = uiState.editingRequesterDepartment?.trim() ?? '';
+    final company = uiState.editingRequesterCompany?.trim() ?? '';
+
+    final primary = switch ((name.isNotEmpty, code.isNotEmpty)) {
+      (true, true) => '$name · $code',
+      (true, false) => name,
+      (false, true) => code,
+      (false, false) => '',
+    };
+    // Department and company are joined on one line to keep the card two lines tall at
+    // default text size; the Text below still wraps at large scales rather than
+    // clipping.
+    final secondary = [department, company].where((v) => v.isNotEmpty).join(' · ');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tracGoGreenLight,
+        borderRadius: tracGoBorderRadius(tracGoRadiusMedium),
+        border: Border.all(color: tracGoBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            TracGoStrings.requisitionDetailRequestedBy.toUpperCase(),
+            style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen),
+          ),
+          if (primary.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              primary,
+              style: tracGoTextTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: tracGoTextDark,
+              ),
+            ),
+          ],
+          if (secondary.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              secondary,
+              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextSubtle),
+            ),
+          ],
         ],
       ),
     );
@@ -338,10 +413,14 @@ class _PassengerFormFields extends StatelessWidget {
           error: errors[RequisitionFormField.customerName],
         ),
         spacing,
+        // Read-only and derived from the rider selection below: the server requires
+        // `no_of_person` to equal the number of selected employees exactly, so an
+        // editable field here could only ever be used to create an invalid state.
         _TracGoTextField(
           label: TracGoStrings.newRequisitionFieldNumberOfPersons,
           value: form.numberOfPersons,
-          onChanged: notifier.onNumberOfPersonsChange,
+          onChanged: (_) {},
+          enabled: false,
           error: errors[RequisitionFormField.numberOfPersons],
           keyboardType: TextInputType.number,
         ),
@@ -353,11 +432,7 @@ class _PassengerFormFields extends StatelessWidget {
           labelFor: (v) => v.label,
           onSelect: notifier.onRequiredForChange,
         ),
-        // "Someone Else" is a valid value, but there is still no wire field for *who*
-        // — and no directory endpoint to pick them from. So the choice is offered and
-        // the picker is not.
-        if (form.requiredFor == RequiredFor.someoneElse &&
-            !ApiCapabilities.employeeDirectory)
+        if (!ApiCapabilities.employeeDirectory)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
@@ -365,6 +440,9 @@ class _PassengerFormFields extends StatelessWidget {
               style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
             ),
           ),
+        // The user type radio stays specific to "Someone Else": an "Own User"
+        // requisition admits only "Internal User", and offering the other option would
+        // let the user build a combination the server documents as a 422.
         if (ApiCapabilities.employeeDirectory &&
             form.requiredFor == RequiredFor.someoneElse) ...[
           spacing,
@@ -376,6 +454,12 @@ class _PassengerFormFields extends StatelessWidget {
             labelFor: (v) => v.label,
             onSelect: notifier.onUserTypeChange,
           ),
+        ],
+        // The picker itself is shown for both values of "Required For". Riders are
+        // required on every passenger requisition now — the contract's worked example
+        // is an "Own User" trip with three of them — where previously this was only
+        // offered for "Someone Else".
+        if (ApiCapabilities.employeeDirectory) ...[
           spacing,
           _EmployeePicker(
             query: uiState.employeeSearchQuery,
@@ -400,6 +484,7 @@ class _PassengerFormFields extends StatelessWidget {
           label: TracGoStrings.newRequisitionFieldRemarks,
           value: form.remarks,
           onChanged: notifier.onPassengerRemarksChange,
+          error: errors[RequisitionFormField.remarks],
           singleLine: false,
         ),
       ],
@@ -443,6 +528,7 @@ class _LogisticsFormFields extends StatelessWidget {
           value: form.goodsWeight,
           onChanged: notifier.onGoodsWeightChange,
           error: errors[RequisitionFormField.goodsWeight],
+          maxLength: RequisitionFieldLimits.goodsWeightMaxLength,
         ),
         const _SectionHeader(TracGoStrings.newRequisitionSectionTripDetails),
         DateTimeField(
@@ -479,6 +565,7 @@ class _LogisticsFormFields extends StatelessWidget {
           value: form.userDepartment,
           onChanged: notifier.onUserDepartmentChange,
           error: errors[RequisitionFormField.userDepartment],
+          maxLength: RequisitionFieldLimits.shortMaxLength,
         ),
         spacing,
         _TracGoTextField(
@@ -486,6 +573,7 @@ class _LogisticsFormFields extends StatelessWidget {
           value: form.storeName,
           onChanged: notifier.onStoreNameChange,
           error: errors[RequisitionFormField.storeName],
+          maxLength: RequisitionFieldLimits.shortMaxLength,
         ),
         spacing,
         _TracGoTextField(
@@ -500,6 +588,7 @@ class _LogisticsFormFields extends StatelessWidget {
           label: TracGoStrings.newRequisitionFieldRemarks,
           value: form.remarks,
           onChanged: notifier.onLogisticsRemarksChange,
+          error: errors[RequisitionFormField.remarks],
           singleLine: false,
         ),
       ],
@@ -515,6 +604,8 @@ class _TracGoTextField extends StatelessWidget {
     this.error,
     this.singleLine = true,
     this.keyboardType = TextInputType.text,
+    this.enabled = true,
+    this.maxLength = RequisitionFieldLimits.defaultMaxLength,
   });
 
   final String label;
@@ -524,12 +615,24 @@ class _TracGoTextField extends StatelessWidget {
   final bool singleLine;
   final TextInputType keyboardType;
 
+  /// The server's `max:` rule for this field. Defaults to the 200 that most of them
+  /// carry; the three that differ pass their own.
+  final int? maxLength;
+
+  /// False for fields the form computes rather than accepts, so they render in the
+  /// standard disabled style instead of inviting an edit that would be discarded.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
     return SyncedTextField(
       value: value,
       onChanged: onChanged,
+      enabled: enabled,
       maxLines: singleLine ? 1 : 3,
+      // The derived, read-only No. of Persons field is the one input with no server
+      // string rule; capping it would be meaningless.
+      maxLength: enabled ? maxLength : null,
       keyboardType: keyboardType,
       hintText: label,
       errorText: error,
@@ -601,6 +704,22 @@ class _EmployeePickerState extends State<_EmployeePicker> {
                 )
               : null,
         ),
+        // A search that matched nobody used to render exactly nothing, which is
+        // indistinguishable from the dropdown having failed to open. Guarded on
+        // `searchError == null` so a failed lookup keeps saying it failed rather than
+        // claiming there were no matches.
+        if (_expanded &&
+            widget.results.isEmpty &&
+            !widget.isSearching &&
+            widget.searchError == null &&
+            widget.query.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              TracGoStrings.newRequisitionEmployeeNoMatches,
+              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
+            ),
+          ),
         if (_expanded && widget.results.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(top: 4),

@@ -237,7 +237,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-class _LabeledField extends StatelessWidget {
+/// A labelled input. When [obscureText] is set it also gains a reveal toggle, because
+/// a masked field with no way to check what was typed is the usual cause of a login
+/// failure that is really a typo.
+class _LabeledField extends StatefulWidget {
   const _LabeledField({
     required this.label,
     required this.value,
@@ -263,22 +266,72 @@ class _LabeledField extends StatelessWidget {
   final bool enabled;
 
   @override
+  State<_LabeledField> createState() => _LabeledFieldState();
+}
+
+class _LabeledFieldState extends State<_LabeledField> {
+  /// Starts masked, and is never persisted or lifted into [LoginUiState]: it is view
+  /// state with no meaning outside this widget, and a revealed password surviving a
+  /// rebuild — or worse, a navigation — is a shoulder-surfing hazard rather than a
+  /// convenience.
+  bool _revealed = false;
+
+  /// Keeps the toggle out of the focus chain.
+  ///
+  /// A plain [IconButton] in a `suffixIcon` takes focus when tapped, which closes the
+  /// keyboard — so every peek at the password would cost the user a tap to get back to
+  /// typing. Screen readers reach the button by touch exploration regardless, and it
+  /// carries a tooltip, so nothing is lost by making it unfocusable.
+  final FocusNode _toggleFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  @override
+  void dispose() {
+    _toggleFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final showToggle = widget.obscureText;
+    final tooltip = _revealed
+        ? TracGoStrings.loginHidePassword
+        : TracGoStrings.loginShowPassword;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: tracGoTextTheme.labelMedium),
+        Text(widget.label.toUpperCase(), style: tracGoTextTheme.labelMedium),
         const SizedBox(height: 6),
         SyncedTextField(
-          value: value,
-          onChanged: onChanged,
-          hintText: hint,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          autofillHints: autofillHints,
-          onSubmitted: onSubmitted,
-          enabled: enabled,
+          value: widget.value,
+          onChanged: widget.onChanged,
+          hintText: widget.hint,
+          obscureText: widget.obscureText && !_revealed,
+          // Explicit, and load-bearing: `obscureText` above goes false while the user
+          // is peeking, and this is what stops the keyboard learning the password in
+          // that window.
+          isSensitive: widget.obscureText,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          autofillHints: widget.autofillHints,
+          onSubmitted: widget.onSubmitted,
+          enabled: widget.enabled,
+          suffixIcon: !showToggle
+              ? null
+              : IconButton(
+                  focusNode: _toggleFocusNode,
+                  // Disabled alongside the field it belongs to: revealing the password
+                  // during a sign-in attempt would toggle a field the user cannot edit.
+                  onPressed: widget.enabled
+                      ? () => setState(() => _revealed = !_revealed)
+                      : null,
+                  tooltip: tooltip,
+                  icon: Icon(
+                    _revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 20,
+                    color: tracGoTextMutedAlt,
+                  ),
+                ),
         ),
       ],
     );

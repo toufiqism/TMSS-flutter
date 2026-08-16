@@ -28,17 +28,33 @@ class TracGoApiClient {
 
   /// `POST /logout` — revokes the current bearer token server-side.
   ///
-  /// Undocumented: it is absent from the contract, which lists the existence of a
-  /// logout endpoint as an open question. Confirmed working against the live server —
-  /// it returns 200 and the token 401s immediately afterwards.
-  Future<Response<dynamic>> logout() => _dio.post<dynamic>('/logout');
+  /// Documented in the updated contract as `Auth > Logout`: it nulls
+  /// `acc_user_info.api_token` and `api_token_expires_at`, and the contract states —
+  /// matching what a live probe shows — that the same token 401s on any request made
+  /// afterwards.
+  ///
+  /// The contract sends an **empty** body with `Content-Type: application/json`, and
+  /// that is reproduced literally: `contentType` is set explicitly because Dio omits
+  /// the header entirely when there is no payload, and the endpoint is specified with
+  /// it present. There is nothing to send — the token comes from the Authorization
+  /// header, which [AuthInterceptor] attaches.
+  Future<Response<dynamic>> logout() => _dio.post<dynamic>(
+        '/logout',
+        options: Options(contentType: Headers.jsonContentType),
+      );
 
   /// `GET /user` — the account row behind the current token.
   ///
   /// Returns a **bare object**, with no `{success, message, data}` envelope, unlike
   /// every other endpoint here. Carries `id`, `user_name` and `employee_id` but no
-  /// display name, so it is not part of the login flow; it is useful as a cheap
-  /// token-validity probe.
+  /// display name, so it is not part of the login flow.
+  ///
+  /// It has one job nothing else can do: `employee_id` (3035 for this account) is the
+  /// **directory's surrogate `id`**, while `id` (864) is the account row. That is the
+  /// only bridge between the signed-in session and a row in
+  /// `GET /requisitions/employees`, and it is what lets the create form pre-select the
+  /// requester as a rider. Do not substitute `id` for it — different key space,
+  /// different person.
   ///
   /// [bearerToken] overrides the stored session token. Login needs that: it has a token
   /// in hand but must not persist it yet, because persisting emits on the session
@@ -77,11 +93,19 @@ class TracGoApiClient {
   }
 
   /// `POST /requisitions` — creates a requisition owned by the caller, starting in
-  /// `Pending`.
+  /// `Pending`. Answers **201** with the complete detail object, including
+  /// `audit_logs` and `employees`, so no follow-up `GET` is needed to show the result.
   ///
   /// No `X-Requisition-Source` header: the contract flagged it as an open question and
   /// the answer is that the server ignores it. Sending an invented value would have
   /// been dead weight at best, and a 422 if it turned out to be validated.
+  ///
+  /// **`pick_up_date_time` is not validated.** Confirmed by probe: `01/09/2026 10:00`
+  /// was accepted with a 201 and stored as `0000-00-00 00:00:00`, silently destroying
+  /// the requisition's own pickup time. There is no error to react to, so the format
+  /// is entirely this client's responsibility — always go through
+  /// `WireDateTime.format`, which emits `YYYY-MM-DD HH:mm:ss` and nothing else. The
+  /// server also accepts a *past* pickup time without complaint.
   Future<Response<dynamic>> createRequisition(Map<String, dynamic> body) {
     return _dio.post<dynamic>('/requisitions', data: body);
   }
@@ -99,8 +123,30 @@ class TracGoApiClient {
   Future<Response<dynamic>> updateRequisition(String id, Map<String, dynamic> body) =>
       _dio.put<dynamic>('/requisitions/$id', data: body);
 
-  /// `POST /requisitions/{id}/cancel` — takes no body. A 409 here is routine, not
-  /// exceptional: it means an approver acted while this client held a stale list.
+  /// `POST /requisitions/{id}/cancel` — takes no body and returns the **full detail
+  /// object** back, with `status: "Cancel"` and a third audit-log entry appended.
+  ///
+  /// A 409 here is routine, not exceptional: it means an approver acted while this
+  /// client held a stale list. Verified — cancelling an already-cancelled requisition
+  /// answers 409 `Only pending requisitions can be cancelled`.
   Future<Response<dynamic>> cancelRequisition(String id) =>
       _dio.post<dynamic>('/requisitions/$id/cancel');
+
+  /// `GET /requisitions/employees` — the rider picker's source list.
+  ///
+  /// Returns every employee with an active `acc_user_info` account, in one
+  /// **unpaginated** response: 537 rows / 92KB in the current sample, which is why the
+  /// repository fetches it once per session and filters locally rather than calling
+  /// this per keystroke.
+  ///
+  /// **It ignores query parameters entirely.** `search`, `q`, `keyword`, `name`,
+  /// `term`, `filter`, `id_no`, `id`, `page`, `per_page` and `limit` were each probed
+  /// and every one returned the identical 92KB body, byte for byte. There is no
+  /// server-side search or paging to opt into, so do not add a parameter here on the
+  /// assumption that one exists.
+  ///
+  /// Nested under `/requisitions/` despite being a directory lookup — that is the
+  /// server's own path, not a mistake.
+  Future<Response<dynamic>> listEmployees() =>
+      _dio.get<dynamic>('/requisitions/employees');
 }

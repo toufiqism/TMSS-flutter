@@ -111,6 +111,26 @@ void main() {
 
     verify(() => mockSessionExpirationHandler.handle()).called(1);
     expect(events, [isA<DashboardSessionExpired>()]);
+    // The event alone is not enough. This notifier is kept alive, so `build()` will not
+    // re-run and no other caller reaches `load()` while the content is off screen — a
+    // state left on `loading` here is a spinner nothing can clear. Observed live: a
+    // stale token 401'd the first load and the user was returned to that spinner after
+    // signing back in.
+    expect(container.read(dashboardNotifierProvider), isA<DashboardError>());
     await sub.cancel();
+  });
+
+  test('a 401 while refreshing keeps the summary rather than replacing it with an error',
+      () async {
+    when(() => mockUseCase()).thenAnswer((_) async => const ApiResult.success(summary));
+    final notifier = container.read(dashboardNotifierProvider.notifier);
+    await Future<void>.delayed(Duration.zero);
+
+    when(() => mockUseCase()).thenAnswer((_) async => const ApiResult.logout('Session expired', 401));
+    await notifier.refresh();
+
+    final state = container.read(dashboardNotifierProvider) as DashboardSuccess;
+    expect(state.summary.allCount, 5, reason: 'there is content to keep, unlike an initial load');
+    expect(state.isRefreshing, isFalse);
   });
 }

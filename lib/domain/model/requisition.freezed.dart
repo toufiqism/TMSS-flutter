@@ -810,6 +810,269 @@ as String?,
 }
 
 /// @nodoc
+mixin _$RequisitionRider {
+
+ String get id; String get name; String get employeeCode;
+/// Create a copy of RequisitionRider
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$RequisitionRiderCopyWith<RequisitionRider> get copyWith => _$RequisitionRiderCopyWithImpl<RequisitionRider>(this as RequisitionRider, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RequisitionRider&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.employeeCode, employeeCode) || other.employeeCode == employeeCode));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,name,employeeCode);
+
+@override
+String toString() {
+  return 'RequisitionRider(id: $id, name: $name, employeeCode: $employeeCode)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $RequisitionRiderCopyWith<$Res>  {
+  factory $RequisitionRiderCopyWith(RequisitionRider value, $Res Function(RequisitionRider) _then) = _$RequisitionRiderCopyWithImpl;
+@useResult
+$Res call({
+ String id, String name, String employeeCode
+});
+
+
+
+
+}
+/// @nodoc
+class _$RequisitionRiderCopyWithImpl<$Res>
+    implements $RequisitionRiderCopyWith<$Res> {
+  _$RequisitionRiderCopyWithImpl(this._self, this._then);
+
+  final RequisitionRider _self;
+  final $Res Function(RequisitionRider) _then;
+
+/// Create a copy of RequisitionRider
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? employeeCode = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,employeeCode: null == employeeCode ? _self.employeeCode : employeeCode // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [RequisitionRider].
+extension RequisitionRiderPatterns on RequisitionRider {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RequisitionRider value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _RequisitionRider() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RequisitionRider value)  $default,){
+final _that = this;
+switch (_that) {
+case _RequisitionRider():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RequisitionRider value)?  $default,){
+final _that = this;
+switch (_that) {
+case _RequisitionRider() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String employeeCode)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _RequisitionRider() when $default != null:
+return $default(_that.id,_that.name,_that.employeeCode);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String employeeCode)  $default,) {final _that = this;
+switch (_that) {
+case _RequisitionRider():
+return $default(_that.id,_that.name,_that.employeeCode);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String employeeCode)?  $default,) {final _that = this;
+switch (_that) {
+case _RequisitionRider() when $default != null:
+return $default(_that.id,_that.name,_that.employeeCode);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _RequisitionRider extends RequisitionRider {
+  const _RequisitionRider({required this.id, this.name = '', this.employeeCode = ''}): super._();
+  
+
+@override final  String id;
+@override@JsonKey() final  String name;
+@override@JsonKey() final  String employeeCode;
+
+/// Create a copy of RequisitionRider
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$RequisitionRiderCopyWith<_RequisitionRider> get copyWith => __$RequisitionRiderCopyWithImpl<_RequisitionRider>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RequisitionRider&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.employeeCode, employeeCode) || other.employeeCode == employeeCode));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,name,employeeCode);
+
+@override
+String toString() {
+  return 'RequisitionRider(id: $id, name: $name, employeeCode: $employeeCode)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$RequisitionRiderCopyWith<$Res> implements $RequisitionRiderCopyWith<$Res> {
+  factory _$RequisitionRiderCopyWith(_RequisitionRider value, $Res Function(_RequisitionRider) _then) = __$RequisitionRiderCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String name, String employeeCode
+});
+
+
+
+
+}
+/// @nodoc
+class __$RequisitionRiderCopyWithImpl<$Res>
+    implements _$RequisitionRiderCopyWith<$Res> {
+  __$RequisitionRiderCopyWithImpl(this._self, this._then);
+
+  final _RequisitionRider _self;
+  final $Res Function(_RequisitionRider) _then;
+
+/// Create a copy of RequisitionRider
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? employeeCode = null,}) {
+  return _then(_RequisitionRider(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,employeeCode: null == employeeCode ? _self.employeeCode : employeeCode // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$RequisitionDetails {
 
  String get customerName;
@@ -948,10 +1211,10 @@ return logistics(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( UsedType usedType,  String customerName,  int numberOfPersons,  RequiredFor requiredFor,  RequisitionUserType? userType,  List<String> employeeIds,  String purpose)?  passenger,TResult Function( VehicleType vehicleType,  String customerName,  String userDepartment,  LoadingCapacity loadingCapacity,  String goodsWeight,  String storeName,  String goodsDetails)?  logistics,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( UsedType usedType,  String customerName,  int numberOfPersons,  RequiredFor requiredFor,  RequisitionUserType? userType,  List<RequisitionRider> riders,  String purpose)?  passenger,TResult Function( VehicleType vehicleType,  String customerName,  String userDepartment,  LoadingCapacity loadingCapacity,  String goodsWeight,  String storeName,  String goodsDetails)?  logistics,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case PassengerDetails() when passenger != null:
-return passenger(_that.usedType,_that.customerName,_that.numberOfPersons,_that.requiredFor,_that.userType,_that.employeeIds,_that.purpose);case LogisticsDetails() when logistics != null:
+return passenger(_that.usedType,_that.customerName,_that.numberOfPersons,_that.requiredFor,_that.userType,_that.riders,_that.purpose);case LogisticsDetails() when logistics != null:
 return logistics(_that.vehicleType,_that.customerName,_that.userDepartment,_that.loadingCapacity,_that.goodsWeight,_that.storeName,_that.goodsDetails);case _:
   return orElse();
 
@@ -970,10 +1233,10 @@ return logistics(_that.vehicleType,_that.customerName,_that.userDepartment,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( UsedType usedType,  String customerName,  int numberOfPersons,  RequiredFor requiredFor,  RequisitionUserType? userType,  List<String> employeeIds,  String purpose)  passenger,required TResult Function( VehicleType vehicleType,  String customerName,  String userDepartment,  LoadingCapacity loadingCapacity,  String goodsWeight,  String storeName,  String goodsDetails)  logistics,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( UsedType usedType,  String customerName,  int numberOfPersons,  RequiredFor requiredFor,  RequisitionUserType? userType,  List<RequisitionRider> riders,  String purpose)  passenger,required TResult Function( VehicleType vehicleType,  String customerName,  String userDepartment,  LoadingCapacity loadingCapacity,  String goodsWeight,  String storeName,  String goodsDetails)  logistics,}) {final _that = this;
 switch (_that) {
 case PassengerDetails():
-return passenger(_that.usedType,_that.customerName,_that.numberOfPersons,_that.requiredFor,_that.userType,_that.employeeIds,_that.purpose);case LogisticsDetails():
+return passenger(_that.usedType,_that.customerName,_that.numberOfPersons,_that.requiredFor,_that.userType,_that.riders,_that.purpose);case LogisticsDetails():
 return logistics(_that.vehicleType,_that.customerName,_that.userDepartment,_that.loadingCapacity,_that.goodsWeight,_that.storeName,_that.goodsDetails);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -988,10 +1251,10 @@ return logistics(_that.vehicleType,_that.customerName,_that.userDepartment,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( UsedType usedType,  String customerName,  int numberOfPersons,  RequiredFor requiredFor,  RequisitionUserType? userType,  List<String> employeeIds,  String purpose)?  passenger,TResult? Function( VehicleType vehicleType,  String customerName,  String userDepartment,  LoadingCapacity loadingCapacity,  String goodsWeight,  String storeName,  String goodsDetails)?  logistics,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( UsedType usedType,  String customerName,  int numberOfPersons,  RequiredFor requiredFor,  RequisitionUserType? userType,  List<RequisitionRider> riders,  String purpose)?  passenger,TResult? Function( VehicleType vehicleType,  String customerName,  String userDepartment,  LoadingCapacity loadingCapacity,  String goodsWeight,  String storeName,  String goodsDetails)?  logistics,}) {final _that = this;
 switch (_that) {
 case PassengerDetails() when passenger != null:
-return passenger(_that.usedType,_that.customerName,_that.numberOfPersons,_that.requiredFor,_that.userType,_that.employeeIds,_that.purpose);case LogisticsDetails() when logistics != null:
+return passenger(_that.usedType,_that.customerName,_that.numberOfPersons,_that.requiredFor,_that.userType,_that.riders,_that.purpose);case LogisticsDetails() when logistics != null:
 return logistics(_that.vehicleType,_that.customerName,_that.userDepartment,_that.loadingCapacity,_that.goodsWeight,_that.storeName,_that.goodsDetails);case _:
   return null;
 
@@ -1004,7 +1267,7 @@ return logistics(_that.vehicleType,_that.customerName,_that.userDepartment,_that
 
 
 class PassengerDetails implements RequisitionDetails {
-  const PassengerDetails({required this.usedType, required this.customerName, required this.numberOfPersons, required this.requiredFor, this.userType, final  List<String> employeeIds = const <String>[], required this.purpose}): _employeeIds = employeeIds;
+  const PassengerDetails({required this.usedType, required this.customerName, required this.numberOfPersons, required this.requiredFor, this.userType, final  List<RequisitionRider> riders = const <RequisitionRider>[], required this.purpose}): _riders = riders;
   
 
  final  UsedType usedType;
@@ -1012,11 +1275,11 @@ class PassengerDetails implements RequisitionDetails {
  final  int numberOfPersons;
  final  RequiredFor requiredFor;
  final  RequisitionUserType? userType;
- final  List<String> _employeeIds;
-@JsonKey() List<String> get employeeIds {
-  if (_employeeIds is EqualUnmodifiableListView) return _employeeIds;
+ final  List<RequisitionRider> _riders;
+@JsonKey() List<RequisitionRider> get riders {
+  if (_riders is EqualUnmodifiableListView) return _riders;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_employeeIds);
+  return EqualUnmodifiableListView(_riders);
 }
 
  final  String purpose;
@@ -1031,16 +1294,16 @@ $PassengerDetailsCopyWith<PassengerDetails> get copyWith => _$PassengerDetailsCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PassengerDetails&&(identical(other.usedType, usedType) || other.usedType == usedType)&&(identical(other.customerName, customerName) || other.customerName == customerName)&&(identical(other.numberOfPersons, numberOfPersons) || other.numberOfPersons == numberOfPersons)&&(identical(other.requiredFor, requiredFor) || other.requiredFor == requiredFor)&&(identical(other.userType, userType) || other.userType == userType)&&const DeepCollectionEquality().equals(other._employeeIds, _employeeIds)&&(identical(other.purpose, purpose) || other.purpose == purpose));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PassengerDetails&&(identical(other.usedType, usedType) || other.usedType == usedType)&&(identical(other.customerName, customerName) || other.customerName == customerName)&&(identical(other.numberOfPersons, numberOfPersons) || other.numberOfPersons == numberOfPersons)&&(identical(other.requiredFor, requiredFor) || other.requiredFor == requiredFor)&&(identical(other.userType, userType) || other.userType == userType)&&const DeepCollectionEquality().equals(other._riders, _riders)&&(identical(other.purpose, purpose) || other.purpose == purpose));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,usedType,customerName,numberOfPersons,requiredFor,userType,const DeepCollectionEquality().hash(_employeeIds),purpose);
+int get hashCode => Object.hash(runtimeType,usedType,customerName,numberOfPersons,requiredFor,userType,const DeepCollectionEquality().hash(_riders),purpose);
 
 @override
 String toString() {
-  return 'RequisitionDetails.passenger(usedType: $usedType, customerName: $customerName, numberOfPersons: $numberOfPersons, requiredFor: $requiredFor, userType: $userType, employeeIds: $employeeIds, purpose: $purpose)';
+  return 'RequisitionDetails.passenger(usedType: $usedType, customerName: $customerName, numberOfPersons: $numberOfPersons, requiredFor: $requiredFor, userType: $userType, riders: $riders, purpose: $purpose)';
 }
 
 
@@ -1051,7 +1314,7 @@ abstract mixin class $PassengerDetailsCopyWith<$Res> implements $RequisitionDeta
   factory $PassengerDetailsCopyWith(PassengerDetails value, $Res Function(PassengerDetails) _then) = _$PassengerDetailsCopyWithImpl;
 @override @useResult
 $Res call({
- UsedType usedType, String customerName, int numberOfPersons, RequiredFor requiredFor, RequisitionUserType? userType, List<String> employeeIds, String purpose
+ UsedType usedType, String customerName, int numberOfPersons, RequiredFor requiredFor, RequisitionUserType? userType, List<RequisitionRider> riders, String purpose
 });
 
 
@@ -1068,15 +1331,15 @@ class _$PassengerDetailsCopyWithImpl<$Res>
 
 /// Create a copy of RequisitionDetails
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? usedType = null,Object? customerName = null,Object? numberOfPersons = null,Object? requiredFor = null,Object? userType = freezed,Object? employeeIds = null,Object? purpose = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? usedType = null,Object? customerName = null,Object? numberOfPersons = null,Object? requiredFor = null,Object? userType = freezed,Object? riders = null,Object? purpose = null,}) {
   return _then(PassengerDetails(
 usedType: null == usedType ? _self.usedType : usedType // ignore: cast_nullable_to_non_nullable
 as UsedType,customerName: null == customerName ? _self.customerName : customerName // ignore: cast_nullable_to_non_nullable
 as String,numberOfPersons: null == numberOfPersons ? _self.numberOfPersons : numberOfPersons // ignore: cast_nullable_to_non_nullable
 as int,requiredFor: null == requiredFor ? _self.requiredFor : requiredFor // ignore: cast_nullable_to_non_nullable
 as RequiredFor,userType: freezed == userType ? _self.userType : userType // ignore: cast_nullable_to_non_nullable
-as RequisitionUserType?,employeeIds: null == employeeIds ? _self._employeeIds : employeeIds // ignore: cast_nullable_to_non_nullable
-as List<String>,purpose: null == purpose ? _self.purpose : purpose // ignore: cast_nullable_to_non_nullable
+as RequisitionUserType?,riders: null == riders ? _self._riders : riders // ignore: cast_nullable_to_non_nullable
+as List<RequisitionRider>,purpose: null == purpose ? _self.purpose : purpose // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -1165,7 +1428,11 @@ as String,
 /// @nodoc
 mixin _$Requisition {
 
- String get id; DateTime get pickupDateTime; String get pickupLocation; String get dropLocation; String? get remarks; RequisitionStatus get status; RequisitionDetails get details; DateTime get createdAt; DateTime? get endDateTime; String? get departmentName; String? get companyName; AssignedDriver? get driver; AssignedVehicle? get vehicle; List<AuditLogEntry> get auditLog;
+ String get id; DateTime get pickupDateTime; String get pickupLocation; String get dropLocation; String? get remarks; RequisitionStatus get status; RequisitionDetails get details; DateTime get createdAt; DateTime? get endDateTime; String? get departmentName; String? get companyName;/// Who raised the requisition. `created_by_name` on the detail response, falling
+/// back to the creating audit entry; null on a list row, which carries neither.
+ String? get requesterName;/// The requester's staff number (`created_by_id_no`), when the response carries it.
+/// Independent of [requesterName] — either can arrive without the other.
+ String? get requesterCode; AssignedDriver? get driver; AssignedVehicle? get vehicle; List<AuditLogEntry> get auditLog;
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1176,16 +1443,16 @@ $RequisitionCopyWith<Requisition> get copyWith => _$RequisitionCopyWithImpl<Requ
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.endDateTime, endDateTime) || other.endDateTime == endDateTime)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName)&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.driver, driver) || other.driver == driver)&&(identical(other.vehicle, vehicle) || other.vehicle == vehicle)&&const DeepCollectionEquality().equals(other.auditLog, auditLog));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.endDateTime, endDateTime) || other.endDateTime == endDateTime)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName)&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.requesterName, requesterName) || other.requesterName == requesterName)&&(identical(other.requesterCode, requesterCode) || other.requesterCode == requesterCode)&&(identical(other.driver, driver) || other.driver == driver)&&(identical(other.vehicle, vehicle) || other.vehicle == vehicle)&&const DeepCollectionEquality().equals(other.auditLog, auditLog));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt,endDateTime,departmentName,companyName,driver,vehicle,const DeepCollectionEquality().hash(auditLog));
+int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt,endDateTime,departmentName,companyName,requesterName,requesterCode,driver,vehicle,const DeepCollectionEquality().hash(auditLog));
 
 @override
 String toString() {
-  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt, endDateTime: $endDateTime, departmentName: $departmentName, companyName: $companyName, driver: $driver, vehicle: $vehicle, auditLog: $auditLog)';
+  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt, endDateTime: $endDateTime, departmentName: $departmentName, companyName: $companyName, requesterName: $requesterName, requesterCode: $requesterCode, driver: $driver, vehicle: $vehicle, auditLog: $auditLog)';
 }
 
 
@@ -1196,7 +1463,7 @@ abstract mixin class $RequisitionCopyWith<$Res>  {
   factory $RequisitionCopyWith(Requisition value, $Res Function(Requisition) _then) = _$RequisitionCopyWithImpl;
 @useResult
 $Res call({
- String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt, DateTime? endDateTime, String? departmentName, String? companyName, AssignedDriver? driver, AssignedVehicle? vehicle, List<AuditLogEntry> auditLog
+ String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt, DateTime? endDateTime, String? departmentName, String? companyName, String? requesterName, String? requesterCode, AssignedDriver? driver, AssignedVehicle? vehicle, List<AuditLogEntry> auditLog
 });
 
 
@@ -1213,7 +1480,7 @@ class _$RequisitionCopyWithImpl<$Res>
 
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,Object? endDateTime = freezed,Object? departmentName = freezed,Object? companyName = freezed,Object? driver = freezed,Object? vehicle = freezed,Object? auditLog = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,Object? endDateTime = freezed,Object? departmentName = freezed,Object? companyName = freezed,Object? requesterName = freezed,Object? requesterCode = freezed,Object? driver = freezed,Object? vehicle = freezed,Object? auditLog = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,pickupDateTime: null == pickupDateTime ? _self.pickupDateTime : pickupDateTime // ignore: cast_nullable_to_non_nullable
@@ -1226,6 +1493,8 @@ as RequisitionDetails,createdAt: null == createdAt ? _self.createdAt : createdAt
 as DateTime,endDateTime: freezed == endDateTime ? _self.endDateTime : endDateTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,departmentName: freezed == departmentName ? _self.departmentName : departmentName // ignore: cast_nullable_to_non_nullable
 as String?,companyName: freezed == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
+as String?,requesterName: freezed == requesterName ? _self.requesterName : requesterName // ignore: cast_nullable_to_non_nullable
+as String?,requesterCode: freezed == requesterCode ? _self.requesterCode : requesterCode // ignore: cast_nullable_to_non_nullable
 as String?,driver: freezed == driver ? _self.driver : driver // ignore: cast_nullable_to_non_nullable
 as AssignedDriver?,vehicle: freezed == vehicle ? _self.vehicle : vehicle // ignore: cast_nullable_to_non_nullable
 as AssignedVehicle?,auditLog: null == auditLog ? _self.auditLog : auditLog // ignore: cast_nullable_to_non_nullable
@@ -1347,10 +1616,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  String? requesterName,  String? requesterCode,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Requisition() when $default != null:
-return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.driver,_that.vehicle,_that.auditLog);case _:
+return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.requesterName,_that.requesterCode,_that.driver,_that.vehicle,_that.auditLog);case _:
   return orElse();
 
 }
@@ -1368,10 +1637,10 @@ return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLoc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  String? requesterName,  String? requesterCode,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)  $default,) {final _that = this;
 switch (_that) {
 case _Requisition():
-return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.driver,_that.vehicle,_that.auditLog);case _:
+return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.requesterName,_that.requesterCode,_that.driver,_that.vehicle,_that.auditLog);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1388,10 +1657,10 @@ return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLoc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  DateTime pickupDateTime,  String pickupLocation,  String dropLocation,  String? remarks,  RequisitionStatus status,  RequisitionDetails details,  DateTime createdAt,  DateTime? endDateTime,  String? departmentName,  String? companyName,  String? requesterName,  String? requesterCode,  AssignedDriver? driver,  AssignedVehicle? vehicle,  List<AuditLogEntry> auditLog)?  $default,) {final _that = this;
 switch (_that) {
 case _Requisition() when $default != null:
-return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.driver,_that.vehicle,_that.auditLog);case _:
+return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLocation,_that.remarks,_that.status,_that.details,_that.createdAt,_that.endDateTime,_that.departmentName,_that.companyName,_that.requesterName,_that.requesterCode,_that.driver,_that.vehicle,_that.auditLog);case _:
   return null;
 
 }
@@ -1403,7 +1672,7 @@ return $default(_that.id,_that.pickupDateTime,_that.pickupLocation,_that.dropLoc
 
 
 class _Requisition extends Requisition {
-  const _Requisition({required this.id, required this.pickupDateTime, required this.pickupLocation, required this.dropLocation, this.remarks, required this.status, required this.details, required this.createdAt, this.endDateTime, this.departmentName, this.companyName, this.driver, this.vehicle, final  List<AuditLogEntry> auditLog = const <AuditLogEntry>[]}): _auditLog = auditLog,super._();
+  const _Requisition({required this.id, required this.pickupDateTime, required this.pickupLocation, required this.dropLocation, this.remarks, required this.status, required this.details, required this.createdAt, this.endDateTime, this.departmentName, this.companyName, this.requesterName, this.requesterCode, this.driver, this.vehicle, final  List<AuditLogEntry> auditLog = const <AuditLogEntry>[]}): _auditLog = auditLog,super._();
   
 
 @override final  String id;
@@ -1417,6 +1686,12 @@ class _Requisition extends Requisition {
 @override final  DateTime? endDateTime;
 @override final  String? departmentName;
 @override final  String? companyName;
+/// Who raised the requisition. `created_by_name` on the detail response, falling
+/// back to the creating audit entry; null on a list row, which carries neither.
+@override final  String? requesterName;
+/// The requester's staff number (`created_by_id_no`), when the response carries it.
+/// Independent of [requesterName] — either can arrive without the other.
+@override final  String? requesterCode;
 @override final  AssignedDriver? driver;
 @override final  AssignedVehicle? vehicle;
  final  List<AuditLogEntry> _auditLog;
@@ -1437,16 +1712,16 @@ _$RequisitionCopyWith<_Requisition> get copyWith => __$RequisitionCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.endDateTime, endDateTime) || other.endDateTime == endDateTime)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName)&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.driver, driver) || other.driver == driver)&&(identical(other.vehicle, vehicle) || other.vehicle == vehicle)&&const DeepCollectionEquality().equals(other._auditLog, _auditLog));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Requisition&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupDateTime, pickupDateTime) || other.pickupDateTime == pickupDateTime)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.dropLocation, dropLocation) || other.dropLocation == dropLocation)&&(identical(other.remarks, remarks) || other.remarks == remarks)&&(identical(other.status, status) || other.status == status)&&(identical(other.details, details) || other.details == details)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.endDateTime, endDateTime) || other.endDateTime == endDateTime)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName)&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.requesterName, requesterName) || other.requesterName == requesterName)&&(identical(other.requesterCode, requesterCode) || other.requesterCode == requesterCode)&&(identical(other.driver, driver) || other.driver == driver)&&(identical(other.vehicle, vehicle) || other.vehicle == vehicle)&&const DeepCollectionEquality().equals(other._auditLog, _auditLog));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt,endDateTime,departmentName,companyName,driver,vehicle,const DeepCollectionEquality().hash(_auditLog));
+int get hashCode => Object.hash(runtimeType,id,pickupDateTime,pickupLocation,dropLocation,remarks,status,details,createdAt,endDateTime,departmentName,companyName,requesterName,requesterCode,driver,vehicle,const DeepCollectionEquality().hash(_auditLog));
 
 @override
 String toString() {
-  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt, endDateTime: $endDateTime, departmentName: $departmentName, companyName: $companyName, driver: $driver, vehicle: $vehicle, auditLog: $auditLog)';
+  return 'Requisition(id: $id, pickupDateTime: $pickupDateTime, pickupLocation: $pickupLocation, dropLocation: $dropLocation, remarks: $remarks, status: $status, details: $details, createdAt: $createdAt, endDateTime: $endDateTime, departmentName: $departmentName, companyName: $companyName, requesterName: $requesterName, requesterCode: $requesterCode, driver: $driver, vehicle: $vehicle, auditLog: $auditLog)';
 }
 
 
@@ -1457,7 +1732,7 @@ abstract mixin class _$RequisitionCopyWith<$Res> implements $RequisitionCopyWith
   factory _$RequisitionCopyWith(_Requisition value, $Res Function(_Requisition) _then) = __$RequisitionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt, DateTime? endDateTime, String? departmentName, String? companyName, AssignedDriver? driver, AssignedVehicle? vehicle, List<AuditLogEntry> auditLog
+ String id, DateTime pickupDateTime, String pickupLocation, String dropLocation, String? remarks, RequisitionStatus status, RequisitionDetails details, DateTime createdAt, DateTime? endDateTime, String? departmentName, String? companyName, String? requesterName, String? requesterCode, AssignedDriver? driver, AssignedVehicle? vehicle, List<AuditLogEntry> auditLog
 });
 
 
@@ -1474,7 +1749,7 @@ class __$RequisitionCopyWithImpl<$Res>
 
 /// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,Object? endDateTime = freezed,Object? departmentName = freezed,Object? companyName = freezed,Object? driver = freezed,Object? vehicle = freezed,Object? auditLog = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? pickupDateTime = null,Object? pickupLocation = null,Object? dropLocation = null,Object? remarks = freezed,Object? status = null,Object? details = null,Object? createdAt = null,Object? endDateTime = freezed,Object? departmentName = freezed,Object? companyName = freezed,Object? requesterName = freezed,Object? requesterCode = freezed,Object? driver = freezed,Object? vehicle = freezed,Object? auditLog = null,}) {
   return _then(_Requisition(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,pickupDateTime: null == pickupDateTime ? _self.pickupDateTime : pickupDateTime // ignore: cast_nullable_to_non_nullable
@@ -1487,6 +1762,8 @@ as RequisitionDetails,createdAt: null == createdAt ? _self.createdAt : createdAt
 as DateTime,endDateTime: freezed == endDateTime ? _self.endDateTime : endDateTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,departmentName: freezed == departmentName ? _self.departmentName : departmentName // ignore: cast_nullable_to_non_nullable
 as String?,companyName: freezed == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
+as String?,requesterName: freezed == requesterName ? _self.requesterName : requesterName // ignore: cast_nullable_to_non_nullable
+as String?,requesterCode: freezed == requesterCode ? _self.requesterCode : requesterCode // ignore: cast_nullable_to_non_nullable
 as String?,driver: freezed == driver ? _self.driver : driver // ignore: cast_nullable_to_non_nullable
 as AssignedDriver?,vehicle: freezed == vehicle ? _self.vehicle : vehicle // ignore: cast_nullable_to_non_nullable
 as AssignedVehicle?,auditLog: null == auditLog ? _self._auditLog : auditLog // ignore: cast_nullable_to_non_nullable

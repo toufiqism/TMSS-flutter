@@ -1,14 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_result.dart';
 import '../../di/providers.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/strings.dart';
 import '../common/tracgo_logo_mark.dart';
+import 'logout_notifier.dart';
 import 'route_paths.dart';
 
 const _honorifics = {
@@ -175,16 +175,7 @@ class AppShell extends ConsumerWidget {
                       const Divider(height: 1, color: tracGoDivider),
                       Padding(
                         padding: const EdgeInsets.all(16),
-                        child: _DrawerItem(
-                          icon: Icons.logout,
-                          label: TracGoStrings.navLogout,
-                          selected: false,
-                          tint: tracGoDestructiveRed,
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            unawaited(ref.read(logoutUseCaseProvider)());
-                          },
-                        ),
+                        child: _LogoutDrawerItem(),
                       ),
                     ],
                   ),
@@ -242,6 +233,58 @@ class AppShell extends ConsumerWidget {
   }
 }
 
+/// The drawer's Log Out row.
+///
+/// A widget of its own so it can watch [logoutNotifierProvider] without rebuilding the
+/// whole shell, and so the in-flight guard lives in one place. The row disables itself
+/// while a sign-out is running: the drawer closes on tap, so without the guard a user
+/// who reopened it could fire a second `POST /logout` with a token the first call had
+/// already revoked.
+class _LogoutDrawerItem extends ConsumerWidget {
+  const _LogoutDrawerItem();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoggingOut = ref.watch(logoutNotifierProvider);
+
+    return _DrawerItem(
+      icon: Icons.logout,
+      label: isLoggingOut ? TracGoStrings.navLoggingOut : TracGoStrings.navLogout,
+      selected: false,
+      tint: tracGoDestructiveRed,
+      trailing: isLoggingOut
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: tracGoDestructiveRed,
+              ),
+            )
+          : null,
+      onTap: isLoggingOut
+          ? null
+          : () async {
+              // Both captured before the drawer closes and before the await: this
+              // widget is disposed by the pop, so `context` is unusable afterwards,
+              // while the messenger it resolves to lives above the drawer and survives
+              // the redirect to Login.
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.of(context).pop();
+
+              final result = await ref.read(logoutNotifierProvider.notifier).logout();
+
+              // null means a sign-out was already in flight — not a failure, and not
+              // something to report twice.
+              if (result == null || result is ApiSuccess<void>) return;
+              messenger.showSnackBar(
+                const SnackBar(content: Text(TracGoStrings.navLogoutRevokeFailed)),
+              );
+            },
+    );
+  }
+}
+
 class _DrawerItem extends StatelessWidget {
   const _DrawerItem({
     required this.icon,
@@ -249,13 +292,19 @@ class _DrawerItem extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.tint,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+
+  /// Null disables the row — used while a sign-out is in flight.
+  final VoidCallback? onTap;
   final Color? tint;
+
+  /// Optional adornment at the end of the row, such as a progress spinner.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +335,7 @@ class _DrawerItem extends StatelessWidget {
                 ),
               ),
             ),
+            if (trailing != null) ...[const SizedBox(width: 12), trailing!],
           ],
         ),
       ),

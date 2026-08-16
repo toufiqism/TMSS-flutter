@@ -91,6 +91,11 @@ class RequisitionDetailNotifier extends Notifier<RequisitionDetailUiState>
       case ApiLogout<Requisition>(:final message):
         await ref.read(sessionExpirationHandlerProvider).handle();
         if (isDisposed) return;
+        // Same reasoning as the 404 branch above, and the same bug the dashboard had:
+        // emitting an event without settling the state left an initial load parked on
+        // its spinner with no way back. `_onFetchFailed` keeps content already on
+        // screen and only turns an empty initial load into an error.
+        _onFetchFailed(hadContent, message);
         emitEvent(RequisitionDetailSessionExpired(message));
     }
   }

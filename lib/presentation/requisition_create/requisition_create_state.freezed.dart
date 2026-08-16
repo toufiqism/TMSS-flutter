@@ -601,7 +601,10 @@ mixin _$RequisitionCreateUiState {
 /// Drives three things: the submit call becomes a PUT, the copy changes, and the
 /// Passenger/Logistics toggle locks — the server rejects a `req_type` that differs
 /// from the stored one, so switching type mid-edit could only ever 422.
- String? get editingRequisitionId;
+ String? get editingRequisitionId;/// Who raised the requisition being edited, for the read-only header. All four are
+/// null while creating, and individually null when the server did not report them —
+/// the header renders only the parts that exist rather than blank rows.
+ String? get editingRequesterName; String? get editingRequesterCode; String? get editingRequesterDepartment; String? get editingRequesterCompany;
 /// Create a copy of RequisitionCreateUiState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -612,16 +615,16 @@ $RequisitionCreateUiStateCopyWith<RequisitionCreateUiState> get copyWith => _$Re
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RequisitionCreateUiState&&(identical(other.formType, formType) || other.formType == formType)&&(identical(other.passengerForm, passengerForm) || other.passengerForm == passengerForm)&&(identical(other.logisticsForm, logisticsForm) || other.logisticsForm == logisticsForm)&&(identical(other.employeeSearchQuery, employeeSearchQuery) || other.employeeSearchQuery == employeeSearchQuery)&&const DeepCollectionEquality().equals(other.employeeSearchResults, employeeSearchResults)&&(identical(other.isSearchingEmployees, isSearchingEmployees) || other.isSearchingEmployees == isSearchingEmployees)&&(identical(other.employeeSearchError, employeeSearchError) || other.employeeSearchError == employeeSearchError)&&(identical(other.isSubmitting, isSubmitting) || other.isSubmitting == isSubmitting)&&const DeepCollectionEquality().equals(other.fieldErrors, fieldErrors)&&(identical(other.submitError, submitError) || other.submitError == submitError)&&(identical(other.editingRequisitionId, editingRequisitionId) || other.editingRequisitionId == editingRequisitionId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RequisitionCreateUiState&&(identical(other.formType, formType) || other.formType == formType)&&(identical(other.passengerForm, passengerForm) || other.passengerForm == passengerForm)&&(identical(other.logisticsForm, logisticsForm) || other.logisticsForm == logisticsForm)&&(identical(other.employeeSearchQuery, employeeSearchQuery) || other.employeeSearchQuery == employeeSearchQuery)&&const DeepCollectionEquality().equals(other.employeeSearchResults, employeeSearchResults)&&(identical(other.isSearchingEmployees, isSearchingEmployees) || other.isSearchingEmployees == isSearchingEmployees)&&(identical(other.employeeSearchError, employeeSearchError) || other.employeeSearchError == employeeSearchError)&&(identical(other.isSubmitting, isSubmitting) || other.isSubmitting == isSubmitting)&&const DeepCollectionEquality().equals(other.fieldErrors, fieldErrors)&&(identical(other.submitError, submitError) || other.submitError == submitError)&&(identical(other.editingRequisitionId, editingRequisitionId) || other.editingRequisitionId == editingRequisitionId)&&(identical(other.editingRequesterName, editingRequesterName) || other.editingRequesterName == editingRequesterName)&&(identical(other.editingRequesterCode, editingRequesterCode) || other.editingRequesterCode == editingRequesterCode)&&(identical(other.editingRequesterDepartment, editingRequesterDepartment) || other.editingRequesterDepartment == editingRequesterDepartment)&&(identical(other.editingRequesterCompany, editingRequesterCompany) || other.editingRequesterCompany == editingRequesterCompany));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,formType,passengerForm,logisticsForm,employeeSearchQuery,const DeepCollectionEquality().hash(employeeSearchResults),isSearchingEmployees,employeeSearchError,isSubmitting,const DeepCollectionEquality().hash(fieldErrors),submitError,editingRequisitionId);
+int get hashCode => Object.hash(runtimeType,formType,passengerForm,logisticsForm,employeeSearchQuery,const DeepCollectionEquality().hash(employeeSearchResults),isSearchingEmployees,employeeSearchError,isSubmitting,const DeepCollectionEquality().hash(fieldErrors),submitError,editingRequisitionId,editingRequesterName,editingRequesterCode,editingRequesterDepartment,editingRequesterCompany);
 
 @override
 String toString() {
-  return 'RequisitionCreateUiState(formType: $formType, passengerForm: $passengerForm, logisticsForm: $logisticsForm, employeeSearchQuery: $employeeSearchQuery, employeeSearchResults: $employeeSearchResults, isSearchingEmployees: $isSearchingEmployees, employeeSearchError: $employeeSearchError, isSubmitting: $isSubmitting, fieldErrors: $fieldErrors, submitError: $submitError, editingRequisitionId: $editingRequisitionId)';
+  return 'RequisitionCreateUiState(formType: $formType, passengerForm: $passengerForm, logisticsForm: $logisticsForm, employeeSearchQuery: $employeeSearchQuery, employeeSearchResults: $employeeSearchResults, isSearchingEmployees: $isSearchingEmployees, employeeSearchError: $employeeSearchError, isSubmitting: $isSubmitting, fieldErrors: $fieldErrors, submitError: $submitError, editingRequisitionId: $editingRequisitionId, editingRequesterName: $editingRequesterName, editingRequesterCode: $editingRequesterCode, editingRequesterDepartment: $editingRequesterDepartment, editingRequesterCompany: $editingRequesterCompany)';
 }
 
 
@@ -632,7 +635,7 @@ abstract mixin class $RequisitionCreateUiStateCopyWith<$Res>  {
   factory $RequisitionCreateUiStateCopyWith(RequisitionCreateUiState value, $Res Function(RequisitionCreateUiState) _then) = _$RequisitionCreateUiStateCopyWithImpl;
 @useResult
 $Res call({
- RequisitionFormType formType, PassengerFormState passengerForm, LogisticsFormState logisticsForm, String employeeSearchQuery, List<Employee> employeeSearchResults, bool isSearchingEmployees, String? employeeSearchError, bool isSubmitting, Map<String, String> fieldErrors, String? submitError, String? editingRequisitionId
+ RequisitionFormType formType, PassengerFormState passengerForm, LogisticsFormState logisticsForm, String employeeSearchQuery, List<Employee> employeeSearchResults, bool isSearchingEmployees, String? employeeSearchError, bool isSubmitting, Map<String, String> fieldErrors, String? submitError, String? editingRequisitionId, String? editingRequesterName, String? editingRequesterCode, String? editingRequesterDepartment, String? editingRequesterCompany
 });
 
 
@@ -649,7 +652,7 @@ class _$RequisitionCreateUiStateCopyWithImpl<$Res>
 
 /// Create a copy of RequisitionCreateUiState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? formType = null,Object? passengerForm = null,Object? logisticsForm = null,Object? employeeSearchQuery = null,Object? employeeSearchResults = null,Object? isSearchingEmployees = null,Object? employeeSearchError = freezed,Object? isSubmitting = null,Object? fieldErrors = null,Object? submitError = freezed,Object? editingRequisitionId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? formType = null,Object? passengerForm = null,Object? logisticsForm = null,Object? employeeSearchQuery = null,Object? employeeSearchResults = null,Object? isSearchingEmployees = null,Object? employeeSearchError = freezed,Object? isSubmitting = null,Object? fieldErrors = null,Object? submitError = freezed,Object? editingRequisitionId = freezed,Object? editingRequesterName = freezed,Object? editingRequesterCode = freezed,Object? editingRequesterDepartment = freezed,Object? editingRequesterCompany = freezed,}) {
   return _then(_self.copyWith(
 formType: null == formType ? _self.formType : formType // ignore: cast_nullable_to_non_nullable
 as RequisitionFormType,passengerForm: null == passengerForm ? _self.passengerForm : passengerForm // ignore: cast_nullable_to_non_nullable
@@ -662,6 +665,10 @@ as String?,isSubmitting: null == isSubmitting ? _self.isSubmitting : isSubmittin
 as bool,fieldErrors: null == fieldErrors ? _self.fieldErrors : fieldErrors // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,submitError: freezed == submitError ? _self.submitError : submitError // ignore: cast_nullable_to_non_nullable
 as String?,editingRequisitionId: freezed == editingRequisitionId ? _self.editingRequisitionId : editingRequisitionId // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterName: freezed == editingRequesterName ? _self.editingRequesterName : editingRequesterName // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterCode: freezed == editingRequesterCode ? _self.editingRequesterCode : editingRequesterCode // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterDepartment: freezed == editingRequesterDepartment ? _self.editingRequesterDepartment : editingRequesterDepartment // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterCompany: freezed == editingRequesterCompany ? _self.editingRequesterCompany : editingRequesterCompany // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -765,10 +772,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RequisitionFormType formType,  PassengerFormState passengerForm,  LogisticsFormState logisticsForm,  String employeeSearchQuery,  List<Employee> employeeSearchResults,  bool isSearchingEmployees,  String? employeeSearchError,  bool isSubmitting,  Map<String, String> fieldErrors,  String? submitError,  String? editingRequisitionId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RequisitionFormType formType,  PassengerFormState passengerForm,  LogisticsFormState logisticsForm,  String employeeSearchQuery,  List<Employee> employeeSearchResults,  bool isSearchingEmployees,  String? employeeSearchError,  bool isSubmitting,  Map<String, String> fieldErrors,  String? submitError,  String? editingRequisitionId,  String? editingRequesterName,  String? editingRequesterCode,  String? editingRequesterDepartment,  String? editingRequesterCompany)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RequisitionCreateUiState() when $default != null:
-return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.employeeSearchQuery,_that.employeeSearchResults,_that.isSearchingEmployees,_that.employeeSearchError,_that.isSubmitting,_that.fieldErrors,_that.submitError,_that.editingRequisitionId);case _:
+return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.employeeSearchQuery,_that.employeeSearchResults,_that.isSearchingEmployees,_that.employeeSearchError,_that.isSubmitting,_that.fieldErrors,_that.submitError,_that.editingRequisitionId,_that.editingRequesterName,_that.editingRequesterCode,_that.editingRequesterDepartment,_that.editingRequesterCompany);case _:
   return orElse();
 
 }
@@ -786,10 +793,10 @@ return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.emp
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RequisitionFormType formType,  PassengerFormState passengerForm,  LogisticsFormState logisticsForm,  String employeeSearchQuery,  List<Employee> employeeSearchResults,  bool isSearchingEmployees,  String? employeeSearchError,  bool isSubmitting,  Map<String, String> fieldErrors,  String? submitError,  String? editingRequisitionId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RequisitionFormType formType,  PassengerFormState passengerForm,  LogisticsFormState logisticsForm,  String employeeSearchQuery,  List<Employee> employeeSearchResults,  bool isSearchingEmployees,  String? employeeSearchError,  bool isSubmitting,  Map<String, String> fieldErrors,  String? submitError,  String? editingRequisitionId,  String? editingRequesterName,  String? editingRequesterCode,  String? editingRequesterDepartment,  String? editingRequesterCompany)  $default,) {final _that = this;
 switch (_that) {
 case _RequisitionCreateUiState():
-return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.employeeSearchQuery,_that.employeeSearchResults,_that.isSearchingEmployees,_that.employeeSearchError,_that.isSubmitting,_that.fieldErrors,_that.submitError,_that.editingRequisitionId);case _:
+return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.employeeSearchQuery,_that.employeeSearchResults,_that.isSearchingEmployees,_that.employeeSearchError,_that.isSubmitting,_that.fieldErrors,_that.submitError,_that.editingRequisitionId,_that.editingRequesterName,_that.editingRequesterCode,_that.editingRequesterDepartment,_that.editingRequesterCompany);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -806,10 +813,10 @@ return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.emp
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RequisitionFormType formType,  PassengerFormState passengerForm,  LogisticsFormState logisticsForm,  String employeeSearchQuery,  List<Employee> employeeSearchResults,  bool isSearchingEmployees,  String? employeeSearchError,  bool isSubmitting,  Map<String, String> fieldErrors,  String? submitError,  String? editingRequisitionId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RequisitionFormType formType,  PassengerFormState passengerForm,  LogisticsFormState logisticsForm,  String employeeSearchQuery,  List<Employee> employeeSearchResults,  bool isSearchingEmployees,  String? employeeSearchError,  bool isSubmitting,  Map<String, String> fieldErrors,  String? submitError,  String? editingRequisitionId,  String? editingRequesterName,  String? editingRequesterCode,  String? editingRequesterDepartment,  String? editingRequesterCompany)?  $default,) {final _that = this;
 switch (_that) {
 case _RequisitionCreateUiState() when $default != null:
-return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.employeeSearchQuery,_that.employeeSearchResults,_that.isSearchingEmployees,_that.employeeSearchError,_that.isSubmitting,_that.fieldErrors,_that.submitError,_that.editingRequisitionId);case _:
+return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.employeeSearchQuery,_that.employeeSearchResults,_that.isSearchingEmployees,_that.employeeSearchError,_that.isSubmitting,_that.fieldErrors,_that.submitError,_that.editingRequisitionId,_that.editingRequesterName,_that.editingRequesterCode,_that.editingRequesterDepartment,_that.editingRequesterCompany);case _:
   return null;
 
 }
@@ -821,7 +828,7 @@ return $default(_that.formType,_that.passengerForm,_that.logisticsForm,_that.emp
 
 
 class _RequisitionCreateUiState extends RequisitionCreateUiState {
-  const _RequisitionCreateUiState({this.formType = RequisitionFormType.passenger, this.passengerForm = const PassengerFormState(), this.logisticsForm = const LogisticsFormState(), this.employeeSearchQuery = '', final  List<Employee> employeeSearchResults = const <Employee>[], this.isSearchingEmployees = false, this.employeeSearchError, this.isSubmitting = false, final  Map<String, String> fieldErrors = const <String, String>{}, this.submitError, this.editingRequisitionId}): _employeeSearchResults = employeeSearchResults,_fieldErrors = fieldErrors,super._();
+  const _RequisitionCreateUiState({this.formType = RequisitionFormType.passenger, this.passengerForm = const PassengerFormState(), this.logisticsForm = const LogisticsFormState(), this.employeeSearchQuery = '', final  List<Employee> employeeSearchResults = const <Employee>[], this.isSearchingEmployees = false, this.employeeSearchError, this.isSubmitting = false, final  Map<String, String> fieldErrors = const <String, String>{}, this.submitError, this.editingRequisitionId, this.editingRequesterName, this.editingRequesterCode, this.editingRequesterDepartment, this.editingRequesterCompany}): _employeeSearchResults = employeeSearchResults,_fieldErrors = fieldErrors,super._();
   
 
 @override@JsonKey() final  RequisitionFormType formType;
@@ -854,6 +861,13 @@ class _RequisitionCreateUiState extends RequisitionCreateUiState {
 /// Passenger/Logistics toggle locks — the server rejects a `req_type` that differs
 /// from the stored one, so switching type mid-edit could only ever 422.
 @override final  String? editingRequisitionId;
+/// Who raised the requisition being edited, for the read-only header. All four are
+/// null while creating, and individually null when the server did not report them —
+/// the header renders only the parts that exist rather than blank rows.
+@override final  String? editingRequesterName;
+@override final  String? editingRequesterCode;
+@override final  String? editingRequesterDepartment;
+@override final  String? editingRequesterCompany;
 
 /// Create a copy of RequisitionCreateUiState
 /// with the given fields replaced by the non-null parameter values.
@@ -865,16 +879,16 @@ _$RequisitionCreateUiStateCopyWith<_RequisitionCreateUiState> get copyWith => __
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RequisitionCreateUiState&&(identical(other.formType, formType) || other.formType == formType)&&(identical(other.passengerForm, passengerForm) || other.passengerForm == passengerForm)&&(identical(other.logisticsForm, logisticsForm) || other.logisticsForm == logisticsForm)&&(identical(other.employeeSearchQuery, employeeSearchQuery) || other.employeeSearchQuery == employeeSearchQuery)&&const DeepCollectionEquality().equals(other._employeeSearchResults, _employeeSearchResults)&&(identical(other.isSearchingEmployees, isSearchingEmployees) || other.isSearchingEmployees == isSearchingEmployees)&&(identical(other.employeeSearchError, employeeSearchError) || other.employeeSearchError == employeeSearchError)&&(identical(other.isSubmitting, isSubmitting) || other.isSubmitting == isSubmitting)&&const DeepCollectionEquality().equals(other._fieldErrors, _fieldErrors)&&(identical(other.submitError, submitError) || other.submitError == submitError)&&(identical(other.editingRequisitionId, editingRequisitionId) || other.editingRequisitionId == editingRequisitionId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RequisitionCreateUiState&&(identical(other.formType, formType) || other.formType == formType)&&(identical(other.passengerForm, passengerForm) || other.passengerForm == passengerForm)&&(identical(other.logisticsForm, logisticsForm) || other.logisticsForm == logisticsForm)&&(identical(other.employeeSearchQuery, employeeSearchQuery) || other.employeeSearchQuery == employeeSearchQuery)&&const DeepCollectionEquality().equals(other._employeeSearchResults, _employeeSearchResults)&&(identical(other.isSearchingEmployees, isSearchingEmployees) || other.isSearchingEmployees == isSearchingEmployees)&&(identical(other.employeeSearchError, employeeSearchError) || other.employeeSearchError == employeeSearchError)&&(identical(other.isSubmitting, isSubmitting) || other.isSubmitting == isSubmitting)&&const DeepCollectionEquality().equals(other._fieldErrors, _fieldErrors)&&(identical(other.submitError, submitError) || other.submitError == submitError)&&(identical(other.editingRequisitionId, editingRequisitionId) || other.editingRequisitionId == editingRequisitionId)&&(identical(other.editingRequesterName, editingRequesterName) || other.editingRequesterName == editingRequesterName)&&(identical(other.editingRequesterCode, editingRequesterCode) || other.editingRequesterCode == editingRequesterCode)&&(identical(other.editingRequesterDepartment, editingRequesterDepartment) || other.editingRequesterDepartment == editingRequesterDepartment)&&(identical(other.editingRequesterCompany, editingRequesterCompany) || other.editingRequesterCompany == editingRequesterCompany));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,formType,passengerForm,logisticsForm,employeeSearchQuery,const DeepCollectionEquality().hash(_employeeSearchResults),isSearchingEmployees,employeeSearchError,isSubmitting,const DeepCollectionEquality().hash(_fieldErrors),submitError,editingRequisitionId);
+int get hashCode => Object.hash(runtimeType,formType,passengerForm,logisticsForm,employeeSearchQuery,const DeepCollectionEquality().hash(_employeeSearchResults),isSearchingEmployees,employeeSearchError,isSubmitting,const DeepCollectionEquality().hash(_fieldErrors),submitError,editingRequisitionId,editingRequesterName,editingRequesterCode,editingRequesterDepartment,editingRequesterCompany);
 
 @override
 String toString() {
-  return 'RequisitionCreateUiState(formType: $formType, passengerForm: $passengerForm, logisticsForm: $logisticsForm, employeeSearchQuery: $employeeSearchQuery, employeeSearchResults: $employeeSearchResults, isSearchingEmployees: $isSearchingEmployees, employeeSearchError: $employeeSearchError, isSubmitting: $isSubmitting, fieldErrors: $fieldErrors, submitError: $submitError, editingRequisitionId: $editingRequisitionId)';
+  return 'RequisitionCreateUiState(formType: $formType, passengerForm: $passengerForm, logisticsForm: $logisticsForm, employeeSearchQuery: $employeeSearchQuery, employeeSearchResults: $employeeSearchResults, isSearchingEmployees: $isSearchingEmployees, employeeSearchError: $employeeSearchError, isSubmitting: $isSubmitting, fieldErrors: $fieldErrors, submitError: $submitError, editingRequisitionId: $editingRequisitionId, editingRequesterName: $editingRequesterName, editingRequesterCode: $editingRequesterCode, editingRequesterDepartment: $editingRequesterDepartment, editingRequesterCompany: $editingRequesterCompany)';
 }
 
 
@@ -885,7 +899,7 @@ abstract mixin class _$RequisitionCreateUiStateCopyWith<$Res> implements $Requis
   factory _$RequisitionCreateUiStateCopyWith(_RequisitionCreateUiState value, $Res Function(_RequisitionCreateUiState) _then) = __$RequisitionCreateUiStateCopyWithImpl;
 @override @useResult
 $Res call({
- RequisitionFormType formType, PassengerFormState passengerForm, LogisticsFormState logisticsForm, String employeeSearchQuery, List<Employee> employeeSearchResults, bool isSearchingEmployees, String? employeeSearchError, bool isSubmitting, Map<String, String> fieldErrors, String? submitError, String? editingRequisitionId
+ RequisitionFormType formType, PassengerFormState passengerForm, LogisticsFormState logisticsForm, String employeeSearchQuery, List<Employee> employeeSearchResults, bool isSearchingEmployees, String? employeeSearchError, bool isSubmitting, Map<String, String> fieldErrors, String? submitError, String? editingRequisitionId, String? editingRequesterName, String? editingRequesterCode, String? editingRequesterDepartment, String? editingRequesterCompany
 });
 
 
@@ -902,7 +916,7 @@ class __$RequisitionCreateUiStateCopyWithImpl<$Res>
 
 /// Create a copy of RequisitionCreateUiState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? formType = null,Object? passengerForm = null,Object? logisticsForm = null,Object? employeeSearchQuery = null,Object? employeeSearchResults = null,Object? isSearchingEmployees = null,Object? employeeSearchError = freezed,Object? isSubmitting = null,Object? fieldErrors = null,Object? submitError = freezed,Object? editingRequisitionId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? formType = null,Object? passengerForm = null,Object? logisticsForm = null,Object? employeeSearchQuery = null,Object? employeeSearchResults = null,Object? isSearchingEmployees = null,Object? employeeSearchError = freezed,Object? isSubmitting = null,Object? fieldErrors = null,Object? submitError = freezed,Object? editingRequisitionId = freezed,Object? editingRequesterName = freezed,Object? editingRequesterCode = freezed,Object? editingRequesterDepartment = freezed,Object? editingRequesterCompany = freezed,}) {
   return _then(_RequisitionCreateUiState(
 formType: null == formType ? _self.formType : formType // ignore: cast_nullable_to_non_nullable
 as RequisitionFormType,passengerForm: null == passengerForm ? _self.passengerForm : passengerForm // ignore: cast_nullable_to_non_nullable
@@ -915,6 +929,10 @@ as String?,isSubmitting: null == isSubmitting ? _self.isSubmitting : isSubmittin
 as bool,fieldErrors: null == fieldErrors ? _self._fieldErrors : fieldErrors // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,submitError: freezed == submitError ? _self.submitError : submitError // ignore: cast_nullable_to_non_nullable
 as String?,editingRequisitionId: freezed == editingRequisitionId ? _self.editingRequisitionId : editingRequisitionId // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterName: freezed == editingRequesterName ? _self.editingRequesterName : editingRequesterName // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterCode: freezed == editingRequesterCode ? _self.editingRequesterCode : editingRequesterCode // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterDepartment: freezed == editingRequesterDepartment ? _self.editingRequesterDepartment : editingRequesterDepartment // ignore: cast_nullable_to_non_nullable
+as String?,editingRequesterCompany: freezed == editingRequesterCompany ? _self.editingRequesterCompany : editingRequesterCompany // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
