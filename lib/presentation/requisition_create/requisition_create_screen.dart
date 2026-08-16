@@ -91,6 +91,34 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
     final uiState = ref.watch(requisitionCreateNotifierProvider);
     final notifier = ref.read(requisitionCreateNotifierProvider.notifier);
 
+    // Read from *this* context, above the Scaffold: the Scaffold strips the bottom view
+    // inset out of the MediaQuery it gives its body (`removeBottomInset`), so the same
+    // call from inside `body` always reports 0.
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+
+    // One instance, two possible homes — pinned under the form, or riding along at the
+    // end of it while the keyboard is up. Built here rather than twice inline so the two
+    // placements cannot drift apart.
+    final submitButton = ElevatedButton(
+      // minimumSize, not a fixed height, so the label survives large text scales.
+      style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(58)),
+      onPressed: uiState.isSubmitting ? null : () => unawaited(notifier.submit()),
+      child: uiState.isSubmitting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: tracGoSurfaceWhite,
+              ),
+            )
+          : Text(
+              uiState.isEditing
+                  ? TracGoStrings.editRequisitionSave
+                  : TracGoStrings.newRequisitionSubmit,
+            ),
+    );
+
     return Scaffold(
       backgroundColor: tracGoPageBackground,
       appBar: AppBar(
@@ -110,7 +138,10 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              // 8 at rest, because the pinned footer below supplies the rest of the gap.
+              // With the keyboard up that footer is gone and this padding is the only
+              // thing keeping the button off the keyboard's edge.
+              padding: EdgeInsets.fromLTRB(20, 20, 20, keyboardVisible ? 24 : 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -137,39 +168,28 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
                     _PassengerFormFields(uiState: uiState, notifier: notifier)
                   else
                     _LogisticsFormFields(uiState: uiState, notifier: notifier),
+                  // While the keyboard is up, the pinned footer would spend ~86px of an
+                  // already-halved viewport on a button the user is not reaching for
+                  // mid-typing. It moves into the form instead, so every one of those
+                  // pixels goes to fields.
+                  if (keyboardVisible) ...[
+                    const SizedBox(height: 20),
+                    submitButton,
+                  ],
                 ],
               ),
             ),
           ),
-          Padding(
-            // Submit is the last thing in a Column, not a bottomNavigationBar, so
-            // Scaffold reserves no space for it and nothing applies the system inset —
-            // it rendered under Android's navigation buttons.
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16)
-                .addBottomSystemInset(context),
-            child: ElevatedButton(
-              // minimumSize, not a fixed height, so the label survives large text scales.
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(58),
-              ),
-              onPressed:
-                  uiState.isSubmitting ? null : () => unawaited(notifier.submit()),
-              child: uiState.isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: tracGoSurfaceWhite,
-                      ),
-                    )
-                  : Text(
-                      uiState.isEditing
-                          ? TracGoStrings.editRequisitionSave
-                          : TracGoStrings.newRequisitionSubmit,
-                    ),
+          if (!keyboardVisible)
+            Padding(
+              // Submit is the last thing in a Column, not a bottomNavigationBar, so
+              // Scaffold reserves no space for it and nothing applies the system inset —
+              // it rendered under Android's navigation buttons. Only needed on this
+              // branch: `padding.bottom` is already 0 whenever the keyboard is open.
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16)
+                  .addBottomSystemInset(context),
+              child: submitButton,
             ),
-          ),
         ],
       ),
     );
@@ -781,8 +801,56 @@ class _EmployeePicker extends StatefulWidget {
 class _EmployeePickerState extends State<_EmployeePicker> {
   bool _expanded = false;
 
+  /// Marks whichever of the two search outcomes is on screen — the result list or the
+  /// "no matches" line — so it can be scrolled into view.
+  final GlobalKey _resultsKey = GlobalKey();
+
+  @override
+  void didUpdateWidget(covariant _EmployeePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Results land a debounce after the keystroke that asked for them, so the moment
+    // worth reacting to is the list changing — not the typing. Searching is also worth
+    // reacting to, because the transition out of it is what replaces the spinner with
+    // either matches or the "no matches" line.
+    if (_expanded &&
+        (widget.results != oldWidget.results ||
+            widget.isSearching != oldWidget.isSearching ||
+            widget.searchError != oldWidget.searchError)) {
+      _revealResults();
+    }
+  }
+
+  /// Brings the dropdown back above the keyboard.
+  ///
+  /// It opens *below* the search field, and the field is the only thing Flutter scrolls
+  /// into view on focus — so on a phone with the keyboard up the matches routinely
+  /// render into the covered strip and read as "the search did nothing".
+  ///
+  /// `keepVisibleAtEnd` is deliberate over an explicit alignment: it scrolls only when
+  /// the list actually hangs below the viewport, and only far enough to bring it in, so
+  /// picking a rider does not yank the form around on a screen where it already fits.
+  void _revealResults() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Null when the dropdown collapsed again in the same frame, or when there was
+      // never anything to show.
+      final resultsContext = _resultsKey.currentContext;
+      if (resultsContext == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          resultsContext,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final resultsSection = _buildResultsSection();
+
     return FormFieldRow(
       label: TracGoStrings.newRequisitionFieldSelectEmployees,
       error: widget.error ?? widget.searchError,
@@ -814,6 +882,10 @@ class _EmployeePickerState extends State<_EmployeePicker> {
                   onChanged: (value) {
                     widget.onQueryChange(value);
                     setState(() => _expanded = true);
+                    // Covers the case `didUpdateWidget` cannot: reopening the dropdown
+                    // over results that were already loaded, where nothing about the
+                    // incoming data changes.
+                    _revealResults();
                   },
                   hint: TracGoStrings.newRequisitionHintEmployeeSearch,
                 ),
@@ -829,59 +901,78 @@ class _EmployeePickerState extends State<_EmployeePicker> {
                 ),
             ],
           ),
-          // A search that matched nobody used to render exactly nothing, which is
-          // indistinguishable from the dropdown having failed to open. Guarded on
-          // `searchError == null` so a failed lookup keeps saying it failed rather than
-          // claiming there were no matches.
-          if (_expanded &&
-              widget.results.isEmpty &&
-              !widget.isSearching &&
-              widget.searchError == null &&
-              widget.query.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Text(
-                TracGoStrings.newRequisitionEmployeeNoMatches,
-                style: tracGoTextTheme.bodySmall,
-              ),
-            ),
-          if (_expanded && widget.results.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 10),
-              constraints: const BoxConstraints(maxHeight: 220),
-              decoration: BoxDecoration(
-                color: tracGoInputBackground,
-                borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: ListView(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                children: [
-                  for (final employee in widget.results)
-                    ListTile(
-                      dense: true,
-                      title: Text(
-                        employee.name,
-                        style: tracGoTextTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${employee.designation}, ${employee.department}',
-                        style: tracGoTextTheme.bodySmall?.copyWith(fontSize: 12),
-                      ),
-                      onTap: () {
-                        widget.onToggle(employee);
-                        setState(() => _expanded = false);
-                      },
-                    ),
-                ],
-              ),
-            ),
+          if (resultsSection != null)
+            KeyedSubtree(key: _resultsKey, child: resultsSection),
         ],
       ),
     );
+  }
+
+  /// The dropdown, the "no matches" line, or nothing at all.
+  ///
+  /// Returned as one nullable widget rather than two independent `if`s in the tree so a
+  /// single key covers whichever is showing — `_revealResults` has one thing to scroll to
+  /// either way.
+  Widget? _buildResultsSection() {
+    if (!_expanded) return null;
+
+    if (widget.results.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(top: 10),
+        constraints: const BoxConstraints(maxHeight: 220),
+        // A Material, not a DecoratedBox: the rows are ListTiles, and a ListTile paints
+        // its ink on the nearest Material ancestor — which was the page behind this
+        // panel, so every tap on a rider splashed *underneath* the dropdown's own fill
+        // and was never seen. Flutter asserts on exactly this arrangement in debug.
+        child: Material(
+          color: tracGoInputBackground,
+          borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
+          clipBehavior: Clip.antiAlias,
+          child: ListView(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            children: [
+              for (final employee in widget.results)
+                ListTile(
+                  dense: true,
+                  title: Text(
+                    employee.name,
+                    style: tracGoTextTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${employee.designation}, ${employee.department}',
+                    style: tracGoTextTheme.bodySmall?.copyWith(fontSize: 12),
+                  ),
+                  onTap: () {
+                    widget.onToggle(employee);
+                    setState(() => _expanded = false);
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // A search that matched nobody used to render exactly nothing, which is
+    // indistinguishable from the dropdown having failed to open. Guarded on
+    // `searchError == null` so a failed lookup keeps saying it failed rather than
+    // claiming there were no matches.
+    if (!widget.isSearching &&
+        widget.searchError == null &&
+        widget.query.trim().isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text(
+          TracGoStrings.newRequisitionEmployeeNoMatches,
+          style: tracGoTextTheme.bodySmall,
+        ),
+      );
+    }
+
+    return null;
   }
 }
 

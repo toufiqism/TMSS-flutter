@@ -17,8 +17,31 @@ import 'login_state.dart';
 // language, so they are now the shared tokens — a second near-identical green in the
 // palette is exactly what that note was written to avoid.
 
-/// Edge length of the centred brand mark.
+/// Edge length of the centred brand mark, at rest and with the keyboard open.
+///
+/// The mark is the first thing asked to give up space. A software keyboard eats roughly
+/// half a phone's height, and at 108px the logo pushes the password field and the sign-in
+/// button below the fold on a short device — the user has to scroll to reach the control
+/// they just opened the keyboard to use. Shrinking the mark and the gap under it buys
+/// back ~68px while keeping the headline, which is what says *which* screen this is.
 const double _logoSize = 108;
+const double _logoSizeCompact = 64;
+
+/// Gap between the mark and the headline, at rest and compacted.
+const double _logoGap = 44;
+const double _logoGapCompact = 20;
+
+/// Gap between the header block and the first field, at rest and compacted.
+const double _headerGap = 40;
+const double _headerGapCompact = 24;
+
+/// Close enough to the platform keyboard's own slide-in that the two read as one
+/// movement rather than two things happening at once.
+const Duration _headerCompactDuration = Duration(milliseconds: 220);
+
+/// Interpolates a resting measurement toward its compact counterpart.
+double _compacted(double rest, double compact, double t) =>
+    rest + (compact - rest) * t;
 
 /// Minimum height of a field's input row, set by the tallest thing that can sit in one
 /// — the reveal toggle, whose padding buys it a 44px tap target.
@@ -70,55 +93,80 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final uiState = ref.watch(loginNotifierProvider);
     final notifier = ref.read(loginNotifierProvider.notifier);
 
+    // Deliberately read from *this* context, which sits above the Scaffold: the Scaffold
+    // strips the bottom view inset out of the MediaQuery it hands its body
+    // (`removeBottomInset`), so the identical call one level down always reports 0.
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+
     return Scaffold(
       backgroundColor: tracGoSignInBackground,
+      // `resizeToAvoidBottomInset` is left at its default (true), so the Scaffold already
+      // shortens the body by the keyboard's height and the scroll view below sees a
+      // viewport that excludes it. This screen used to *also* pad the scroll view by
+      // viewInsets.bottom, which double-counted the keyboard and left a screenful of dead
+      // scrollable space under the form.
       // No AppBar on this screen, so the status bar is ours to clear — on both platforms.
       body: SafeArea(
         child: SingleChildScrollView(
-          // Keeps the last field clear of the keyboard once it opens.
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(30, 26, 30, 32),
             child: AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  MediaQuery.withClampedTextScaling(
-                    maxScaleFactor: _headerMaxTextScale,
-                    child: Column(
+                  // Only the header rebuilds per animation frame; the fields and button
+                  // sit outside the builder and are untouched by it, so a keyboard
+                  // opening cannot disturb input state.
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: keyboardVisible ? 1 : 0),
+                    duration: _headerCompactDuration,
+                    curve: Curves.easeOutCubic,
+                    builder: (context, t, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const TracGoLogoMark(size: _logoSize),
-                        const SizedBox(height: 44),
-                        Text(
-                          TracGoStrings.loginHeading,
-                          textAlign: TextAlign.center,
-                          style: tracGoTextTheme.headlineSmall?.copyWith(
-                            fontSize: 40,
-                            height: 1.0,
-                            letterSpacing: -1.2, // -0.03em at 40px
-                            color: tracGoInk,
+                        MediaQuery.withClampedTextScaling(
+                          maxScaleFactor: _headerMaxTextScale,
+                          child: Column(
+                            children: [
+                              TracGoLogoMark(
+                                size: _compacted(_logoSize, _logoSizeCompact, t),
+                              ),
+                              SizedBox(
+                                height: _compacted(_logoGap, _logoGapCompact, t),
+                              ),
+                              Text(
+                                TracGoStrings.loginHeading,
+                                textAlign: TextAlign.center,
+                                style: tracGoTextTheme.headlineSmall?.copyWith(
+                                  fontSize: 40,
+                                  height: 1.0,
+                                  letterSpacing: -1.2, // -0.03em at 40px
+                                  color: tracGoInk,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              // The design caps the subtitle at 290px so it breaks into
+                              // two balanced lines rather than one long one.
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 290),
+                                child: Text(
+                                  TracGoStrings.loginSubheading,
+                                  textAlign: TextAlign.center,
+                                  style: tracGoTextTheme.bodyLarge?.copyWith(
+                                    height: 1.5,
+                                    color: tracGoTextMuted,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        // The design caps the subtitle at 290px so it breaks into two
-                        // balanced lines rather than one long one.
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 290),
-                          child: Text(
-                            TracGoStrings.loginSubheading,
-                            textAlign: TextAlign.center,
-                            style: tracGoTextTheme.bodyLarge?.copyWith(
-                              height: 1.5,
-                              color: tracGoTextMuted,
-                            ),
-                          ),
+                        SizedBox(
+                          height: _compacted(_headerGap, _headerGapCompact, t),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 40),
                   if (uiState.errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 20),
