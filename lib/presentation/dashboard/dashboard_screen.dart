@@ -10,6 +10,7 @@ import '../../theme/typography.dart';
 import '../common/requisition_row.dart';
 import '../common/safe_insets.dart';
 import '../common/strings.dart';
+import '../common/surface_card.dart';
 import 'dashboard_notifier.dart';
 import 'dashboard_state.dart';
 
@@ -93,19 +94,25 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            message,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text(TracGoStrings.dashboardRetry),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                color: tracGoTextMuted,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: const Text(TracGoStrings.dashboardRetry),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -130,10 +137,17 @@ class _DashboardContent extends StatelessWidget {
       // Without this the dashboard cannot be over-scrolled when its content is
       // shorter than the viewport, and the enclosing RefreshIndicator never fires.
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20).addBottomSystemInset(context),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        22,
+        20,
+        20,
+      ).addBottomSystemInset(context),
       children: [
-        _StatPanel(summary: summary),
-        const SizedBox(height: 20),
+        _HeroCount(total: summary.allCount),
+        const SizedBox(height: 14),
+        _StatGrid(summary: summary),
+        const SizedBox(height: 24),
         // Wrap, not Row: the section title plus both actions outgrow a single line
         // at large accessibility text sizes, and a Wrap reflows them onto another
         // run instead of overflowing.
@@ -160,14 +174,17 @@ class _DashboardContent extends StatelessWidget {
                     // which is what pushes this action onto a second run at phone
                     // widths. The 48dp tap target is preserved by the default
                     // MaterialTapTargetSize.
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     minimumSize: Size.zero,
                   ),
                   child: Text(
                     TracGoStrings.dashboardViewAll,
-                    style: tracGoTextTheme.bodyMedium?.copyWith(
+                    style: tracGoTextTheme.bodySmall?.copyWith(
                       color: tracGoGreen,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -175,9 +192,10 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
         if (summary.recentRequisitions.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+          SurfaceCard(
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             child: Text(
               TracGoStrings.dashboardNoRecentRequisitions,
               textAlign: TextAlign.center,
@@ -187,14 +205,332 @@ class _DashboardContent extends StatelessWidget {
             ),
           )
         else
-          for (final requisition in summary.recentRequisitions) ...[
-            const SizedBox(height: 14),
-            RequisitionRow(
-              requisition: requisition,
-              onTap: () => onOpenRequisition(requisition),
-            ),
-          ],
+          SurfaceCard.rows(
+            rows: [
+              for (final requisition in summary.recentRequisitions)
+                RequisitionRecentRow(
+                  requisition: requisition,
+                  onTap: () => onOpenRequisition(requisition),
+                ),
+            ],
+          ),
       ],
+    );
+  }
+}
+
+/// The count line that opens the dashboard, with the period badge opposite it.
+///
+/// The design dropped the "ALL REQUISITIONS" eyebrow that used to sit above this and
+/// folded the meaning into the qualifier — "10 requisitions" says the same thing on one
+/// line, and buys the four status tiles below it the vertical room they now need.
+class _HeroCount extends StatelessWidget {
+  const _HeroCount({required this.total});
+
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    // allCount is a server field and is not validated upstream; a negative total would
+    // render as "-3" here, so floor it.
+    final safeTotal = total < 0 ? 0 : total;
+
+    // Wrap, not Row. Two things pushed it here: `Flexible` defaults to `flex: 1`, so a
+    // flexible badge takes an equal share of the row and sits at the start of it rather
+    // than hugging the right edge — and a non-flexible one overflows instead, once its
+    // label outgrows the phone at a large accessibility text scale. `spaceBetween` puts
+    // the badge on the far edge while they fit, and drops it to its own run when they
+    // do not. Same pattern as the "Recent" header below.
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      // flex-end in the design: the badge sits on the count's bottom edge.
+      crossAxisAlignment: WrapCrossAlignment.end,
+      spacing: 12,
+      runSpacing: 10,
+      children: [
+        // One rich Text, not a Row of two: the design baseline-aligns the 34px count
+        // with its 13px qualifier, and inline spans share a baseline for free. A Row
+        // would need `CrossAxisAlignment.baseline`, which silently top-aligns any child
+        // that reports no baseline.
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '$safeTotal',
+                style: tracGoTextTheme.titleLarge?.copyWith(
+                  fontSize: 34,
+                  height: 0.9,
+                  letterSpacing: -1.02, // -0.03em at 34px
+                ),
+              ),
+              TextSpan(
+                text: '  ${TracGoStrings.dashboardStatQualifier}',
+                style: tracGoTextTheme.bodySmall?.copyWith(
+                  color: tracGoTextMuted,
+                ),
+              ),
+            ],
+          ),
+          // A five-digit total plus the qualifier does not fit one line on a phone, and
+          // neither does either of them at a large text scale. Wrapping is the graceful
+          // failure; ellipsis on a headline number is not.
+          maxLines: 2,
+        ),
+        const _PeriodBadge(),
+      ],
+    );
+  }
+}
+
+/// The lime-tinted pill naming the window the count covers.
+class _PeriodBadge extends StatelessWidget {
+  const _PeriodBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: const BoxDecoration(
+        color: tracGoLimeTint,
+        borderRadius: pillBorderRadius,
+      ),
+      child: Text(
+        TracGoStrings.dashboardStatPeriod,
+        style: tracGoTextTheme.bodySmall?.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: tracGoGreen,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatSpec {
+  const _StatSpec(
+    this.count,
+    this.label,
+    this.shortLabel,
+    this.icon,
+    this.tint,
+    this.tintBg,
+  );
+
+  final int count;
+  final String label;
+
+  /// Fallback for when [label] does not fit the tile — see [_StatLabel].
+  final String shortLabel;
+  final IconData icon;
+  final Color tint;
+  final Color tintBg;
+}
+
+/// The four status counts, side by side in one row.
+///
+/// The design moved these from a 2x2 board to a single 4-across strip, which halves the
+/// vertical space the block costs and puts every status in one glance. It also costs
+/// each tile about two thirds of its width — hence the abbreviated labels in
+/// [_StatLabel].
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.summary});
+
+  static const _gap = 8.0;
+
+  final DashboardSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = [
+      _StatSpec(
+        summary.pendingCount,
+        TracGoStrings.dashboardStatPending,
+        TracGoStrings.dashboardStatPendingShort,
+        Icons.access_time_rounded,
+        tracGoStatusPendingDot,
+        tracGoStatusPendingBg,
+      ),
+      _StatSpec(
+        summary.approvedCount,
+        TracGoStrings.dashboardStatApproved,
+        TracGoStrings.dashboardStatApprovedShort,
+        Icons.check_rounded,
+        tracGoStatusApprovedText,
+        tracGoStatusApprovedBg,
+      ),
+      _StatSpec(
+        summary.assignedCount,
+        TracGoStrings.dashboardStatAssigned,
+        TracGoStrings.dashboardStatAssignedShort,
+        Icons.assignment_turned_in_outlined,
+        tracGoStatusAssignedDot,
+        tracGoStatusAssignedBg,
+      ),
+      _StatSpec(
+        summary.rejectedCount,
+        TracGoStrings.dashboardStatRejected,
+        TracGoStrings.dashboardStatRejectedShort,
+        Icons.close_rounded,
+        tracGoStatusRejectedDot,
+        tracGoStatusRejectedBg,
+      ),
+    ];
+
+    // The LayoutBuilder is outside the IntrinsicHeight, and has to be: IntrinsicHeight
+    // asks its subtree for intrinsic dimensions, and LayoutBuilder refuses to answer
+    // (it would have to run its callback speculatively). Measuring here and passing a
+    // plain number down keeps both.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // How much room a tile's caption actually gets: the strip's width, less the
+        // gaps, split four ways, less the tile's own padding and its 1px border.
+        final tileWidth =
+            (constraints.maxWidth - _gap * (tiles.length - 1)) / tiles.length;
+        final labelWidth =
+            tileWidth -
+            _StatTile.horizontalPadding * 2 -
+            _StatTile.borderWidth * 2;
+
+        // IntrinsicHeight is load-bearing, not decoration. This Row sits in a ListView,
+        // so its height is unbounded; `CrossAxisAlignment.stretch` there hands each tile
+        // `h=Infinity` and the layout asserts. IntrinsicHeight bounds the Row to its
+        // tallest child first, which is also what keeps the four bordered cards ending
+        // flush when one of them scales its count or caption down.
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < tiles.length; i++) ...[
+                if (i > 0) const SizedBox(width: _gap),
+                Expanded(
+                  child: _StatTile(spec: tiles[i], labelMaxWidth: labelWidth),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({required this.spec, required this.labelMaxWidth});
+
+  static const horizontalPadding = 10.0;
+  static const borderWidth = 1.0;
+
+  final _StatSpec spec;
+
+  /// Room the caption has, measured by [_StatGrid] rather than by a LayoutBuilder in
+  /// here — see the note there.
+  final double labelMaxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return SurfaceCard(
+      radius: tracGoRadiusMedium,
+      borderWidth: borderWidth,
+      padding: const EdgeInsets.fromLTRB(
+        horizontalPadding,
+        11,
+        horizontalPadding,
+        10,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: spec.tintBg,
+              borderRadius: tracGoBorderRadius(9),
+            ),
+            alignment: Alignment.center,
+            child: Icon(spec.icon, size: 14, color: spec.tint),
+          ),
+          const SizedBox(height: 6),
+          // scaleDown: a four-digit count does not fit a quarter-width tile, and neither
+          // does a two-digit one at a large text scale.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${spec.count}',
+              style: tracGoTextTheme.titleLarge?.copyWith(
+                fontSize: 19,
+                height: 1,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          _StatLabel(
+            label: spec.label,
+            shortLabel: spec.shortLabel,
+            maxWidth: labelMaxWidth,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The uppercase caption under a tile's count, abbreviated only when it has to be.
+///
+/// Four tiles across a 393dp phone leaves each label roughly 62dp. "APPROVED" fits at
+/// the default text scale and stops fitting well before the accessibility sizes iOS
+/// reaches (~3.1x), so the width is measured rather than guessed: the full word is used
+/// whenever it fits, the design's own abbreviation when it does not, and `scaleDown` is
+/// the last resort so a label can never overflow its tile.
+class _StatLabel extends StatelessWidget {
+  const _StatLabel({
+    required this.label,
+    required this.shortLabel,
+    required this.maxWidth,
+  });
+
+  final String label;
+  final String shortLabel;
+
+  /// Room available, from [_StatGrid].
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = tracGoTextTheme.bodySmall?.copyWith(
+      fontSize: 10,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.4, // 0.04em at 10px
+      color: tracGoTextMutedAlt,
+    );
+
+    final full = label.toUpperCase();
+    final painter = TextPainter(
+      text: TextSpan(text: full, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final fits = painter.width <= maxWidth;
+    // TextPainter holds a native paragraph; dropping it without this leaks it.
+    painter.dispose();
+
+    return Semantics(
+      // The visual may be an abbreviation; what is announced never is.
+      label: label,
+      excludeSemantics: true,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        // Last resort, and it does fire: even "REJD" outgrows a quarter-width tile
+        // somewhere above 2x text scaling, and a caption that overflows its card is
+        // worse than one that shrinks.
+        child: Text(
+          fits ? full : shortLabel.toUpperCase(),
+          style: style,
+          maxLines: 1,
+        ),
+      ),
     );
   }
 }
@@ -233,356 +569,6 @@ class _NewRequisitionButton extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StatSpec {
-  const _StatSpec(this.count, this.label, this.icon, this.tint, this.tintBg);
-  final int count;
-  final String label;
-  final IconData icon;
-  final Color tint;
-  final Color tintBg;
-}
-
-/// Type scale and geometry for the summary card. The mock is a 1000px desktop grid;
-/// its side-by-side structure holds at every width, but its paddings and 64sp count do
-/// not fit a ~110dp hero column on a phone, so the compact set shrinks them and moves
-/// the hero label under its badge instead of beside it.
-class _StatMetrics {
-  const _StatMetrics({
-    required this.heroPadding,
-    required this.heroBadgeSize,
-    required this.heroBadgeRadius,
-    required this.heroIconSize,
-    required this.heroLabelSize,
-    required this.heroLabelBesideBadge,
-    required this.heroCountSize,
-    required this.tilePadding,
-    required this.tileBadgeSize,
-    required this.tileBadgeRadius,
-    required this.tileIconSize,
-    required this.tileCountSize,
-    required this.tileLabelSize,
-  });
-
-  static const compact = _StatMetrics(
-    heroPadding: EdgeInsets.fromLTRB(16, 16, 16, 14),
-    heroBadgeSize: 32,
-    heroBadgeRadius: 11,
-    heroIconSize: 18,
-    heroLabelSize: 12.5,
-    heroLabelBesideBadge: false,
-    heroCountSize: 40,
-    tilePadding: EdgeInsets.all(12),
-    tileBadgeSize: 28,
-    tileBadgeRadius: 9,
-    tileIconSize: 16,
-    tileCountSize: 22,
-    tileLabelSize: 12,
-  );
-
-  static const comfortable = _StatMetrics(
-    heroPadding: EdgeInsets.fromLTRB(26, 26, 26, 22),
-    heroBadgeSize: 40,
-    heroBadgeRadius: 12,
-    heroIconSize: 20,
-    heroLabelSize: 14,
-    heroLabelBesideBadge: true,
-    heroCountSize: 64,
-    tilePadding: EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-    tileBadgeSize: 36,
-    tileBadgeRadius: 11,
-    tileIconSize: 18,
-    tileCountSize: 32,
-    tileLabelSize: 14,
-  );
-
-  final EdgeInsets heroPadding;
-  final double heroBadgeSize;
-  final double heroBadgeRadius;
-  final double heroIconSize;
-  final double heroLabelSize;
-  final bool heroLabelBesideBadge;
-  final double heroCountSize;
-  final EdgeInsets tilePadding;
-  final double tileBadgeSize;
-  final double tileBadgeRadius;
-  final double tileIconSize;
-  final double tileCountSize;
-  final double tileLabelSize;
-}
-
-class _StatPanel extends StatelessWidget {
-  const _StatPanel({required this.summary});
-
-  /// Gap between the card's cells, and the card's own inner padding.
-  static const _gap = 8.0;
-
-  /// At or above this card width the mock's full desktop metrics are used; below it the
-  /// compact set. The layout itself does not change — hero left, 2x2 grid right, at
-  /// every width.
-  static const _comfortableBreakpoint = 520.0;
-
-  final DashboardSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final tiles = [
-      _StatSpec(summary.approvedCount, TracGoStrings.dashboardStatApproved, Icons.event_available_outlined, tracGoStatusApprovedGreen, tracGoStatusApprovedGreenBg),
-      _StatSpec(summary.assignedCount, TracGoStrings.dashboardStatAssigned, Icons.check_box_outlined, tracGoStatusAssignedTeal, tracGoStatusAssignedTealBg),
-      _StatSpec(summary.pendingCount, TracGoStrings.dashboardStatPending, Icons.access_time_outlined, tracGoStatusPendingOrange, tracGoStatusPendingOrangeBg),
-      _StatSpec(summary.rejectedCount, TracGoStrings.dashboardStatRejected, Icons.cancel_outlined, tracGoStatusRejectedRed, tracGoStatusRejectedRedBg),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(_gap),
-      decoration: BoxDecoration(
-        color: tracGoSurfaceWhite,
-        borderRadius: tracGoBorderRadius(tracGoRadiusExtraLarge),
-        boxShadow: const [
-          BoxShadow(color: Color(0x0A18281E), blurRadius: 2, offset: Offset(0, 1)),
-          BoxShadow(color: Color(0x0D18281E), blurRadius: 24, offset: Offset(0, 8)),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final metrics = constraints.maxWidth < _comfortableBreakpoint
-              ? _StatMetrics.compact
-              : _StatMetrics.comfortable;
-
-          // IntrinsicHeight bounds the row's height, which is what lets the grid split
-          // it into two equal rows and both columns end flush at the bottom. The hero
-          // is normally the taller of the two and therefore sets that height.
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1.15fr / 2fr, straight from the mock's grid-template-columns.
-                Expanded(flex: 115, child: _AllRequisitionsTile(summary: summary, metrics: metrics)),
-                const SizedBox(width: _gap),
-                Expanded(flex: 200, child: _StatTileGrid(specs: tiles, metrics: metrics)),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _AllRequisitionsTile extends StatelessWidget {
-  const _AllRequisitionsTile({required this.summary, required this.metrics});
-
-  final DashboardSummary summary;
-  final _StatMetrics metrics;
-
-  @override
-  Widget build(BuildContext context) {
-    // allCount is a server field and is not validated upstream; a negative total would
-    // render as "-3" here, so floor it.
-    final total = summary.allCount < 0 ? 0 : summary.allCount;
-
-    final badge = _StatIconBadge(
-      icon: Icons.assignment_outlined,
-      tint: tracGoStatHeroAccent,
-      tintBg: tracGoStatHeroBadgeBg,
-      size: metrics.heroBadgeSize,
-      radius: metrics.heroBadgeRadius,
-      iconSize: metrics.heroIconSize,
-    );
-    final label = Text(
-      TracGoStrings.dashboardStatAll,
-      style: tracGoTextTheme.bodyMedium?.copyWith(
-        fontSize: metrics.heroLabelSize,
-        fontWeight: FontWeight.w600,
-        letterSpacing: metrics.heroLabelSize * 0.01,
-        color: tracGoStatHeroLabel,
-      ),
-    );
-
-    return Container(
-      padding: metrics.heroPadding,
-      decoration: BoxDecoration(
-        borderRadius: tracGoBorderRadius(tracGoRadiusStatTile),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [tracGoStatHeroGradientTop, tracGoStatHeroGradientBottom],
-        ),
-      ),
-      // space-between: the badge pins to the top and the count to the bottom, so the
-      // tile keeps its shape when the status grid beside it is the taller column.
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          if (metrics.heroLabelBesideBadge)
-            Row(
-              children: [
-                badge,
-                const SizedBox(width: 12),
-                // Expanded so the label wraps inside the tile at large accessibility
-                // text sizes instead of pushing the Row past its width.
-                Expanded(child: label),
-              ],
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [badge, const SizedBox(height: 10), label],
-            ),
-          // scaleDown: the count already fills most of the tile, so a large text scale
-          // or a four-digit total would otherwise overflow horizontally.
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '$total',
-                style: tracGoTextTheme.titleLarge?.copyWith(
-                  fontSize: metrics.heroCountSize,
-                  height: 1,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: metrics.heroCountSize * -0.03,
-                  color: tracGoStatHeroCount,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatTileGrid extends StatelessWidget {
-  const _StatTileGrid({required this.specs, required this.metrics});
-
-  final List<_StatSpec> specs;
-  final _StatMetrics metrics;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var rowStart = 0; rowStart < specs.length; rowStart += 2) ...[
-          if (rowStart > 0) const SizedBox(height: _StatPanel._gap),
-          // Expanded, not intrinsic: the two grid rows split the card height evenly so
-          // the right column ends flush with the hero.
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _StatTile(spec: specs[rowStart], metrics: metrics)),
-                const SizedBox(width: _StatPanel._gap),
-                Expanded(
-                  child: rowStart + 1 < specs.length
-                      ? _StatTile(spec: specs[rowStart + 1], metrics: metrics)
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.spec, required this.metrics});
-
-  final _StatSpec spec;
-  final _StatMetrics metrics;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: metrics.tilePadding,
-      decoration: BoxDecoration(
-        color: tracGoStatTileBackground,
-        borderRadius: tracGoBorderRadius(tracGoRadiusStatTile),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              _StatIconBadge(
-                icon: spec.icon,
-                tint: spec.tint,
-                tintBg: spec.tintBg,
-                size: metrics.tileBadgeSize,
-                radius: metrics.tileBadgeRadius,
-                iconSize: metrics.tileIconSize,
-              ),
-              const SizedBox(width: 8),
-              // Expanded + scaleDown: a quarter of the card is narrow, so the count
-              // shrinks to fit beside the badge rather than overflowing the tile.
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '${spec.count}',
-                    style: tracGoTextTheme.titleLarge?.copyWith(
-                      fontSize: metrics.tileCountSize,
-                      height: 1,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: metrics.tileCountSize * -0.02,
-                      color: tracGoTextDark,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            spec.label,
-            style: tracGoTextTheme.bodyMedium?.copyWith(
-              fontSize: metrics.tileLabelSize,
-              fontWeight: FontWeight.w500,
-              color: tracGoTextSubtle,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatIconBadge extends StatelessWidget {
-  const _StatIconBadge({
-    required this.icon,
-    required this.tint,
-    required this.tintBg,
-    required this.size,
-    required this.radius,
-    required this.iconSize,
-  });
-
-  final IconData icon;
-  final Color tint;
-  final Color tintBg;
-  final double size;
-  final double radius;
-  final double iconSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: tintBg, borderRadius: tracGoBorderRadius(radius)),
-      alignment: Alignment.center,
-      child: Icon(icon, color: tint, size: iconSize),
     );
   }
 }

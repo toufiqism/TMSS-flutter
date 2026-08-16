@@ -6,6 +6,11 @@ class TracGoStrings {
 
   static const appName = 'TracGo';
 
+  /// Shown in the drawer footer. Hand-kept in step with `version:` in pubspec.yaml —
+  /// there is no package_info dependency here, and adding one for a single caption
+  /// would pull a platform channel into a screen that renders offline.
+  static const appVersionLabel = 'v1.0.0';
+
   static const loginHeading = 'Welcome back.';
   static const loginSubheading =
       'Sign in to manage allocations, trips and vehicle requisitions.';
@@ -42,6 +47,7 @@ class TracGoStrings {
   static const navLogoutRevokeFailed =
       'Signed out on this device. The server could not be reached, so the session may '
       'still be active until the token expires.';
+
   /// Shown on the dashboard's first back press. Worded as a prompt, not a warning: on
   /// iOS the second press does not actually close the app (see `DashboardBackScope`),
   /// so anything promising an exit would be a lie on half the platforms we ship.
@@ -51,20 +57,47 @@ class TracGoStrings {
   static const navProfile = 'Profile';
   static const navNotifications = 'Notifications';
 
-  static const dashboardErrorGeneric = 'Something went wrong. Please try again.';
+  /// Caption above the drawer's navigation rows.
+  static const navMenuSectionLabel = 'Menu';
+
+  static const dashboardErrorGeneric =
+      'Something went wrong. Please try again.';
   static const dashboardNewRequisition = 'New';
-  static const dashboardStatAll = 'All Requisitions';
   static const dashboardStatApproved = 'Approved';
   static const dashboardStatAssigned = 'Assigned';
   static const dashboardStatPending = 'Pending';
   static const dashboardStatRejected = 'Rejected';
-  static const dashboardRecentRequisitions = 'Recent Req.';
-  static const dashboardViewAll = 'View All';
+
+  // Four tiles across a phone leaves each label roughly 62dp of room. These are the
+  // design's own abbreviations, swapped in only when the full word does not fit — at a
+  // large accessibility text scale, or in a narrow split view. Never shown when the
+  // full label fits, because "Appr" is worse to read when there is space for
+  // "Approved".
+  static const dashboardStatApprovedShort = 'Appr';
+  static const dashboardStatAssignedShort = 'Asgn';
+  static const dashboardStatPendingShort = 'Pend';
+  static const dashboardStatRejectedShort = 'Rejd';
+  static const dashboardRecentRequisitions = 'Recent';
+  static const dashboardViewAll = 'View all';
+
+  /// Sits beside the hero count. Lower-case on purpose: it reads as the tail of the
+  /// sentence "10 requisitions", not as a label of its own. Verbatim from the design.
+  static const dashboardStatQualifier = 'requisitions';
+
+  /// The period badge on the right of the hero row.
+  ///
+  /// The design says "Aug 2026". That is wrong for this number: `getDashboardSummary`
+  /// fetches a rolling **365-day** window (`_dashboardWindow` in
+  /// `RemoteRequisitionRepository`), not a calendar month, so a month badge beside the
+  /// count would state a scope the count does not have. The design's slot is kept; its
+  /// wording is not. Must stay in step with that duration.
+  static const dashboardStatPeriod = 'Last 12 months';
   static const dashboardNoRecentRequisitions = 'No recent requisitions found';
   static const dashboardRetry = 'Retry';
 
   static const requisitionListTitle = 'My Requisitions';
-  static const requisitionListSearchPlaceholder = 'Search pickup, drop, purpose…';
+  static const requisitionListSearchPlaceholder =
+      'Search pickup, drop, purpose…';
   static const requisitionListReset = 'Reset';
   static const requisitionListEmpty = 'No requisitions found';
   static const requisitionListCancel = 'Cancel';
@@ -72,10 +105,20 @@ class TracGoStrings {
   static const requisitionListCancelConfirmBody = "This can't be undone.";
   static const requisitionListCancelConfirmYes = 'Yes, cancel';
   static const requisitionListCancelConfirmNo = 'Keep it';
-  static const requisitionListCancelFailed = 'Could not cancel this requisition';
+  static const requisitionListCancelFailed =
+      'Could not cancel this requisition';
   static const requisitionListLoadFailed = 'Could not load requisitions';
   static const requisitionListNewFab = 'New requisition';
-  static const requisitionListDateRangeInvalid = "End date can't be before start date";
+  static const requisitionListDateRangeInvalid =
+      "End date can't be before start date";
+  static const requisitionListFilterFrom = 'From';
+  static const requisitionListFilterTo = 'To';
+
+  /// Day header above a group of rows, for requisitions whose pickup falls today or
+  /// tomorrow — a date there would make the reader do arithmetic.
+  static const requisitionListToday = 'Today';
+  static const requisitionListTomorrow = 'Tomorrow';
+  static const requisitionListYesterday = 'Yesterday';
   static const dialogOk = 'OK';
   static const dialogCancel = 'Cancel';
 
@@ -103,10 +146,36 @@ class TracGoStrings {
   static const newRequisitionFieldGoodsWeight = 'Goods Weight';
   static const newRequisitionFieldStoreName = 'Store Name';
   static const newRequisitionFieldGoodsDetails = 'Goods Details';
+  // Placeholders. The grouped form gives every field a caption above it, which frees
+  // the input itself to say what a *good* answer looks like instead of repeating the
+  // label — the one thing a bare Material field could never do here.
+  static const newRequisitionHintPickupDatetime = 'Select date and time';
+  static const newRequisitionHintPickupLocation = 'Where should we collect?';
+  static const newRequisitionHintDropLocation = 'Where to?';
+  static const newRequisitionHintPickupSite = 'Store or site';
+  static const newRequisitionHintDropSite = 'Destination';
+  static const newRequisitionHintCustomerName = 'Who is it for?';
+  static const newRequisitionHintPurpose = 'e.g. Client site visit';
+  static const newRequisitionHintRemarks =
+      'Anything the fleet desk should know';
+  static const newRequisitionHintUserDepartment = 'Requesting department';
+  static const newRequisitionHintStoreName = 'Origin store';
+  static const newRequisitionHintGoodsDetails = 'What is being moved?';
+  static const newRequisitionHintGoodsWeight = 'in kg';
+  static const newRequisitionHintEmployeeSearch =
+      'Search by name or staff number';
+
   static const newRequisitionSubmit = 'Submit Requisition';
+
+  /// Second line on each vehicle card — what the type is actually for. Without it
+  /// "Cover Van" and "Open Truck" are two names with no stated difference.
+  static const vehicleTypeCoverVanHint = 'Enclosed cargo';
+  static const vehicleTypeOpenTruckHint = 'Bulk / oversize';
   static const newRequisitionErrorRequired = 'This field is required';
-  static const newRequisitionErrorNumberInvalid = 'Enter a valid number of persons';
-  static const newRequisitionErrorSelectEmployee = 'Select at least one employee';
+  static const newRequisitionErrorNumberInvalid =
+      'Enter a valid number of persons';
+  static const newRequisitionErrorSelectEmployee =
+      'Select at least one employee';
 
   /// The server's `min:3` rule, worded for a person rather than echoing Laravel.
   static String newRequisitionErrorTooShort(int minimum) =>
@@ -124,14 +193,21 @@ class TracGoStrings {
 
   /// Shown under the picker when a search matched nobody, which is otherwise
   /// indistinguishable from the dropdown simply not having opened.
-  static const newRequisitionEmployeeNoMatches = 'No employees match this search';
+  static const newRequisitionEmployeeNoMatches =
+      'No employees match this search';
+
+  /// Screen-reader label for the × on a selected-rider chip. The bare glyph announces
+  /// as "close", which says nothing about which of several chips it closes.
+  static String newRequisitionRemoveEmployee(String name) => 'Remove $name';
 
   /// Shown for a rider the edit form knows only by id, while the directory loads — and
   /// permanently for one who is no longer in it (an employee who has since left is
   /// still on the requisition).
   static const newRequisitionRiderUnresolved = 'Employee details unavailable';
-  static const newRequisitionSubmitFailed = 'Could not submit requisition. Please try again.';
-  static const newRequisitionEmployeeSearchFailed = 'Could not search employees';
+  static const newRequisitionSubmitFailed =
+      'Could not submit requisition. Please try again.';
+  static const newRequisitionEmployeeSearchFailed =
+      'Could not search employees';
 
   // Capabilities the API contract does not define. Shown in place of the control
   // rather than letting the user submit a payload the backend cannot accept.
@@ -156,6 +232,10 @@ class TracGoStrings {
   static const profileNotProvided = 'Not provided';
 
   static const requisitionDetailTitle = 'Requisition Details';
+
+  /// Eyebrow on the detail hero. The server exposes no separate human-readable
+  /// reference, so this is the row id with a prefix — not an invented format.
+  static String requisitionDetailReference(String id) => 'REQ-$id';
   static const requisitionDetailEdit = 'Edit';
   static const requisitionDetailCancelled = 'Requisition cancelled';
   static const requisitionDetailSectionTrip = 'Trip';
@@ -180,7 +260,8 @@ class TracGoStrings {
       'Passenger $position';
   static const requisitionDetailDriver = 'Driver';
   static const requisitionDetailVehicle = 'Vehicle';
-  static const requisitionDetailNotAssigned = 'No driver or vehicle assigned yet';
+  static const requisitionDetailNotAssigned =
+      'No driver or vehicle assigned yet';
   static const requisitionDetailNoActivity = 'No activity recorded';
   static const requisitionDetailNotEditable =
       'Only pending requisitions can be edited or cancelled.';

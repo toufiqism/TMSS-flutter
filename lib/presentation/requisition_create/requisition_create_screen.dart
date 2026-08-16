@@ -10,13 +10,20 @@ import '../../domain/requisition_field_limits.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../common/choice_pill.dart';
 import '../common/date_time_field.dart';
 import '../common/safe_insets.dart';
+import '../common/section_label.dart';
 import '../common/strings.dart';
-import '../common/synced_text_field.dart';
+import '../common/surface_card.dart';
 import 'form_controls.dart';
 import 'requisition_create_notifier.dart';
 import 'requisition_create_state.dart';
+
+String _vehicleHint(VehicleType type) => switch (type) {
+  VehicleType.coverVan => TracGoStrings.vehicleTypeCoverVanHint,
+  VehicleType.openTruck => TracGoStrings.vehicleTypeOpenTruckHint,
+};
 
 class RequisitionCreateScreen extends ConsumerStatefulWidget {
   const RequisitionCreateScreen({
@@ -85,51 +92,51 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
     final notifier = ref.read(requisitionCreateNotifierProvider.notifier);
 
     return Scaffold(
+      backgroundColor: tracGoPageBackground,
       appBar: AppBar(
+        titleSpacing: 0,
         title: Text(
           uiState.isEditing
               ? TracGoStrings.editRequisitionTitle
               : TracGoStrings.newRequisitionTitle,
-          style: tracGoTextTheme.titleMedium,
+          style: tracGoScreenTitleStyle,
         ),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: tracGoTextDark), onPressed: widget.onBack),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: tracGoInk),
+          onPressed: widget.onBack,
+        ),
       ),
-      backgroundColor: tracGoPageBackground,
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: _PillSegmentedToggle(
-              selected: uiState.formType,
-              onSelect: notifier.switchFormType,
-              // req_type is immutable server-side, so the choice is fixed once the
-              // requisition exists.
-              locked: uiState.isEditing,
-            ),
-          ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _PillSegmentedToggle(
+                    selected: uiState.formType,
+                    onSelect: notifier.switchFormType,
+                    // req_type is immutable server-side, so the choice is fixed once
+                    // the requisition exists.
+                    locked: uiState.isEditing,
+                  ),
+                  const SizedBox(height: 22),
                   // Editing only, and only when the server actually reported a
                   // requester: it answers "whose requisition am I changing?" before the
                   // first field, and there is nobody to name on a fresh create.
                   if (uiState.isEditing && uiState.hasRequesterInfo) ...[
                     _RequesterHeader(uiState: uiState),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 22),
                   ],
-                  if (uiState.submitError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(uiState.submitError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                    ),
+                  if (uiState.submitError != null) ...[
+                    _SubmitError(message: uiState.submitError!),
+                    const SizedBox(height: 18),
+                  ],
                   if (uiState.formType == RequisitionFormType.passenger)
                     _PassengerFormFields(uiState: uiState, notifier: notifier)
                   else
                     _LogisticsFormFields(uiState: uiState, notifier: notifier),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -138,27 +145,66 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
             // Submit is the last thing in a Column, not a bottomNavigationBar, so
             // Scaffold reserves no space for it and nothing applies the system inset —
             // it rendered under Android's navigation buttons.
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16)
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16)
                 .addBottomSystemInset(context),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                // minimumSize, not a fixed height, so the label survives large text scales.
-                style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                onPressed:
-                    uiState.isSubmitting ? null : () => unawaited(notifier.submit()),
-                child: uiState.isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: tracGoSurfaceWhite),
-                      )
-                    : Text(
-                        uiState.isEditing
-                            ? TracGoStrings.editRequisitionSave
-                            : TracGoStrings.newRequisitionSubmit,
-                        style: tracGoTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 15, color: tracGoSurfaceWhite),
+            child: ElevatedButton(
+              // minimumSize, not a fixed height, so the label survives large text scales.
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(58),
+              ),
+              onPressed:
+                  uiState.isSubmitting ? null : () => unawaited(notifier.submit()),
+              child: uiState.isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: tracGoSurfaceWhite,
                       ),
+                    )
+                  : Text(
+                      uiState.isEditing
+                          ? TracGoStrings.editRequisitionSave
+                          : TracGoStrings.newRequisitionSubmit,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A whole-form failure (a 422 with no field mapping, a network error). Boxed rather
+/// than set as bare red text, so it reads as a banner about the form rather than as the
+/// error message of whichever field happens to sit under it.
+class _SubmitError extends StatelessWidget {
+  const _SubmitError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SurfaceCard(
+      color: tracGoStatusRejectedBg,
+      borderColor: null,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            size: 18,
+            color: tracGoStatusRejectedText,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: tracGoTextTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: tracGoStatusRejectedText,
               ),
             ),
           ),
@@ -197,37 +243,24 @@ class _RequesterHeader extends StatelessWidget {
     // clipping.
     final secondary = [department, company].where((v) => v.isNotEmpty).join(' · ');
 
-    return Container(
-      width: double.infinity,
+    return SurfaceCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: tracGoGreenLight,
-        borderRadius: tracGoBorderRadius(tracGoRadiusMedium),
-        border: Border.all(color: tracGoBorder),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            TracGoStrings.requisitionDetailRequestedBy.toUpperCase(),
-            style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen),
-          ),
+          SectionLabel(TracGoStrings.requisitionDetailRequestedBy),
           if (primary.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 7),
             Text(
               primary,
               style: tracGoTextTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: tracGoTextDark,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
           if (secondary.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              secondary,
-              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextSubtle),
-            ),
+            const SizedBox(height: 3),
+            Text(secondary, style: tracGoTextTheme.bodySmall),
           ],
         ],
       ),
@@ -256,13 +289,12 @@ class _PillSegmentedToggle extends StatelessWidget {
     const logisticsEnabled = ApiCapabilities.logisticsRequisitions;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          decoration: BoxDecoration(
-            color: tracGoSurfaceWhite,
+          decoration: const BoxDecoration(
+            color: tracGoBorder,
             borderRadius: pillBorderRadius,
-            border: Border.all(color: tracGoBorder, width: 1.5),
           ),
           padding: const EdgeInsets.all(4),
           child: Row(
@@ -293,7 +325,7 @@ class _PillSegmentedToggle extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               TracGoStrings.editRequisitionTypeLocked,
-              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
+              style: tracGoTextTheme.bodySmall?.copyWith(fontSize: 12),
             ),
           ),
       ],
@@ -324,20 +356,20 @@ class _SegmentPill extends StatelessWidget {
         onTap: onTap,
         borderRadius: pillBorderRadius,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
-            color: selected ? tracGoGreen : Colors.transparent,
+            color: selected ? tracGoInk : Colors.transparent,
             borderRadius: pillBorderRadius,
           ),
           alignment: Alignment.center,
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: tracGoTextTheme.bodyMedium?.copyWith(
               color: selected
                   ? tracGoSurfaceWhite
-                  : (enabled ? tracGoTextMutedAlt : tracGoPlaceholder),
-              fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-              fontSize: 13.5,
+                  : (enabled ? tracGoTextMuted : tracGoPlaceholder),
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
         ),
@@ -346,16 +378,27 @@ class _SegmentPill extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.text);
+/// A numbered step: header, then the card of fields belonging to it.
+class _FormStep extends StatelessWidget {
+  const _FormStep({
+    required this.step,
+    required this.label,
+    required this.children,
+  });
 
-  final String text;
+  final int step;
+  final String label;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 22, bottom: 8),
-      child: Text(text.toUpperCase(), style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        StepSectionLabel(step: step, label: label),
+        const SizedBox(height: 12),
+        ...children,
+      ],
     );
   }
 }
@@ -370,122 +413,162 @@ class _PassengerFormFields extends StatelessWidget {
   Widget build(BuildContext context) {
     final form = uiState.passengerForm;
     final errors = uiState.fieldErrors;
-    const spacing = SizedBox(height: 12);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionHeader(TracGoStrings.newRequisitionSectionTripDetails),
-        DateTimeField(
-          label: TracGoStrings.newRequisitionFieldPickupDatetime,
-          value: form.pickupDateTime,
-          onChanged: notifier.onPassengerPickupDateTimeChange,
-          isError: errors.containsKey(RequisitionFormField.pickupDateTime),
-          errorText: errors[RequisitionFormField.pickupDateTime],
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldPickupLocation,
-          value: form.pickupLocation,
-          onChanged: notifier.onPassengerPickupLocationChange,
-          error: errors[RequisitionFormField.pickupLocation],
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldDropLocation,
-          value: form.dropLocation,
-          onChanged: notifier.onPassengerDropLocationChange,
-          error: errors[RequisitionFormField.dropLocation],
-        ),
-        spacing,
-        DropdownField<UsedType>(
-          label: TracGoStrings.newRequisitionFieldUsedType,
-          options: UsedType.values,
-          selected: form.usedType,
-          labelFor: (v) => v.label,
-          onSelect: notifier.onUsedTypeChange,
-        ),
-        const _SectionHeader(TracGoStrings.newRequisitionSectionPassengerDetails),
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldCustomerName,
-          value: form.customerName,
-          onChanged: notifier.onPassengerCustomerNameChange,
-          error: errors[RequisitionFormField.customerName],
-        ),
-        spacing,
-        // Read-only and derived from the rider selection below: the server requires
-        // `no_of_person` to equal the number of selected employees exactly, so an
-        // editable field here could only ever be used to create an invalid state.
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldNumberOfPersons,
-          value: form.numberOfPersons,
-          onChanged: (_) {},
-          enabled: false,
-          error: errors[RequisitionFormField.numberOfPersons],
-          keyboardType: TextInputType.number,
-        ),
-        spacing,
-        DropdownField<RequiredFor>(
-          label: TracGoStrings.newRequisitionFieldRequiredFor,
-          options: RequiredFor.values,
-          selected: form.requiredFor,
-          labelFor: (v) => v.label,
-          onSelect: notifier.onRequiredForChange,
-        ),
-        if (!ApiCapabilities.employeeDirectory)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              TracGoStrings.unsupportedEmployeePicker,
-              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
+        _FormStep(
+          step: 1,
+          label: TracGoStrings.newRequisitionSectionTripDetails,
+          children: [
+            FormCard(
+              rows: [
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldPickupDatetime,
+                  error: errors[RequisitionFormField.pickupDateTime],
+                  child: DateTimeField(
+                    hint: TracGoStrings.newRequisitionHintPickupDatetime,
+                    value: form.pickupDateTime,
+                    onChanged: notifier.onPassengerPickupDateTimeChange,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldPickupLocation,
+                  error: errors[RequisitionFormField.pickupLocation],
+                  child: InlineTextField(
+                    value: form.pickupLocation,
+                    onChanged: notifier.onPassengerPickupLocationChange,
+                    hint: TracGoStrings.newRequisitionHintPickupLocation,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldDropLocation,
+                  error: errors[RequisitionFormField.dropLocation],
+                  child: InlineTextField(
+                    value: form.dropLocation,
+                    onChanged: notifier.onPassengerDropLocationChange,
+                    hint: TracGoStrings.newRequisitionHintDropLocation,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldUsedType,
+                  child: ChoicePillRow<UsedType>(
+                    options: UsedType.values,
+                    selected: form.usedType,
+                    labelFor: (v) => v.label,
+                    onSelect: notifier.onUsedTypeChange,
+                  ),
+                ),
+              ],
             ),
-          ),
-        // The user type radio stays specific to "Someone Else": an "Own User"
-        // requisition admits only "Internal User", and offering the other option would
-        // let the user build a combination the server documents as a 422.
-        if (ApiCapabilities.employeeDirectory &&
-            form.requiredFor == RequiredFor.someoneElse) ...[
-          spacing,
-          Text(TracGoStrings.newRequisitionFieldUserType, style: tracGoTextTheme.bodySmall),
-          const SizedBox(height: 8),
-          RadioRow<RequisitionUserType>(
-            options: RequisitionUserType.values,
-            selected: form.userType,
-            labelFor: (v) => v.label,
-            onSelect: notifier.onUserTypeChange,
-          ),
-        ],
-        // The picker itself is shown for both values of "Required For". Riders are
-        // required on every passenger requisition now — the contract's worked example
-        // is an "Own User" trip with three of them — where previously this was only
-        // offered for "Someone Else".
-        if (ApiCapabilities.employeeDirectory) ...[
-          spacing,
-          _EmployeePicker(
-            query: uiState.employeeSearchQuery,
-            results: uiState.employeeSearchResults,
-            selected: form.selectedEmployees,
-            isSearching: uiState.isSearchingEmployees,
-            error: errors[RequisitionFormField.employees],
-            searchError: uiState.employeeSearchError,
-            onQueryChange: notifier.onEmployeeSearchQueryChange,
-            onToggle: notifier.toggleEmployeeSelection,
-          ),
-        ],
-        const _SectionHeader(TracGoStrings.newRequisitionSectionPurpose),
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldPurpose,
-          value: form.purpose,
-          onChanged: notifier.onPurposeChange,
-          error: errors[RequisitionFormField.purpose],
+          ],
         ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldRemarks,
-          value: form.remarks,
-          onChanged: notifier.onPassengerRemarksChange,
-          error: errors[RequisitionFormField.remarks],
-          singleLine: false,
+        const SizedBox(height: 22),
+        _FormStep(
+          step: 2,
+          label: TracGoStrings.newRequisitionSectionPassengerDetails,
+          children: [
+            FormCard(
+              rows: [
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldCustomerName,
+                  error: errors[RequisitionFormField.customerName],
+                  child: InlineTextField(
+                    value: form.customerName,
+                    onChanged: notifier.onPassengerCustomerNameChange,
+                    hint: TracGoStrings.newRequisitionHintCustomerName,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldRequiredFor,
+                  child: ChoicePillRow<RequiredFor>(
+                    options: RequiredFor.values,
+                    selected: form.requiredFor,
+                    labelFor: (v) => v.label,
+                    onSelect: notifier.onRequiredForChange,
+                  ),
+                ),
+                // The user type control stays specific to "Someone Else": an "Own User"
+                // requisition admits only "Internal User", and offering the other option
+                // would let the user build a combination the server documents as a 422.
+                if (ApiCapabilities.employeeDirectory &&
+                    form.requiredFor == RequiredFor.someoneElse)
+                  FormFieldRow(
+                    label: TracGoStrings.newRequisitionFieldUserType,
+                    child: ChoicePillRow<RequisitionUserType>(
+                      options: RequisitionUserType.values,
+                      selected: form.userType,
+                      labelFor: (v) => v.label,
+                      onSelect: notifier.onUserTypeChange,
+                    ),
+                  ),
+                // The picker itself is shown for both values of "Required For". Riders
+                // are required on every passenger requisition now — the contract's
+                // worked example is an "Own User" trip with three of them.
+                if (ApiCapabilities.employeeDirectory)
+                  _EmployeePicker(
+                    query: uiState.employeeSearchQuery,
+                    results: uiState.employeeSearchResults,
+                    selected: form.selectedEmployees,
+                    isSearching: uiState.isSearchingEmployees,
+                    error: errors[RequisitionFormField.employees],
+                    searchError: uiState.employeeSearchError,
+                    onQueryChange: notifier.onEmployeeSearchQueryChange,
+                    onToggle: notifier.toggleEmployeeSelection,
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      TracGoStrings.unsupportedEmployeePicker,
+                      style: tracGoTextTheme.bodySmall,
+                    ),
+                  ),
+                // Derived from the rider selection above: the server requires
+                // `no_of_person` to equal the number of selected employees exactly.
+                DerivedValueRow(
+                  label: TracGoStrings.newRequisitionFieldNumberOfPersons,
+                  value: form.numberOfPersons,
+                  error: errors[RequisitionFormField.numberOfPersons],
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        _FormStep(
+          step: 3,
+          label: TracGoStrings.newRequisitionSectionPurpose,
+          children: [
+            FormCard(
+              rows: [
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldPurpose,
+                  error: errors[RequisitionFormField.purpose],
+                  child: InlineTextField(
+                    value: form.purpose,
+                    onChanged: notifier.onPurposeChange,
+                    hint: TracGoStrings.newRequisitionHintPurpose,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldRemarks,
+                  error: errors[RequisitionFormField.remarks],
+                  child: InlineTextField(
+                    value: form.remarks,
+                    onChanged: notifier.onPassengerRemarksChange,
+                    hint: TracGoStrings.newRequisitionHintRemarks,
+                    singleLine: false,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
@@ -502,144 +585,171 @@ class _LogisticsFormFields extends StatelessWidget {
   Widget build(BuildContext context) {
     final form = uiState.logisticsForm;
     final errors = uiState.fieldErrors;
-    const spacing = SizedBox(height: 12);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionHeader(TracGoStrings.newRequisitionSectionVehicleDetails),
-        RadioRow<VehicleType>(
-          options: VehicleType.values,
-          selected: form.vehicleType,
-          labelFor: (v) => v.label,
-          onSelect: notifier.onVehicleTypeChange,
+        _FormStep(
+          step: 1,
+          label: TracGoStrings.newRequisitionSectionVehicleDetails,
+          children: [
+            // IntrinsicHeight so a wrapped title in one card does not leave the card
+            // beside it visibly shorter.
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final type in VehicleType.values) ...[
+                    if (type != VehicleType.values.first)
+                      const SizedBox(width: 10),
+                    Expanded(
+                      child: SelectableTypeCard(
+                        title: type.label,
+                        subtitle: _vehicleHint(type),
+                        selected: form.vehicleType == type,
+                        onTap: () => notifier.onVehicleTypeChange(type),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            FormCard(
+              rows: [
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldLoadingCapacity,
+                  child: ChoicePillRow<LoadingCapacity>(
+                    options: LoadingCapacity.values,
+                    selected: form.loadingCapacity,
+                    labelFor: (v) => v.label,
+                    onSelect: notifier.onLoadingCapacityChange,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldGoodsWeight,
+                  error: errors[RequisitionFormField.goodsWeight],
+                  child: InlineTextField(
+                    value: form.goodsWeight,
+                    onChanged: notifier.onGoodsWeightChange,
+                    hint: TracGoStrings.newRequisitionHintGoodsWeight,
+                    maxLength: RequisitionFieldLimits.goodsWeightMaxLength,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        spacing,
-        DropdownField<LoadingCapacity>(
-          label: TracGoStrings.newRequisitionFieldLoadingCapacity,
-          options: LoadingCapacity.values,
-          selected: form.loadingCapacity,
-          labelFor: (v) => v.label,
-          onSelect: notifier.onLoadingCapacityChange,
+        const SizedBox(height: 22),
+        _FormStep(
+          step: 2,
+          label: TracGoStrings.newRequisitionSectionTripDetails,
+          children: [
+            FormCard(
+              rows: [
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldPickupDatetime,
+                  error: errors[RequisitionFormField.pickupDateTime],
+                  child: DateTimeField(
+                    hint: TracGoStrings.newRequisitionHintPickupDatetime,
+                    value: form.pickupDateTime,
+                    onChanged: notifier.onLogisticsPickupDateTimeChange,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldPickupLocation,
+                  error: errors[RequisitionFormField.pickupLocation],
+                  child: InlineTextField(
+                    value: form.pickupLocation,
+                    onChanged: notifier.onLogisticsPickupLocationChange,
+                    hint: TracGoStrings.newRequisitionHintPickupSite,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldDropLocation,
+                  error: errors[RequisitionFormField.dropLocation],
+                  child: InlineTextField(
+                    value: form.dropLocation,
+                    onChanged: notifier.onLogisticsDropLocationChange,
+                    hint: TracGoStrings.newRequisitionHintDropSite,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldGoodsWeight,
-          value: form.goodsWeight,
-          onChanged: notifier.onGoodsWeightChange,
-          error: errors[RequisitionFormField.goodsWeight],
-          maxLength: RequisitionFieldLimits.goodsWeightMaxLength,
-        ),
-        const _SectionHeader(TracGoStrings.newRequisitionSectionTripDetails),
-        DateTimeField(
-          label: TracGoStrings.newRequisitionFieldPickupDatetime,
-          value: form.pickupDateTime,
-          onChanged: notifier.onLogisticsPickupDateTimeChange,
-          isError: errors.containsKey(RequisitionFormField.pickupDateTime),
-          errorText: errors[RequisitionFormField.pickupDateTime],
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldPickupLocation,
-          value: form.pickupLocation,
-          onChanged: notifier.onLogisticsPickupLocationChange,
-          error: errors[RequisitionFormField.pickupLocation],
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldDropLocation,
-          value: form.dropLocation,
-          onChanged: notifier.onLogisticsDropLocationChange,
-          error: errors[RequisitionFormField.dropLocation],
-        ),
-        const _SectionHeader(TracGoStrings.newRequisitionSectionRequesterDetails),
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldCustomerName,
-          value: form.customerName,
-          onChanged: notifier.onLogisticsCustomerNameChange,
-          error: errors[RequisitionFormField.customerName],
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldUserDepartment,
-          value: form.userDepartment,
-          onChanged: notifier.onUserDepartmentChange,
-          error: errors[RequisitionFormField.userDepartment],
-          maxLength: RequisitionFieldLimits.shortMaxLength,
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldStoreName,
-          value: form.storeName,
-          onChanged: notifier.onStoreNameChange,
-          error: errors[RequisitionFormField.storeName],
-          maxLength: RequisitionFieldLimits.shortMaxLength,
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldGoodsDetails,
-          value: form.goodsDetails,
-          onChanged: notifier.onGoodsDetailsChange,
-          error: errors[RequisitionFormField.goodsDetails],
-          singleLine: false,
-        ),
-        spacing,
-        _TracGoTextField(
-          label: TracGoStrings.newRequisitionFieldRemarks,
-          value: form.remarks,
-          onChanged: notifier.onLogisticsRemarksChange,
-          error: errors[RequisitionFormField.remarks],
-          singleLine: false,
+        const SizedBox(height: 22),
+        _FormStep(
+          step: 3,
+          label: TracGoStrings.newRequisitionSectionRequesterDetails,
+          children: [
+            FormCard(
+              rows: [
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldCustomerName,
+                  error: errors[RequisitionFormField.customerName],
+                  child: InlineTextField(
+                    value: form.customerName,
+                    onChanged: notifier.onLogisticsCustomerNameChange,
+                    hint: TracGoStrings.newRequisitionHintCustomerName,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldUserDepartment,
+                  error: errors[RequisitionFormField.userDepartment],
+                  child: InlineTextField(
+                    value: form.userDepartment,
+                    onChanged: notifier.onUserDepartmentChange,
+                    hint: TracGoStrings.newRequisitionHintUserDepartment,
+                    maxLength: RequisitionFieldLimits.shortMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldStoreName,
+                  error: errors[RequisitionFormField.storeName],
+                  child: InlineTextField(
+                    value: form.storeName,
+                    onChanged: notifier.onStoreNameChange,
+                    hint: TracGoStrings.newRequisitionHintStoreName,
+                    maxLength: RequisitionFieldLimits.shortMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldGoodsDetails,
+                  error: errors[RequisitionFormField.goodsDetails],
+                  child: InlineTextField(
+                    value: form.goodsDetails,
+                    onChanged: notifier.onGoodsDetailsChange,
+                    hint: TracGoStrings.newRequisitionHintGoodsDetails,
+                    singleLine: false,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+                FormFieldRow(
+                  label: TracGoStrings.newRequisitionFieldRemarks,
+                  error: errors[RequisitionFormField.remarks],
+                  child: InlineTextField(
+                    value: form.remarks,
+                    onChanged: notifier.onLogisticsRemarksChange,
+                    hint: TracGoStrings.newRequisitionHintRemarks,
+                    singleLine: false,
+                    maxLength: RequisitionFieldLimits.defaultMaxLength,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _TracGoTextField extends StatelessWidget {
-  const _TracGoTextField({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    this.error,
-    this.singleLine = true,
-    this.keyboardType = TextInputType.text,
-    this.enabled = true,
-    this.maxLength = RequisitionFieldLimits.defaultMaxLength,
-  });
-
-  final String label;
-  final String value;
-  final ValueChanged<String> onChanged;
-  final String? error;
-  final bool singleLine;
-  final TextInputType keyboardType;
-
-  /// The server's `max:` rule for this field. Defaults to the 200 that most of them
-  /// carry; the three that differ pass their own.
-  final int? maxLength;
-
-  /// False for fields the form computes rather than accepts, so they render in the
-  /// standard disabled style instead of inviting an edit that would be discarded.
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return SyncedTextField(
-      value: value,
-      onChanged: onChanged,
-      enabled: enabled,
-      maxLines: singleLine ? 1 : 3,
-      // The derived, read-only No. of Persons field is the one input with no server
-      // string rule; capping it would be meaningless.
-      maxLength: enabled ? maxLength : null,
-      keyboardType: keyboardType,
-      hintText: label,
-      errorText: error,
-    );
-  }
-}
-
+/// Selected riders as removable pills, with a search field underneath and the result
+/// list below that.
 class _EmployeePicker extends StatefulWidget {
   const _EmployeePicker({
     required this.query,
@@ -673,79 +783,153 @@ class _EmployeePickerState extends State<_EmployeePicker> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(TracGoStrings.newRequisitionFieldSelectEmployees, style: tracGoTextTheme.bodySmall),
-        if (widget.selected.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final employee in widget.selected)
-                  InputChip(label: Text(employee.name), onDeleted: () => widget.onToggle(employee)),
-              ],
+    return FormFieldRow(
+      label: TracGoStrings.newRequisitionFieldSelectEmployees,
+      error: widget.error ?? widget.searchError,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.selected.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final employee in widget.selected)
+                    _SelectedEmployeeChip(
+                      name: employee.name,
+                      onRemove: () => widget.onToggle(employee),
+                    ),
+                ],
+              ),
             ),
-          ),
-        SyncedTextField(
-          value: widget.query,
-          onChanged: (value) {
-            widget.onQueryChange(value);
-            setState(() => _expanded = true);
-          },
-          hintText: TracGoStrings.newRequisitionFieldSelectEmployees,
-          errorText: widget.error ?? widget.searchError,
-          suffixIcon: widget.isSearching
-              ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                )
-              : null,
-        ),
-        // A search that matched nobody used to render exactly nothing, which is
-        // indistinguishable from the dropdown having failed to open. Guarded on
-        // `searchError == null` so a failed lookup keeps saying it failed rather than
-        // claiming there were no matches.
-        if (_expanded &&
-            widget.results.isEmpty &&
-            !widget.isSearching &&
-            widget.searchError == null &&
-            widget.query.trim().isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              TracGoStrings.newRequisitionEmployeeNoMatches,
-              style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
-            ),
-          ),
-        if (_expanded && widget.results.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            decoration: BoxDecoration(
-              color: tracGoSurfaceWhite,
-              border: Border.all(color: tracGoBorder),
-              borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
-            ),
-            constraints: const BoxConstraints(maxHeight: 220),
-            child: ListView(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              children: [
-                for (final employee in widget.results)
-                  ListTile(
-                    title: Text(employee.name),
-                    subtitle: Text('${employee.designation}, ${employee.department}'),
-                    onTap: () {
-                      widget.onToggle(employee);
-                      setState(() => _expanded = false);
-                    },
+          Row(
+            children: [
+              const Icon(Icons.search, size: 18, color: tracGoTextMutedAlt),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InlineTextField(
+                  value: widget.query,
+                  onChanged: (value) {
+                    widget.onQueryChange(value);
+                    setState(() => _expanded = true);
+                  },
+                  hint: TracGoStrings.newRequisitionHintEmployeeSearch,
+                ),
+              ),
+              if (widget.isSearching)
+                const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-              ],
+                ),
+            ],
+          ),
+          // A search that matched nobody used to render exactly nothing, which is
+          // indistinguishable from the dropdown having failed to open. Guarded on
+          // `searchError == null` so a failed lookup keeps saying it failed rather than
+          // claiming there were no matches.
+          if (_expanded &&
+              widget.results.isEmpty &&
+              !widget.isSearching &&
+              widget.searchError == null &&
+              widget.query.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                TracGoStrings.newRequisitionEmployeeNoMatches,
+                style: tracGoTextTheme.bodySmall,
+              ),
+            ),
+          if (_expanded && widget.results.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 10),
+              constraints: const BoxConstraints(maxHeight: 220),
+              decoration: BoxDecoration(
+                color: tracGoInputBackground,
+                borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final employee in widget.results)
+                    ListTile(
+                      dense: true,
+                      title: Text(
+                        employee.name,
+                        style: tracGoTextTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${employee.designation}, ${employee.department}',
+                        style: tracGoTextTheme.bodySmall?.copyWith(fontSize: 12),
+                      ),
+                      onTap: () {
+                        widget.onToggle(employee);
+                        setState(() => _expanded = false);
+                      },
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedEmployeeChip extends StatelessWidget {
+  const _SelectedEmployeeChip({required this.name, required this.onRemove});
+
+  final String name;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: const BoxDecoration(
+        color: tracGoSurfaceSoft,
+        borderRadius: pillBorderRadius,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // A long name is bounded by the enclosing Wrap's run width rather than
+          // pushing the chip past the card.
+          Flexible(
+            child: Text(
+              name,
+              style: tracGoTextTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: tracGoInk,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-      ],
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: onRemove,
+            customBorder: const CircleBorder(),
+            child: Semantics(
+              button: true,
+              label: TracGoStrings.newRequisitionRemoveEmployee(name),
+              excludeSemantics: true,
+              child: const Padding(
+                padding: EdgeInsets.all(2),
+                child: Icon(Icons.close, size: 15, color: tracGoTextMutedAlt),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

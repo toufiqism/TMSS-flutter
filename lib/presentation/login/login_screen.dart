@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../common/strings.dart';
 import '../common/synced_text_field.dart';
@@ -10,19 +11,11 @@ import '../common/tracgo_logo_mark.dart';
 import 'login_notifier.dart';
 import 'login_state.dart';
 
-/// Palette for this screen only, taken from the "TracGo Sign In" design.
-///
-/// Deliberately *not* added to `theme/colors.dart`: these are close cousins of the app
-/// tokens rather than replacements — #2E5C34 against TmsGreen #2F5A3F, #12122B against
-/// TmsTextDark #16231A — and promoting them would leave two near-identical greens in the
-/// shared palette for every other screen to pick from by accident.
-const _loginBackground = Color(0xFFFBFBF7);
-const _loginInk = Color(0xFF12122B);
-const _loginBody = Color(0xFF6B7269);
-const _loginLabel = Color(0xFF8D948B);
-const _loginPlaceholder = Color(0xFF9AA39C);
-const _loginRule = Color(0xFFDDE0DA);
-const _loginAccent = Color(0xFF2E5C34);
+// This screen's palette used to be seven private constants, kept out of
+// `theme/colors.dart` because they were close cousins of the old forest-green tokens
+// rather than replacements. The rest of the app has since adopted the same daylight
+// language, so they are now the shared tokens — a second near-identical green in the
+// palette is exactly what that note was written to avoid.
 
 /// Edge length of the centred brand mark.
 const double _logoSize = 108;
@@ -78,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final notifier = ref.read(loginNotifierProvider.notifier);
 
     return Scaffold(
-      backgroundColor: _loginBackground,
+      backgroundColor: tracGoSignInBackground,
       // No AppBar on this screen, so the status bar is ours to clear — on both platforms.
       body: SafeArea(
         child: SingleChildScrollView(
@@ -105,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             fontSize: 40,
                             height: 1.0,
                             letterSpacing: -1.2, // -0.03em at 40px
-                            color: _loginInk,
+                            color: tracGoInk,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -118,7 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             textAlign: TextAlign.center,
                             style: tracGoTextTheme.bodyLarge?.copyWith(
                               height: 1.5,
-                              color: _loginBody,
+                              color: tracGoTextMuted,
                             ),
                           ),
                         ),
@@ -175,7 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TracGoStrings.loginForgotPassword,
                         style: tracGoTextTheme.bodyLarge?.copyWith(
                           fontSize: 14,
-                          color: _loginBody,
+                          color: tracGoTextMuted,
                         ),
                       ),
                       Text(
@@ -183,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: tracGoTextTheme.bodyLarge?.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: _loginAccent,
+                          color: tracGoGreen,
                         ),
                       ),
                     ],
@@ -225,8 +218,8 @@ class _SignInButton extends StatelessWidget {
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _loginAccent,
-          disabledBackgroundColor: _loginAccent.withValues(alpha: 0.55),
+          backgroundColor: tracGoGreen,
+          disabledBackgroundColor: tracGoGreen.withValues(alpha: 0.55),
           foregroundColor: Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -322,7 +315,7 @@ class _UnderlinedFieldState extends State<_UnderlinedField> {
   Widget build(BuildContext context) {
     final inputStyle = tracGoTextTheme.bodyLarge?.copyWith(
       fontSize: 18,
-      color: _loginInk,
+      color: tracGoInk,
       letterSpacing: widget.obscureText ? 1.08 : null, // 0.06em at 18px
     );
 
@@ -335,7 +328,7 @@ class _UnderlinedFieldState extends State<_UnderlinedField> {
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.1, // 0.1em at 11px
-            color: _loginLabel,
+            color: tracGoTextMutedAlt,
           ),
         ),
         const SizedBox(height: 8),
@@ -365,7 +358,7 @@ class _UnderlinedFieldState extends State<_UnderlinedField> {
                   enabled: widget.enabled,
                   style: inputStyle,
                   hintStyle: inputStyle?.copyWith(
-                    color: _loginPlaceholder,
+                    color: tracGoPlaceholder,
                     letterSpacing: null,
                   ),
                   // The rule below is drawn by this widget, so the field itself must not
@@ -388,7 +381,7 @@ class _UnderlinedFieldState extends State<_UnderlinedField> {
         ),
         const SizedBox(height: 10),
         const ColoredBox(
-          color: _loginRule,
+          color: tracGoRule,
           child: SizedBox(height: 1.5, width: double.infinity),
         ),
       ],
@@ -422,7 +415,7 @@ class _RevealToggle extends StatelessWidget {
         focusNode: focusNode,
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          foregroundColor: _loginAccent,
+          foregroundColor: tracGoGreen,
           // The design shows a bare word, but a 12px word is a 12px tap target. The
           // padding restores a 48px-tall hit area without moving the text.
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),

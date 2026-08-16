@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/api_result.dart';
+import '../../di/providers.dart';
 import '../../domain/model/user.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
-import '../../di/providers.dart';
+import '../common/key_value_row.dart';
 import '../common/safe_insets.dart';
+import '../common/section_label.dart';
 import '../common/strings.dart';
+import '../common/surface_card.dart';
+import '../nav/logout_notifier.dart';
 import 'profile_notifier.dart';
 import 'profile_state.dart';
 
@@ -79,9 +84,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: tracGoPageBackground,
       appBar: AppBar(
-        title: Text(TracGoStrings.profileTitle, style: tracGoTextTheme.titleMedium),
+        titleSpacing: 0,
+        title: const Text(
+          TracGoStrings.profileTitle,
+          style: tracGoScreenTitleStyle,
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: tracGoTextDark),
+          icon: const Icon(Icons.arrow_back, color: tracGoInk),
           onPressed: widget.onBack,
         ),
       ),
@@ -89,25 +98,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         onRefresh: notifier.load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20).addBottomSystemInset(context),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            24,
+            20,
+            24,
+          ).addBottomSystemInset(context),
           children: [
             if (user != null) ...[
-              _IdentityCard(user: user),
-              const SizedBox(height: 16),
+              _Identity(user: user, activeStatus: uiState.account?.activeStatus),
+              const SizedBox(height: 24),
               _Section(
                 title: TracGoStrings.profileSectionContact,
                 rows: [
-                  _Row(TracGoStrings.profileEmail, user.email),
-                  _Row(TracGoStrings.profilePhone, user.phone),
-                  _Row(TracGoStrings.profileCompany, user.companyName),
+                  KeyValueRow(
+                    TracGoStrings.profileEmail,
+                    user.email,
+                    placeholder: TracGoStrings.profileNotProvided,
+                  ),
+                  KeyValueRow(
+                    TracGoStrings.profilePhone,
+                    user.phone,
+                    placeholder: TracGoStrings.profileNotProvided,
+                  ),
+                  KeyValueRow(
+                    TracGoStrings.profileCompany,
+                    user.companyName,
+                    placeholder: TracGoStrings.profileNotProvided,
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
             ],
             _AccountSection(
               state: uiState,
               onRetry: () => unawaited(notifier.load()),
             ),
+            const SizedBox(height: 28),
+            const _LogoutButton(),
           ],
         ),
       ),
@@ -115,53 +143,84 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.user});
+/// Centred avatar, name and one-line role, per the design.
+class _Identity extends StatelessWidget {
+  const _Identity({required this.user, required this.activeStatus});
 
   final User user;
 
+  /// From `GET /user`; null until it lands, and permanently if it fails. The dot and
+  /// the word are dropped together in that case rather than showing a lone separator.
+  final String? activeStatus;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
-        gradient: const LinearGradient(colors: [tracGoGreenLight, tracGoGreenLightAlt]),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: const BoxDecoration(color: tracGoSurfaceWhite, shape: BoxShape.circle),
-            alignment: Alignment.center,
+    final status = activeStatus?.trim() ?? '';
+    final designation = user.designation.trim();
+
+    return Column(
+      children: [
+        Container(
+          width: 84,
+          height: 84,
+          decoration: const BoxDecoration(color: tracGoInk, shape: BoxShape.circle),
+          alignment: Alignment.center,
+          // Fixed circle, so its contents cannot scale past it. The full name is
+          // directly underneath at whatever size the user has chosen.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.0,
             child: Text(
               _initialsOf(user.name),
-              style: tracGoTextTheme.titleMedium?.copyWith(color: tracGoGreen),
+              style: tracGoTextTheme.titleLarge?.copyWith(
+                fontSize: 28,
+                color: tracGoLime,
+              ),
             ),
           ),
-          const SizedBox(width: 16),
-          // Expanded, not a bare Column: a long name plus the avatar overflows the row
-          // at large accessibility text sizes otherwise.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(user.name, style: tracGoTextTheme.titleMedium),
-                if (user.designation.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    user.designation,
-                    style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextSubtle),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          user.name,
+          textAlign: TextAlign.center,
+          style: tracGoTextTheme.titleLarge,
+        ),
+        if (designation.isNotEmpty || status.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          // Wrap, not Row: designation plus status overflows a phone width at large
+          // accessibility text sizes.
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              if (designation.isNotEmpty)
+                Text(
+                  designation,
+                  style: tracGoTextTheme.bodySmall?.copyWith(
+                    color: tracGoTextMuted,
                   ),
-                ],
-              ],
-            ),
+                ),
+              if (designation.isNotEmpty && status.isNotEmpty)
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: tracGoDashedAccentBorder,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              if (status.isNotEmpty)
+                Text(
+                  status,
+                  style: tracGoTextTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: tracGoGreen,
+                  ),
+                ),
+            ],
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -179,7 +238,7 @@ class _AccountSection extends StatelessWidget {
         title: TracGoStrings.profileSectionAccount,
         rows: [
           Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
+            padding: EdgeInsets.symmetric(vertical: 22),
             child: Center(
               child: SizedBox(
                 width: 22,
@@ -198,27 +257,33 @@ class _AccountSection extends StatelessWidget {
         title: TracGoStrings.profileSectionAccount,
         rows: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   TracGoStrings.profileAccountUnavailable,
-                  style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextDark),
+                  style: tracGoTextTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   error,
-                  style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
+                  style: tracGoTextTheme.bodySmall?.copyWith(
+                    color: tracGoTextMutedAlt,
+                  ),
                 ),
                 // Withheld for terminal failures such as 403, where a second attempt
                 // cannot produce a different answer.
                 if (state.canRetry) ...[
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: onRetry,
-                    style: ElevatedButton.styleFrom(shape: pillShape),
-                    child: const Text(TracGoStrings.requisitionListRetry),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton(
+                      onPressed: onRetry,
+                      child: const Text(TracGoStrings.requisitionListRetry),
+                    ),
                   ),
                 ],
               ],
@@ -234,20 +299,80 @@ class _AccountSection extends StatelessWidget {
     return _Section(
       title: TracGoStrings.profileSectionAccount,
       rows: [
-        _Row(TracGoStrings.profileEmployeeId, account.employeeId),
-        _Row(TracGoStrings.profileRole, account.roleId),
-        _Row(TracGoStrings.profileStatus, account.activeStatus),
+        KeyValueRow(
+          TracGoStrings.profileEmployeeId,
+          account.employeeId,
+          placeholder: TracGoStrings.profileNotProvided,
+        ),
+        KeyValueRow(
+          TracGoStrings.profileRole,
+          account.roleId,
+          placeholder: TracGoStrings.profileNotProvided,
+        ),
         if (account.memberSince != null)
-          _Row(
+          KeyValueRow(
             TracGoStrings.profileMemberSince,
             _dateFormatter.format(account.memberSince!),
           ),
         if (account.lastPasswordChangedAt != null)
-          _Row(
+          KeyValueRow(
             TracGoStrings.profilePasswordChanged,
             _dateFormatter.format(account.lastPasswordChangedAt!),
           ),
       ],
+    );
+  }
+}
+
+/// The design pairs this with a "Change password" button. That is deliberately not
+/// reproduced: the API exposes no password-change endpoint, and a button that opens
+/// nothing is worse than an absent one.
+class _LogoutButton extends ConsumerWidget {
+  const _LogoutButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoggingOut = ref.watch(logoutNotifierProvider);
+
+    return TextButton(
+      style: TextButton.styleFrom(
+        minimumSize: const Size.fromHeight(56),
+        backgroundColor: tracGoDestructiveRedTint,
+        foregroundColor: tracGoDestructiveRed,
+        disabledForegroundColor: tracGoDestructiveRed.withValues(alpha: 0.6),
+        shape: pillShape,
+        textStyle: tracGoTextTheme.labelLarge?.copyWith(fontSize: 15),
+      ),
+      // Disabled while a sign-out is in flight: a second tap would fire another
+      // `POST /logout` with a token the first call has already revoked.
+      onPressed: isLoggingOut
+          ? null
+          : () async {
+              // Captured before the await — the redirect to Login disposes this
+              // widget, and the messenger above it survives.
+              final messenger = ScaffoldMessenger.of(context);
+              final result = await ref
+                  .read(logoutNotifierProvider.notifier)
+                  .logout();
+
+              // null means a sign-out was already in flight — not a failure.
+              if (result == null || result is ApiSuccess<void>) return;
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text(TracGoStrings.navLogoutRevokeFailed),
+                ),
+              );
+            },
+      child: isLoggingOut
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: tracGoDestructiveRed,
+              ),
+            )
+          : const Text(TracGoStrings.navLogout),
     );
   }
 }
@@ -261,69 +386,17 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, left: 4),
-          child: Text(
-            title.toUpperCase(),
-            style: tracGoTextTheme.labelMedium?.copyWith(color: tracGoGreen),
-          ),
+          padding: const EdgeInsets.only(bottom: 9),
+          child: SectionLabel(title),
         ),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            child: Column(children: rows),
-          ),
+        SurfaceCard.rows(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          rows: rows,
         ),
       ],
-    );
-  }
-}
-
-/// A label/value pair. A null or blank value renders as "Not provided" rather than an
-/// empty gap, so a missing field is visibly missing instead of silently absent.
-class _Row extends StatelessWidget {
-  const _Row(this.label, this.value);
-
-  final String label;
-  final String? value;
-
-  @override
-  Widget build(BuildContext context) {
-    final display = (value == null || value!.trim().isEmpty)
-        ? TracGoStrings.profileNotProvided
-        : value!;
-    final isMissing = value == null || value!.trim().isEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Proportional rather than a fixed width, so the split stays sane at every
-          // text scale.
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 3,
-            child: Text(
-              display,
-              style: tracGoTextTheme.bodyMedium?.copyWith(
-                color: isMissing ? tracGoPlaceholder : tracGoTextDark,
-                fontWeight: isMissing ? FontWeight.w400 : FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

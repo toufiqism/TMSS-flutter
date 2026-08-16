@@ -79,6 +79,13 @@ void main() {
     expect(find.text('Md. Tofiq Akbar'), findsOneWidget);
     expect(find.text('Senior Engineer'), findsOneWidget);
     // Initials skip the honorific: "Md. Tofiq Akbar" is TA, not MT.
-    expect(find.text('TA'), findsOneWidget);
+    //
+    // Scoped to the drawer: the daylight redesign also renders the same initials as the
+    // top bar's profile avatar, so an unscoped `findsOneWidget` here would fail on a
+    // second, correct occurrence rather than on a missing one.
+    expect(
+      find.descendant(of: find.byType(Drawer), matching: find.text('TA')),
+      findsOneWidget,
+    );
   });
 }

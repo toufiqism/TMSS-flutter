@@ -8,13 +8,57 @@ import '../../domain/model/requisition.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../common/choice_pill.dart';
 import '../common/requisition_row.dart';
+import '../common/section_label.dart';
 import '../common/strings.dart';
+import '../common/surface_card.dart';
 import '../common/synced_text_field.dart';
 import 'requisition_list_notifier.dart';
 import 'requisition_list_state.dart';
 
 final _chipDateFormatter = DateFormat('dd MMM');
+final _dayHeaderFormatter = DateFormat('dd MMM yyyy');
+
+/// One day's worth of rows, in the order the server returned them.
+class _DayGroup {
+  const _DayGroup(this.day, this.items);
+
+  final DateTime day;
+  final List<Requisition> items;
+}
+
+/// Splits the flat page into day groups without reordering it.
+///
+/// Consecutive runs only — the list is server-sorted and the sort field is
+/// user-selectable, so bucketing by date globally would silently re-sort a list the
+/// user asked to see by pickup or by status.
+List<_DayGroup> _groupByDay(List<Requisition> items) {
+  final groups = <_DayGroup>[];
+  for (final item in items) {
+    final at = item.pickupDateTime;
+    final day = DateTime(at.year, at.month, at.day);
+    if (groups.isNotEmpty && groups.last.day == day) {
+      groups.last.items.add(item);
+    } else {
+      groups.add(_DayGroup(day, [item]));
+    }
+  }
+  return groups;
+}
+
+/// "Today" / "Tomorrow" / "Yesterday" where that is unambiguous, an absolute date
+/// otherwise — a reader should never have to work out what "in 2 days" means.
+String _dayLabel(DateTime day, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  final delta = day.difference(today).inDays;
+  return switch (delta) {
+    0 => TracGoStrings.requisitionListToday,
+    1 => TracGoStrings.requisitionListTomorrow,
+    -1 => TracGoStrings.requisitionListYesterday,
+    _ => _dayHeaderFormatter.format(day),
+  };
+}
 
 class RequisitionListScreen extends ConsumerStatefulWidget {
   const RequisitionListScreen({
@@ -168,52 +212,12 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                   message: TracGoStrings.requisitionListEmpty,
                 ),
                 RequisitionListUiState(:final items, :final isLoadingMore) =>
-                  ListView.separated(
+                  _GroupedList(
                     controller: _scrollController,
-                    // Without this a short list cannot be over-scrolled, so
-                    // RefreshIndicator never fires on exactly the screens where the
-                    // user most wants it (empty or nearly-empty results).
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                    itemCount: items.length + (isLoadingMore ? 1 : 0),
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 14),
-                    itemBuilder: (context, index) {
-                      if (index >= items.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        );
-                      }
-                      final requisition = items[index];
-                      return RequisitionRow(
-                        requisition: requisition,
-                        onTap: () => widget.onOpenRequisition(requisition),
-                        trailingAction:
-                            requisition.status == RequisitionStatus.pending
-                            ? InkWell(
-                                onTap: () =>
-                                    unawaited(_confirmCancel(requisition.id)),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: Text(
-                                    TracGoStrings.requisitionListCancel,
-                                    style: tracGoTextTheme.bodyMedium?.copyWith(
-                                      color: tracGoDestructiveRed,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : null,
-                      );
-                    },
+                    groups: _groupByDay(items),
+                    isLoadingMore: isLoadingMore,
+                    onOpenRequisition: widget.onOpenRequisition,
+                    onCancel: (id) => unawaited(_confirmCancel(id)),
                   ),
               },
             ),
@@ -224,8 +228,110 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
   }
 }
 
+class _GroupedList extends StatelessWidget {
+  const _GroupedList({
+    required this.controller,
+    required this.groups,
+    required this.isLoadingMore,
+    required this.onOpenRequisition,
+    required this.onCancel,
+  });
+
+  final ScrollController controller;
+  final List<_DayGroup> groups;
+  final bool isLoadingMore;
+  final ValueChanged<Requisition> onOpenRequisition;
+  final ValueChanged<String> onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    // Resolved once per build rather than per group, so every header on screen agrees
+    // about what "today" is even if the build straddles midnight.
+    final now = DateTime.now();
+
+    return ListView.builder(
+      controller: controller,
+      // Without this a short list cannot be over-scrolled, so RefreshIndicator never
+      // fires on exactly the screens where the user most wants it (empty or
+      // nearly-empty results).
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      itemCount: groups.length + (isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= groups.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
+        final group = groups[index];
+        return Padding(
+          padding: EdgeInsets.only(top: index == 0 ? 0 : 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 9),
+                child: SectionLabel(_dayLabel(group.day, now)),
+              ),
+              SurfaceCard.rows(
+                rows: [
+                  for (final requisition in group.items)
+                    RequisitionRow(
+                      requisition: requisition,
+                      timeOnly: true,
+                      onTap: () => onOpenRequisition(requisition),
+                      trailingAction:
+                          requisition.status == RequisitionStatus.pending
+                          ? _CancelAction(
+                              onTap: () => onCancel(requisition.id),
+                            )
+                          : null,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CancelAction extends StatelessWidget {
+  const _CancelAction({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: pillBorderRadius,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Text(
+          TracGoStrings.requisitionListCancel,
+          style: tracGoTextTheme.bodySmall?.copyWith(
+            color: tracGoDestructiveRed,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 enum _DatePickerTarget { start, end }
 
+/// The white header block under the top bar: search, then the date-range filters.
 class _SearchAndFilters extends StatefulWidget {
   const _SearchAndFilters({
     required this.searchQuery,
@@ -279,8 +385,14 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    final hasFilters =
+        widget.startDate != null ||
+        widget.endDate != null ||
+        widget.searchQuery.isNotEmpty;
+
+    return Container(
+      color: tracGoSurfaceWhite,
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -292,99 +404,76 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
             onChanged: widget.onSearchQueryChange,
             hintText: TracGoStrings.requisitionListSearchPlaceholder,
             textInputAction: TextInputAction.search,
-            prefixIcon: const Icon(Icons.search, color: tracGoTextSubtle),
-            fillColor: tracGoSurfaceWhite,
+            prefixIcon: const Icon(
+              Icons.search,
+              size: 20,
+              color: tracGoTextMutedAlt,
+            ),
+            fillColor: tracGoInputBackground,
           ),
           Padding(
             padding: const EdgeInsets.only(top: 12),
-            // Wrap, not Row: two date chips, a rule and Reset do not fit on one line at
-            // large accessibility text sizes. Wrapping onto a second line keeps every
-            // filter reachable instead of clipping Reset off the right edge.
+            // Wrap, not Row: two date chips plus Reset do not fit on one line at large
+            // accessibility text sizes. Wrapping onto a second line keeps every filter
+            // reachable instead of clipping Reset off the right edge.
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 8,
               runSpacing: 8,
               children: [
-                _FilterPillChip(
+                FilterPill(
+                  icon: Icons.calendar_today_outlined,
                   label: widget.startDate != null
                       ? _chipDateFormatter.format(widget.startDate!)
-                      : 'From',
+                      : TracGoStrings.requisitionListFilterFrom,
+                  selected: widget.startDate != null,
                   onTap: () => _pickDate(_DatePickerTarget.start),
                 ),
-                _FilterPillChip(
+                FilterPill(
+                  icon: Icons.calendar_today_outlined,
                   label: widget.endDate != null
                       ? _chipDateFormatter.format(widget.endDate!)
-                      : 'To',
+                      : TracGoStrings.requisitionListFilterTo,
+                  selected: widget.endDate != null,
                   onTap: () => _pickDate(_DatePickerTarget.end),
                 ),
-                // A fixed-height rule, not a VerticalDivider. VerticalDivider builds a
-                // child with `height: double.infinity`, which in a Row with loose
-                // vertical constraints made this filter bar expand to the full height of
-                // the body — leaving the Expanded list below it zero height, so the
-                // requisition rows were built but never laid out and the screen showed
-                // nothing at all. The dashboard's stat panel gets away with
-                // VerticalDivider only because it wraps its Row in IntrinsicHeight.
-                Container(width: 1, height: 24, color: tracGoDivider),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _rangeError = null);
-                    widget.onReset();
-                  },
-                  child: Text(
-                    TracGoStrings.requisitionListReset,
-                    style: tracGoTextTheme.bodyMedium?.copyWith(
-                      color: tracGoGreen,
-                      fontWeight: FontWeight.bold,
+                // Only offered once something is actually filtered — a Reset that
+                // resets nothing is a dead control taking up the row.
+                if (hasFilters)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _rangeError = null);
+                      widget.onReset();
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      minimumSize: Size.zero,
+                    ),
+                    child: Text(
+                      TracGoStrings.requisitionListReset,
+                      style: tracGoTextTheme.bodySmall?.copyWith(
+                        color: tracGoGreen,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
           if (_rangeError != null)
-            Text(
-              _rangeError!,
-              style: tracGoTextTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.error,
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _rangeError!,
+                style: tracGoTextTheme.bodySmall?.copyWith(
+                  color: tracGoDestructiveRed,
+                ),
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _FilterPillChip extends StatelessWidget {
-  const _FilterPillChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: pillBorderRadius,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: const BoxDecoration(
-          color: tracGoGreenLight,
-          borderRadius: pillBorderRadius,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.calendar_month, size: 15, color: tracGoGreen),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: tracGoTextTheme.bodyMedium?.copyWith(
-                color: tracGoGreen,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -425,7 +514,6 @@ class _EmptyOrErrorState extends StatelessWidget {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: onRetry,
-                      style: ElevatedButton.styleFrom(shape: pillShape),
                       child: const Text(TracGoStrings.requisitionListRetry),
                     ),
                   ],

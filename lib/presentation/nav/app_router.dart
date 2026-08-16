@@ -190,14 +190,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         observers: [shellObserver],
         builder: (context, state, child) {
           final topBarTitle = state.matchedLocation == RoutePaths.requisitionList
-              ? Text(TracGoStrings.requisitionListTitle, style: tracGoTextTheme.titleMedium)
+              ? const Text(
+                  TracGoStrings.requisitionListTitle,
+                  style: tracGoScreenTitleStyle,
+                )
               : null;
           return AppShell(
             currentPath: state.matchedLocation,
             onNavigate: (path) => context.go(path),
             onOpenProfile: () => context.push(RoutePaths.profile),
             topBarTitle: topBarTitle,
-            showNotificationBell: state.matchedLocation != RoutePaths.requisitionList,
             child: child,
           );
         },

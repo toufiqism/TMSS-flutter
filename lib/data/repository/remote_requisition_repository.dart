@@ -55,6 +55,11 @@ class RemoteRequisitionRepository implements RequisitionRepository {
   /// How far back the dashboard looks. The server defaults to one month when no dates
   /// are sent, which would silently under-count the tiles, so a window is always sent
   /// explicitly.
+  ///
+  /// The dashboard *states* this window on screen, in
+  /// `TracGoStrings.dashboardStatPeriod` ("Last 12 months"). Changing the duration here
+  /// without changing that string leaves the hero count labelled with a period it no
+  /// longer covers.
   static const _dashboardWindow = Duration(days: 365);
 
   @override

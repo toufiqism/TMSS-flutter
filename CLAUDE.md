@@ -244,11 +244,42 @@ Dependency direction is the same as the Android app: `presentation → domain �
 
 ---
 
-## Design System — pixel-match the Android redesign
+## Design System — the "daylight" redesign
 
-Port these verbatim from `K:\TMSS\app\src\main\java\com\banglatrac\tmss\ui\theme\Color.kt` — do not reinterpret or "clean up" during the port:
+**Source of truth is the claude.ai/design project `TracGo App Screens.dc.html`** (project
+`eb218760-e6f1-4e91-9769-6b8454edf3fd`, with its companion `TracGo Sign In.dc.html`), **not**
+the Android app's `Color.kt` any more. The two diverged with this redesign and are not
+being resynced: the app is now navy ink on a warm off-white page, with green reserved for
+actions and lime used once per surface. Do not reinterpret the values during a port.
 
-TmsGreen `#2F5A3F`, TmsGreenDark `#1F3B2C`, TmsGreenLight `#EAF3E4`, TmsGreenLightAlt `#DCEFD3`, TmsLoginAccentGreen `#8FD98F`, TmsTextDark `#16231A`, TmsTextMuted `#7A857E`, TmsTextMutedAlt `#8A938C`, TmsTextSubtle `#5B6660`, TmsPlaceholder `#B8BFB6`, TmsBorder `#E3E9DF`, TmsDivider `#EDF0EA`, TmsInputBackground `#FAFCF9`, TmsScreenBackground `#F6F8F5`, TmsPageBackground `#F0F3EE`, TmsSurfaceWhite, status colors (All/Approved/Assigned/Pending/Rejected — purple/green/teal/orange/red variants incl. text+bg pairs), TmsDestructiveRed `#C4453A` (distinct from TmsStatusRejectedRed), TmsLauncherNavy.
+Tokens live in `lib/theme/colors.dart` and are named for their *role*, so a future
+repalette touches one file:
+
+| Role | Token | Value |
+|---|---|---|
+| Action green / links | `tracGoGreen` | `#2E5C34` |
+| Pressed green | `tracGoGreenDark` | `#24492A` |
+| Lime accent | `tracGoLime` | `#7AB648` |
+| Ink (headings, dark cards) | `tracGoInk` (= `tracGoTextDark`) | `#12122B` |
+| Body / muted / caption / faint | `tracGoTextBody` `tracGoTextMuted` `tracGoTextMutedAlt` `tracGoTextFaint` | `#4A5148` `#6B7269` `#8D948B` `#7A8179` |
+| Placeholder | `tracGoPlaceholder` | `#A2A9A0` |
+| Card outline / inner rule | `tracGoBorder` / `tracGoDivider` | `#E8EAE3` / `#F0F1EC` |
+| Page / inset field | `tracGoPageBackground` / `tracGoInputBackground` | both `#F4F5F0` |
+| Soft tint (avatars, selected rows) | `tracGoSurfaceSoft` | `#F1F3EC` |
+| Sign In page | `tracGoSignInBackground` | `#FBFBF7` |
+| Destructive | `tracGoDestructiveRed` | `#A4413A` |
+
+Status colours are text/background/**dot** triples, reached through
+`StatusPalette.of(status)` in `presentation/common/status_chip.dart` rather than by
+picking constants at call sites: Pending `#7A5A00`/`#FBF0D5`/`#E0A82E`, Approved
+`#2E5C34`/`#E2EFDE`/`#7AB648`, Assigned `#22254F`/`#E5E7F1`/`#3D4189`, Rejected
+`#8C3E38`/`#F6E5E2`/`#A4413A`, Cancelled *and* Unknown neutral
+`#5A6058`/`#E8EAE3`/`#B9BEB5`.
+
+The violet "All Requisitions" hero ramp (`tracGoStatHero*`) is **gone** — the dashboard
+replaced that tile with a plain eyebrow-plus-count. So are `tracGoGreenLight`,
+`tracGoGreenLightAlt` and `tracGoLoginAccentGreen`; use `tracGoSurfaceSoft`,
+`tracGoStatusApprovedBg` and `tracGoLime` instead.
 
 **Fonts:** ~~Manrope + Inter~~ → **Space Grotesk** (400/500/700, display) + **Plus Jakarta Sans** (400/500/600/700, body), app-wide, adopted with the Sign In redesign. Manrope and Inter and their `.ttf` files are deleted — this is now the divergence point from the Android app's type scale.
 
@@ -256,7 +287,10 @@ Google publishes both families as variable fonts only; the static per-weight `.t
 
 Constants are role-named (`displayFontFamily`, `bodyFontFamily`) rather than family-named, so the next swap does not have to touch every call site.
 
-**Shapes:** `extraSmall` 10dp, `small` 14dp, `medium` 16dp, `large` 20dp, `extraLarge` 24dp, plus a fully-rounded `PillShape` (`BorderRadius.circular(999)`), matching `Shape.kt`.
+**Shapes:** `extraSmall` 10 (icon wells), `small` 14 (inset fields, drawer rows), `medium` 16,
+`stat tile` 18, `large` 20 (vehicle cards), **`card` 22 — the workhorse**, `extraLarge` 24
+(dark hero cards), plus a fully-rounded `pillShape` / `pillBorderRadius`
+(`BorderRadius.circular(999)`) for every button, toggle, chip and badge.
 
 **Assets:** copy the launcher icon source and Font Awesome vector icons (clipboard-list, calendar-check, check-square, clock-outline, times-circle) from `K:\TMSS\app\src\main\res\drawable-nodpi\` / `drawable\` into `assets/images/`. `login_bg.jpg` is **gone** — the Sign In redesign replaced the photo hero with a centred logo, so the 370 KB asset and the `loginTagline*` strings were deleted rather than left orphaned.
 
@@ -265,13 +299,43 @@ Constants are role-named (`displayFontFamily`, `bodyFontFamily`) rather than fam
 | Variant | Asset | Where |
 |---|---|---|
 | `TracGoLogoVariant.color` | `tracgo_logo.svg` | login hero, top bar |
-| `TracGoLogoVariant.mono` | `tracgo_logo_mono.svg` | drawer header (dark green gradient) |
+| `TracGoLogoVariant.mono` | `tracgo_logo_mono.svg` | drawer header (navy `#12122B` with a lime radial glow) |
 
 The old `badgeColor`/`glyphColor` parameters are **gone**, not deprecated: the artwork is ten fixed brand colours and cannot honour a caller's two.
 
 Both SVGs are traced from `refference-image/Logo1.png`, and every launcher/splash asset is derived from them (see "Regenerating the brand assets" in the README). The wordmark is deliberately cropped out — the top bar and drawer already set "TracGo" in text beside the mark.
 
-**Custom widgets to port 1:1** (not stock Material defaults): pill-shaped status chip, bordered (non-elevated) requisition row card, unified 2-column stat panel with full-width rejected row, custom pill-segmented toggle (Passenger/Logistics), radio-row pill chips with dot indicator, combined date+time picker field, gradient hero card + gradient nav-drawer header.
+**Shared components — build screens out of these, not out of stock Material.** The
+daylight language is a small kit, and a screen that hand-rolls one of these will look
+subtly wrong beside every other:
+
+| Component | File | What it is |
+|---|---|---|
+| `SurfaceCard` / `SurfaceCard.rows` | `common/surface_card.dart` | The white, hairline-outlined container everything groups into. `.rows` inserts the inner rule *between* children only — never above the first. (The design file draws a leading rule; on device it reads as a stray line under the card's own border, so it was dropped everywhere.) Never a Material `Card` with elevation. |
+| `DashedSurfaceCard` | `common/surface_card.dart` | Dashed-outline placeholder for a slot that is legitimately empty. |
+| `SectionLabel` / `StepSectionLabel` | `common/section_label.dart` | The uppercase micro-caption; the numbered variant heads each step of the create form. Pass sentence case — it uppercases for display and keeps the readable string for screen readers. |
+| `KeyValueRow` | `common/key_value_row.dart` | Label left, value hard right. Used by detail and profile. |
+| `ChoicePill` / `ChoicePillRow` / `FilterPill` | `common/choice_pill.dart` | Inline enum choice (lime-tinted when selected); the list screen's heavier navy filter chip. **Replaced the old `DropdownField` and `RadioRow`, both deleted.** |
+| `StatusChip` / `StatusDot` / `StatusPalette` | `common/status_chip.dart` | `onDark: true` inverts the chip for the navy hero. |
+| `RequisitionRow` / `RequisitionRecentRow` | `common/requisition_row.dart` | Borderless rows meant to live inside a `SurfaceCard.rows`. |
+| `FormCard` / `FormFieldRow` / `InlineTextField` / `DerivedValueRow` / `SelectableTypeCard` | `requisition_create/form_controls.dart` | The grouped form: fields are *rows in a shared card*, so the inputs themselves are borderless (`SyncedTextField(bare: true)`). |
+| `DateTimeField` | `common/date_time_field.dart` | Value row only — its caption and error belong to the enclosing `FormFieldRow`. |
+
+Typography roles live in `theme/typography.dart`; `tracGoScreenTitleStyle` is the top-bar
+title and `tracGoChipTextStyle` the status pill. Both carry their tracking already — do
+not reapply `letterSpacing` at call sites.
+
+**Deliberate divergences from the design file** (each one is a data problem, not an
+oversight; re-adding them needs backend support first):
+- No "Aug 2026 / this month" badge on the dashboard hero — `allCount` is the whole
+  history, not the current month.
+- No ±  stepper on `No. of Persons` — the server requires it to equal the rider count
+  exactly, so it renders as a derived value (`DerivedValueRow`).
+- No "Change password" button on Profile — there is no such endpoint.
+- The list screen keeps its existing date-range filters rather than the design's
+  status/"This week" chips, which the list API does not support.
+- The dashboard's **`+ New` button is unchanged** (small pill in the "Recent" header row)
+  rather than the design's full-width button, by explicit request.
 
 **Platform note (iOS is in scope):** stick to Material 3 widgets everywhere for pixel-match fidelity — do not substitute Cupertino widgets. Do still respect iOS safe-area insets (`SafeArea`/`MediaQuery.padding`) the same way `statusBarsPadding()` was needed on the Android Login screen; screens without a `Scaffold`+`AppBar` need explicit safe-area handling on both platforms.
 
