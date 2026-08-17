@@ -12,6 +12,266 @@ part of 'requisition.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
+mixin _$RequisitionStatus {
+
+ String get rawValue; RequisitionStatusKind get kind;
+/// Create a copy of RequisitionStatus
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$RequisitionStatusCopyWith<RequisitionStatus> get copyWith => _$RequisitionStatusCopyWithImpl<RequisitionStatus>(this as RequisitionStatus, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RequisitionStatus&&(identical(other.rawValue, rawValue) || other.rawValue == rawValue)&&(identical(other.kind, kind) || other.kind == kind));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,rawValue,kind);
+
+@override
+String toString() {
+  return 'RequisitionStatus(rawValue: $rawValue, kind: $kind)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $RequisitionStatusCopyWith<$Res>  {
+  factory $RequisitionStatusCopyWith(RequisitionStatus value, $Res Function(RequisitionStatus) _then) = _$RequisitionStatusCopyWithImpl;
+@useResult
+$Res call({
+ String rawValue, RequisitionStatusKind kind
+});
+
+
+
+
+}
+/// @nodoc
+class _$RequisitionStatusCopyWithImpl<$Res>
+    implements $RequisitionStatusCopyWith<$Res> {
+  _$RequisitionStatusCopyWithImpl(this._self, this._then);
+
+  final RequisitionStatus _self;
+  final $Res Function(RequisitionStatus) _then;
+
+/// Create a copy of RequisitionStatus
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? rawValue = null,Object? kind = null,}) {
+  return _then(_self.copyWith(
+rawValue: null == rawValue ? _self.rawValue : rawValue // ignore: cast_nullable_to_non_nullable
+as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as RequisitionStatusKind,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [RequisitionStatus].
+extension RequisitionStatusPatterns on RequisitionStatus {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RequisitionStatus value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _RequisitionStatus() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RequisitionStatus value)  $default,){
+final _that = this;
+switch (_that) {
+case _RequisitionStatus():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RequisitionStatus value)?  $default,){
+final _that = this;
+switch (_that) {
+case _RequisitionStatus() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String rawValue,  RequisitionStatusKind kind)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _RequisitionStatus() when $default != null:
+return $default(_that.rawValue,_that.kind);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String rawValue,  RequisitionStatusKind kind)  $default,) {final _that = this;
+switch (_that) {
+case _RequisitionStatus():
+return $default(_that.rawValue,_that.kind);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String rawValue,  RequisitionStatusKind kind)?  $default,) {final _that = this;
+switch (_that) {
+case _RequisitionStatus() when $default != null:
+return $default(_that.rawValue,_that.kind);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _RequisitionStatus extends RequisitionStatus {
+  const _RequisitionStatus({required this.rawValue, required this.kind}): super._();
+  
+
+@override final  String rawValue;
+@override final  RequisitionStatusKind kind;
+
+/// Create a copy of RequisitionStatus
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$RequisitionStatusCopyWith<_RequisitionStatus> get copyWith => __$RequisitionStatusCopyWithImpl<_RequisitionStatus>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RequisitionStatus&&(identical(other.rawValue, rawValue) || other.rawValue == rawValue)&&(identical(other.kind, kind) || other.kind == kind));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,rawValue,kind);
+
+@override
+String toString() {
+  return 'RequisitionStatus(rawValue: $rawValue, kind: $kind)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$RequisitionStatusCopyWith<$Res> implements $RequisitionStatusCopyWith<$Res> {
+  factory _$RequisitionStatusCopyWith(_RequisitionStatus value, $Res Function(_RequisitionStatus) _then) = __$RequisitionStatusCopyWithImpl;
+@override @useResult
+$Res call({
+ String rawValue, RequisitionStatusKind kind
+});
+
+
+
+
+}
+/// @nodoc
+class __$RequisitionStatusCopyWithImpl<$Res>
+    implements _$RequisitionStatusCopyWith<$Res> {
+  __$RequisitionStatusCopyWithImpl(this._self, this._then);
+
+  final _RequisitionStatus _self;
+  final $Res Function(_RequisitionStatus) _then;
+
+/// Create a copy of RequisitionStatus
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? rawValue = null,Object? kind = null,}) {
+  return _then(_RequisitionStatus(
+rawValue: null == rawValue ? _self.rawValue : rawValue // ignore: cast_nullable_to_non_nullable
+as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as RequisitionStatusKind,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$AuditLogEntry {
 
  String get id; RequisitionStatus get status; String? get remarks; String? get actorName; String? get actorCode; DateTime? get at;
@@ -49,7 +309,7 @@ $Res call({
 });
 
 
-
+$RequisitionStatusCopyWith<$Res> get status;
 
 }
 /// @nodoc
@@ -73,7 +333,16 @@ as String?,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nul
 as DateTime?,
   ));
 }
-
+/// Create a copy of AuditLogEntry
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$RequisitionStatusCopyWith<$Res> get status {
+  
+  return $RequisitionStatusCopyWith<$Res>(_self.status, (value) {
+    return _then(_self.copyWith(status: value));
+  });
+}
 }
 
 
@@ -255,7 +524,7 @@ $Res call({
 });
 
 
-
+@override $RequisitionStatusCopyWith<$Res> get status;
 
 }
 /// @nodoc
@@ -280,7 +549,16 @@ as DateTime?,
   ));
 }
 
-
+/// Create a copy of AuditLogEntry
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$RequisitionStatusCopyWith<$Res> get status {
+  
+  return $RequisitionStatusCopyWith<$Res>(_self.status, (value) {
+    return _then(_self.copyWith(status: value));
+  });
+}
 }
 
 /// @nodoc
@@ -1467,7 +1745,7 @@ $Res call({
 });
 
 
-$RequisitionDetailsCopyWith<$Res> get details;$AssignedDriverCopyWith<$Res>? get driver;$AssignedVehicleCopyWith<$Res>? get vehicle;
+$RequisitionStatusCopyWith<$Res> get status;$RequisitionDetailsCopyWith<$Res> get details;$AssignedDriverCopyWith<$Res>? get driver;$AssignedVehicleCopyWith<$Res>? get vehicle;
 
 }
 /// @nodoc
@@ -1502,6 +1780,15 @@ as List<AuditLogEntry>,
   ));
 }
 /// Create a copy of Requisition
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$RequisitionStatusCopyWith<$Res> get status {
+  
+  return $RequisitionStatusCopyWith<$Res>(_self.status, (value) {
+    return _then(_self.copyWith(status: value));
+  });
+}/// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
@@ -1736,7 +2023,7 @@ $Res call({
 });
 
 
-@override $RequisitionDetailsCopyWith<$Res> get details;@override $AssignedDriverCopyWith<$Res>? get driver;@override $AssignedVehicleCopyWith<$Res>? get vehicle;
+@override $RequisitionStatusCopyWith<$Res> get status;@override $RequisitionDetailsCopyWith<$Res> get details;@override $AssignedDriverCopyWith<$Res>? get driver;@override $AssignedVehicleCopyWith<$Res>? get vehicle;
 
 }
 /// @nodoc
@@ -1772,6 +2059,15 @@ as List<AuditLogEntry>,
 }
 
 /// Create a copy of Requisition
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$RequisitionStatusCopyWith<$Res> get status {
+  
+  return $RequisitionStatusCopyWith<$Res>(_self.status, (value) {
+    return _then(_self.copyWith(status: value));
+  });
+}/// Create a copy of Requisition
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')

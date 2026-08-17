@@ -324,8 +324,7 @@ class _GroupedList extends StatelessWidget {
                           requisition: requisition,
                           timeOnly: true,
                           onTap: () => onOpenRequisition(requisition),
-                          trailingAction:
-                              requisition.status == RequisitionStatus.pending
+                          trailingAction: requisition.canBeModified
                               ? _CancelAction(
                                   onTap: () => onCancel(requisition.id),
                                 )

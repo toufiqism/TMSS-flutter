@@ -23,6 +23,11 @@ class RequisitionRow extends StatelessWidget {
     /// True when the row already sits under a day header, so only the time is worth
     /// repeating. False on any flat list, where the row has to say which day it is.
     this.timeOnly = false,
+
+    /// Draws the status dot inline ahead of the date. Off by default: the row already
+    /// carries a [StatusChip], so the dot is a second encoding of the same value and is
+    /// opt-in for surfaces that want the extra scan line down the card.
+    this.showStatusDot = false,
   });
 
   final Requisition requisition;
@@ -31,6 +36,7 @@ class RequisitionRow extends StatelessWidget {
   /// Opens the detail screen. Null leaves the row inert.
   final VoidCallback? onTap;
   final bool timeOnly;
+  final bool showStatusDot;
 
   @override
   Widget build(BuildContext context) {
@@ -50,13 +56,35 @@ class RequisitionRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Flexible(
-                  child: Text(
-                    formatter.format(requisition.pickupDateTime),
-                    style: tracGoTextTheme.bodySmall,
+                  // Dot and date travel together as one unit so `spaceBetween` still has
+                  // exactly two children to push apart. mainAxisSize.min keeps the pair
+                  // shrink-wrapped, and the inner Flexible lets the date — not the dot —
+                  // absorb the truncation when the chip grows at large text sizes.
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showStatusDot && requisition.status.hasValue) ...[
+                        // Vertically centred against the date rather than top-aligned:
+                        // the dot is a fixed 8px and the text line grows with the scale
+                        // factor, so a top-aligned dot drifts upward as text enlarges.
+                        StatusDot(status: requisition.status),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        child: Text(
+                          formatter.format(requisition.pickupDateTime),
+                          style: tracGoTextTheme.bodySmall,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Flexible(child: StatusChip(status: requisition.status)),
+                // Gap and chip together, so a requisition the server sent no status for
+                // leaves the date flush right rather than trailing 10px of nothing.
+                if (requisition.status.hasValue) ...[
+                  const SizedBox(width: 10),
+                  Flexible(child: StatusChip(status: requisition.status)),
+                ],
               ],
             ),
             const SizedBox(height: 8),
@@ -80,60 +108,6 @@ class RequisitionRow extends StatelessWidget {
                 children: [trailingAction!],
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The tighter two-line row the dashboard's "Recent" card uses: a status dot instead of
-/// a leading date, and the timing folded into the supporting line.
-class RequisitionRecentRow extends StatelessWidget {
-  const RequisitionRecentRow({super.key, required this.requisition, this.onTap});
-
-  final Requisition requisition;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Nudged down to sit on the first line's optical centre rather than its
-            // ascender. Not text-scaled — a 3x dot would be a blob.
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: StatusDot(status: requisition.status),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${requisition.pickupLocation} → ${requisition.dropLocation}',
-                    style: tracGoTextTheme.titleSmall?.copyWith(fontSize: 15),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${_dateTimeFormatter.format(requisition.pickupDateTime)} · '
-                    '${requisition.purposeText}',
-                    style: tracGoTextTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            StatusChip(status: requisition.status),
           ],
         ),
       ),

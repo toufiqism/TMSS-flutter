@@ -74,10 +74,14 @@ class RemoteRequisitionRepository implements RequisitionRepository {
       final sorted = [...all]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return DashboardSummary(
         allCount: all.length,
-        approvedCount: _countOf(all, RequisitionStatus.approved),
-        assignedCount: _countOf(all, RequisitionStatus.assigned),
-        pendingCount: _countOf(all, RequisitionStatus.pending),
-        rejectedCount: _countOf(all, RequisitionStatus.rejected),
+        // Counted by kind, so every spelling the server uses for a state lands in the
+        // right tile — `Vehicle Assigned` counts as assigned. A state this build does not
+        // recognise counts toward `allCount` only, by design: the panel's four tiles are
+        // fixed, so the four can legitimately sum to less than the total.
+        approvedCount: _countOf(all, RequisitionStatusKind.approved),
+        assignedCount: _countOf(all, RequisitionStatusKind.assigned),
+        pendingCount: _countOf(all, RequisitionStatusKind.pending),
+        rejectedCount: _countOf(all, RequisitionStatusKind.rejected),
         recentRequisitions: sorted.take(5).toList(),
       );
     });
@@ -301,7 +305,15 @@ class RemoteRequisitionRepository implements RequisitionRepository {
           RequisitionSortField.pickup => a.pickupLocation.compareTo(b.pickupLocation),
           RequisitionSortField.destination => a.dropLocation.compareTo(b.dropLocation),
           RequisitionSortField.purpose => a.purposeText.compareTo(b.purposeText),
-          RequisitionSortField.status => a.status.index.compareTo(b.status.index),
+          // Lifecycle order via the kind's index, then the raw value as a tie-break so
+          // that unrecognised states — which all share one index — group by their own
+          // name instead of ordering arbitrarily.
+          RequisitionSortField.status => switch (a.status.kind.index.compareTo(
+            b.status.kind.index,
+          )) {
+            0 => a.status.rawValue.compareTo(b.status.rawValue),
+            final byKind => byKind,
+          },
         };
 
     final sorted = [...result]
@@ -313,8 +325,8 @@ class RemoteRequisitionRepository implements RequisitionRepository {
     return sorted.sublist(fromIndex, toIndex > sorted.length ? sorted.length : toIndex);
   }
 
-  static int _countOf(List<Requisition> all, RequisitionStatus status) =>
-      all.where((r) => r.status == status).length;
+  static int _countOf(List<Requisition> all, RequisitionStatusKind kind) =>
+      all.where((r) => r.status.kind == kind).length;
 
   /// Unwraps `{success, message, data: {...requisition}}`.
   ///

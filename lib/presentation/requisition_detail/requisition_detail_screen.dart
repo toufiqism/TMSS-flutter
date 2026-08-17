@@ -425,10 +425,15 @@ class _HeroCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Both children Flexible rather than Expanded-plus-fixed: the chip shows
+                  // the server's own wording now, so its width is unbounded in principle.
+                  // A non-flex chip is laid out first with unbounded width and would leave
+                  // the reference label nothing, overflowing the hero card.
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
+                      Flexible(
                         child: SectionLabel(
                           TracGoStrings.requisitionDetailReference(
                             requisition.id,
@@ -436,8 +441,15 @@ class _HeroCard extends StatelessWidget {
                           color: tracGoSurfaceWhite.withValues(alpha: 0.55),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      StatusChip(status: requisition.status, onDark: true),
+                      if (requisition.status.hasValue) ...[
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: StatusChip(
+                            status: requisition.status,
+                            onDark: true,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -721,15 +733,21 @@ class _ActivityRow extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          entry.status.label,
-                          style: tracGoTextTheme.bodyMedium?.copyWith(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
+                      // The entry's own wording from the server. A Spacer stands in when
+                      // the entry carried no status, so the timestamp stays hard right
+                      // instead of sliding under the timeline dot.
+                      if (entry.status.hasValue)
+                        Flexible(
+                          child: Text(
+                            entry.status.rawValue,
+                            style: tracGoTextTheme.bodyMedium?.copyWith(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                      ),
+                        )
+                      else
+                        const Spacer(),
                       if (entry.at != null) ...[
                         const SizedBox(width: 10),
                         Flexible(

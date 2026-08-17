@@ -316,8 +316,8 @@ subtly wrong beside every other:
 | `SectionLabel` / `StepSectionLabel` | `common/section_label.dart` | The uppercase micro-caption; the numbered variant heads each step of the create form. Pass sentence case — it uppercases for display and keeps the readable string for screen readers. |
 | `KeyValueRow` | `common/key_value_row.dart` | Label left, value hard right. Used by detail and profile. |
 | `ChoicePill` / `ChoicePillRow` / `FilterPill` | `common/choice_pill.dart` | Inline enum choice (lime-tinted when selected); the list screen's heavier navy filter chip. **Replaced the old `DropdownField` and `RadioRow`, both deleted.** |
-| `StatusChip` / `StatusDot` / `StatusPalette` | `common/status_chip.dart` | `onDark: true` inverts the chip for the navy hero. |
-| `RequisitionRow` / `RequisitionRecentRow` | `common/requisition_row.dart` | Borderless rows meant to live inside a `SurfaceCard.rows`. |
+| `StatusChip` / `StatusDot` / `StatusPalette` | `common/status_chip.dart` | Renders `status.rawValue` — the server's own wording — one line, ellipsised, so callers must bound its width. Both render nothing when `status.hasValue` is false. `onDark: true` inverts the chip for the navy hero. Palettes are keyed on `RequisitionStatusKind`, never on the raw string. |
+| `RequisitionRow` | `common/requisition_row.dart` | The **only** requisition row. Borderless, meant to live inside a `SurfaceCard.rows`. Used by both the list screen (`timeOnly: true`, under day headers) and the dashboard's Recent card (`timeOnly: false` + `showStatusDot: true`, no headers). **Replaced `RequisitionRecentRow`, deleted** — the dashboard's dot-plus-folded-timing variant was a second take on the same data and the two drifted apart; differences are now flags on one widget. |
 | `FormCard` / `FormFieldRow` / `InlineTextField` / `DerivedValueRow` / `SelectableTypeCard` | `requisition_create/form_controls.dart` | The grouped form: fields are *rows in a shared card*, so the inputs themselves are borderless (`SyncedTextField(bare: true)`). |
 | `DateTimeField` | `common/date_time_field.dart` | Value row only — its caption and error belong to the enclosing `FormFieldRow`. |
 

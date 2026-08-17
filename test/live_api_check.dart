@@ -158,7 +158,10 @@ void main(List<String> args) async {
     if (created is! ApiSuccess<Requisition>) continue;
     final row = created.response;
     check('created row keeps its fields (${row.type.name})',
-        row.pickupLocation == 'Test' && row.status == RequisitionStatus.pending);
+        // isPending, not `== RequisitionStatus.pending`: status equality includes the raw
+        // server string, so this would start failing the day the server answers `Pending
+        // Approval` instead — which is a rename, not a broken round-trip.
+        row.pickupLocation == 'Test' && row.status.isPending);
 
     final fetched = await repository.getRequisition(row.id);
     check('detail fetch parses (${row.type.name})', fetched is ApiSuccess<Requisition>);

@@ -217,8 +217,23 @@ class _DashboardContent extends StatelessWidget {
               // several rows, and scaling all of them because one was touched would say
               // the wrong thing about what the tap is going to open.
               PressableScale(
-                child: RequisitionRecentRow(
+                // The same RequisitionRow the list screen uses, so the two read as one
+                // component rather than two takes on the same data.
+                //
+                // timeOnly stays false — the default — because this card has no day
+                // headers to supply the date. It is the one difference from the list, and
+                // it is the row saying which day it is rather than a different layout.
+                //
+                // No trailingAction either: cancelling belongs on the list screen, which
+                // exists to manage requisitions. A Cancel button here would also make
+                // pending rows taller than their neighbours.
+                //
+                // showStatusDot is the one element the list screen does not draw: this
+                // card is a five-row glance, so the dot gives it a colour rail to scan
+                // without reading the chips.
+                child: RequisitionRow(
                   requisition: requisition,
+                  showStatusDot: true,
                   onTap: () => onOpenRequisition(requisition),
                 ),
               ),

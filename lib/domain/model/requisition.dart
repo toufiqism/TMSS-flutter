@@ -2,44 +2,203 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'requisition.freezed.dart';
 
-enum RequisitionStatus {
-  pending('Pending'),
-  approved('Approved'),
-  assigned('Assigned'),
-  rejected('Rejected'),
+/// The workflow states this build knows how to *style* and *count*.
+///
+/// This is deliberately not what the UI displays. It exists only to answer three
+/// questions — which colour, which stat tile, is it editable — and it is a closed set
+/// because those three things are closed sets in the design. What the user reads is always
+/// [RequisitionStatus.rawValue], the server's own string, so a state absent from this enum
+/// still shows its real name rather than a placeholder.
+///
+/// Declaration order is lifecycle order, because `RequisitionSortField.status` sorts on
+/// `index`. Do not reorder to change parse precedence — that is
+/// [RequisitionStatus._matchOrder]'s job.
+enum RequisitionStatusKind {
+  pending('Pending', <String>[
+    // Verified live.
+    'pending',
+    // Hedges against the web UI's wordier phrasings of the same step.
+    'pendingapproval',
+    'approvalpending',
+    'awaitingapproval',
+  ]),
+  approved('Approved', <String>['approved', 'approve', 'vehicleapproved']),
+  assigned('Assigned', <String>[
+    // Verified live: the list endpoint sends `Vehicle Assigned`. A bare `Assigned` has
+    // never been observed — it is listed second as a hedge, not as the known value.
+    'vehicleassigned',
+    'assigned',
+    'driverassigned',
+    'vehicledriverassigned',
+  ]),
+  rejected('Rejected', <String>[
+    // Verified live.
+    'rejected',
+    'reject',
+    'declined',
+    'decline',
+    'denied',
+  ]),
 
-  /// Display label only. The server's wire value is the bare `Cancel` — see [fromWire].
-  cancelled('Cancelled'),
+  /// Canonical label only. The server's wire value is the bare `Cancel`.
+  cancelled('Cancelled', <String>[
+    // Verified live.
+    'cancel',
+    'canceled',
+    'cancelled',
+    'cancellation',
+    'vehiclecancelled',
+  ]),
 
-  /// A status this build does not recognise.
+  /// A state this build has no styling or stat tile for.
   ///
-  /// Verified live: `Pending` and `Cancel` are real wire values. The rest of the
-  /// vocabulary is still unconfirmed, so a row with an unrecognised status must still
-  /// render and lands here instead of throwing. Actions stay gated on [pending]
-  /// specifically, so an unknown status is never treated as cancellable.
-  unknown('Unknown');
+  /// Verified live: `Pending`, `Rejected`, `Vehicle Assigned` and `Cancel` are real wire
+  /// values. The rest of the vocabulary is still unconfirmed — a `Completed` or
+  /// `In Progress` state may well exist — so anything unmatched lands here, takes the
+  /// neutral palette, and **still displays its own server string**. Actions stay gated on
+  /// [pending] specifically, so an unrecognised state is never treated as cancellable.
+  unrecognised('', <String>[]);
 
-  const RequisitionStatus(this.label);
-  final String label;
+  const RequisitionStatusKind(this.canonicalLabel, this.wireAliases);
 
-  /// Parses a server status. Matching ignores case, spaces, underscores and hyphens,
-  /// because the wire vocabulary is only partly confirmed and `In Progress`,
-  /// `in_progress` and `IN-PROGRESS` are all plausible spellings of the same thing.
+  /// The spelling used when the *client* originates a status rather than reading one —
+  /// test fixtures and the [RequisitionStatus] constants. Never shown in place of a
+  /// value the server sent. Empty for [unrecognised], which has no canonical spelling.
+  final String canonicalLabel;
+
+  /// Normalised wire values that map here: lower case, with separators already stripped.
+  /// Empty for [unrecognised], which is the fallback rather than a matchable value.
+  final List<String> wireAliases;
+}
+
+/// A requisition's status as the pairing of **what the server called it** and **what this
+/// build can do with it**.
+///
+/// [rawValue] is the display string, always, verbatim from the response. That is the whole
+/// point of this type: an earlier version displayed a curated per-status label, which meant
+/// the live value `Vehicle Assigned` — two of six rows on a real list response — matched no
+/// label, fell through to a hardcoded "Unknown" chip and vanished from the dashboard's
+/// assigned count. A status the server invents tomorrow now renders its own name instead.
+///
+/// [kind] is the interpretation layered on top, and only ever drives colour, stat-tile
+/// counting and whether edit/cancel is offered. An unmatched value degrades to
+/// [RequisitionStatusKind.unrecognised] on those three axes without affecting what is
+/// shown.
+///
+/// Equality covers **both** fields, so `fromWire('Vehicle Assigned') != assigned` — the
+/// canonical constant carries a different [rawValue]. Compare [kind] when asking "is this
+/// approved?"; there is [isPending] for the common case.
+@freezed
+abstract class RequisitionStatus with _$RequisitionStatus {
+  const RequisitionStatus._();
+
+  const factory RequisitionStatus({
+    required String rawValue,
+    required RequisitionStatusKind kind,
+  }) = _RequisitionStatus;
+
+  /// Client-originated statuses, for fixtures and for code that needs to name a state it
+  /// did not read off the wire. Their [rawValue] is the canonical spelling, not a server
+  /// one.
+  static const pending = RequisitionStatus(
+    rawValue: 'Pending',
+    kind: RequisitionStatusKind.pending,
+  );
+  static const approved = RequisitionStatus(
+    rawValue: 'Approved',
+    kind: RequisitionStatusKind.approved,
+  );
+  static const assigned = RequisitionStatus(
+    rawValue: 'Assigned',
+    kind: RequisitionStatusKind.assigned,
+  );
+  static const rejected = RequisitionStatus(
+    rawValue: 'Rejected',
+    kind: RequisitionStatusKind.rejected,
+  );
+  static const cancelled = RequisitionStatus(
+    rawValue: 'Cancelled',
+    kind: RequisitionStatusKind.cancelled,
+  );
+
+  /// The server sent no status at all — null, or a string that was nothing but
+  /// whitespace. Distinct from an unrecognised state: there is no name to show, so the UI
+  /// renders no chip and no dot rather than inventing a word for it. See [hasValue].
+  static const absent = RequisitionStatus(
+    rawValue: '',
+    kind: RequisitionStatusKind.unrecognised,
+  );
+
+  /// Precedence for the substring pass in [fromWire], most-terminal first.
+  ///
+  /// A compound value like `Cancellation Pending` contains two status words, so the order
+  /// decides. Terminal and restrictive states win, because [Requisition.canBeModified] is
+  /// true only for pending: guessing "pending" on an ambiguous value would offer the user
+  /// an edit or cancel the server then rejects, whereas guessing the terminal state only
+  /// under-promises. This affects [kind] alone — [rawValue] is untouched either way.
+  static const List<RequisitionStatusKind> _matchOrder = <RequisitionStatusKind>[
+    RequisitionStatusKind.rejected,
+    RequisitionStatusKind.cancelled,
+    RequisitionStatusKind.pending,
+    RequisitionStatusKind.assigned,
+    RequisitionStatusKind.approved,
+  ];
+
+  static final RegExp _separators = RegExp(r'[\s_\-,./&]');
+
+  /// Negations of a status word. `Unassigned` *contains* `assigned` and `Not Approved`
+  /// contains `approved`, so the substring pass would read either as its own opposite.
+  /// Neither has been observed on the wire, so their [kind] stays
+  /// [RequisitionStatusKind.unrecognised] — neutral colour, no action — rather than
+  /// inverting the server's meaning. The text still displays as sent.
+  static final RegExp _negated = RegExp(r'(un|not|non)(approved|assigned|confirmed)');
+
+  /// Reads a server status, keeping the original string whatever happens.
+  ///
+  /// Only [kind] can fail to resolve. Interpretation ignores case, spaces, underscores,
+  /// hyphens, commas, dots, slashes and ampersands, because the wire vocabulary is only
+  /// partly confirmed and `In Progress`, `in_progress` and `IN-PROGRESS` are all plausible
+  /// spellings of the same thing.
+  ///
+  /// Three passes, in order:
+  /// 1. exact alias match — unambiguous, so it runs before any guard and an explicitly
+  ///    listed value always wins;
+  /// 2. the [_negated] guard, which only ever constrains guessing;
+  /// 3. substring match in [_matchOrder] precedence, for values that wrap a status word
+  ///    in extra prose.
   static RequisitionStatus fromWire(String? raw) {
-    if (raw == null) return unknown;
-    final normalised = raw.toLowerCase().replaceAll(RegExp(r'[\s_-]'), '');
-    if (normalised.isEmpty) return unknown;
-    // Checked before the label scan: the server sends the verb `Cancel`, not the
-    // adjective `Cancelled` this enum displays, so the labels do not match directly.
-    if (normalised == 'cancel' || normalised == 'canceled' || normalised == 'cancelled') {
-      return cancelled;
-    }
-    for (final status in values) {
-      if (status == unknown) continue;
-      if (status.label.toLowerCase() == normalised) return status;
-    }
-    return unknown;
+    // Trimmed, because the display string is user-facing and a stray leading space in the
+    // response would push the chip's text off centre.
+    final value = raw?.trim() ?? '';
+    if (value.isEmpty) return absent;
+    return RequisitionStatus(rawValue: value, kind: _kindOf(value));
   }
+
+  static RequisitionStatusKind _kindOf(String value) {
+    final normalised = value.toLowerCase().replaceAll(_separators, '');
+    if (normalised.isEmpty) return RequisitionStatusKind.unrecognised;
+
+    for (final kind in _matchOrder) {
+      if (kind.wireAliases.contains(normalised)) return kind;
+    }
+
+    if (_negated.hasMatch(normalised)) return RequisitionStatusKind.unrecognised;
+
+    for (final kind in _matchOrder) {
+      for (final alias in kind.wireAliases) {
+        if (normalised.contains(alias)) return kind;
+      }
+    }
+    return RequisitionStatusKind.unrecognised;
+  }
+
+  /// Whether there is a name to display. False only for [absent] — an unrecognised status
+  /// still has a perfectly good string to show.
+  bool get hasValue => rawValue.isNotEmpty;
+
+  /// True when the server called this pending, by any spelling. The one interpretation
+  /// worth a getter, because it gates every mutating action.
+  bool get isPending => kind == RequisitionStatusKind.pending;
 }
 
 enum RequisitionType { passenger, logistics }
@@ -313,7 +472,11 @@ abstract class Requisition with _$Requisition {
   /// Mirrors the rule the API enforces — `status == Pending` **and** caller is the
   /// creator. The client can only check the first half; ownership is implicit because
   /// the list is already scoped to the authenticated user, and a 403 covers the rest.
-  bool get canBeModified => status == RequisitionStatus.pending;
+  /// Compares [RequisitionStatus.kind], not the status itself: equality on
+  /// [RequisitionStatus] includes the raw server string, so a live `Pending` row is not
+  /// equal to the canonical constant and a value comparison here would gate every action
+  /// off by accident.
+  bool get canBeModified => status.isPending;
 
   /// True once dispatch has attached either a driver or a vehicle.
   bool get hasAssignment =>

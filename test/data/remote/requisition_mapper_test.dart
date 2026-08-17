@@ -204,19 +204,23 @@ void main() {
       expect(requisition!.pickupLocation, '');
       expect(requisition.dropLocation, '');
       expect(requisition.remarks, isNull);
-      expect(requisition.status, RequisitionStatus.unknown);
+      // No status field at all: nothing to display, so the UI renders no chip.
+      expect(requisition.status, RequisitionStatus.absent);
+      expect(requisition.status.hasValue, isFalse);
       expect((requisition.details as PassengerDetails).numberOfPersons, 1);
     });
 
-    test('an unrecognised status renders as unknown instead of throwing', () {
-      // The contract flags the status vocabulary as its biggest gap, so the client
-      // must not assume it has seen every value.
+    test('an unrecognised status keeps its own name through the mapper', () {
+      // The contract flags the status vocabulary as its biggest gap, so the client must
+      // not assume it has seen every value — and must never substitute a placeholder for
+      // one it has not.
       final requisition = RequisitionMapper.fromJson({
         'id': 7,
         'status': 'Awaiting Fleet Approval',
       });
 
-      expect(requisition!.status, RequisitionStatus.unknown);
+      expect(requisition!.status.rawValue, 'Awaiting Fleet Approval');
+      expect(requisition.status.kind, RequisitionStatusKind.unrecognised);
     });
 
     test('falls back to the pickup time when created_at is absent', () {
@@ -340,38 +344,62 @@ void main() {
 
   group('canBeModified', () {
     test('mirrors the server rule: pending only', () {
-      Requisition withStatus(RequisitionStatus status) => RequisitionMapper.fromJson({
+      Requisition withStatus(String? wireStatus) => RequisitionMapper.fromJson({
             'id': 1,
-            'status': status == RequisitionStatus.unknown ? 'Whatever' : status.label,
+            // Null-aware element: a null wireStatus omits the key entirely, which is what
+            // a response with no status field looks like.
+            'status': ?wireStatus,
           })!;
 
-      expect(withStatus(RequisitionStatus.pending).canBeModified, isTrue);
-      expect(withStatus(RequisitionStatus.approved).canBeModified, isFalse);
-      expect(withStatus(RequisitionStatus.assigned).canBeModified, isFalse);
-      expect(withStatus(RequisitionStatus.rejected).canBeModified, isFalse);
-      expect(withStatus(RequisitionStatus.unknown).canBeModified, isFalse,
+      // Wire spellings, not domain constants: the rule compares status *kind*, so the
+      // server's own wording has to satisfy it.
+      expect(withStatus('Pending').canBeModified, isTrue);
+      expect(withStatus('Approved').canBeModified, isFalse);
+      expect(withStatus('Vehicle Assigned').canBeModified, isFalse);
+      expect(withStatus('Rejected').canBeModified, isFalse);
+      expect(withStatus('Cancel').canBeModified, isFalse);
+      expect(withStatus('Whatever').canBeModified, isFalse,
           reason: 'an unrecognised status must never be treated as cancellable');
+      expect(withStatus(null).canBeModified, isFalse,
+          reason: 'an absent status must never be treated as cancellable');
     });
   });
 
-  group('status parsing', () {
-    test('ignores case, spacing and separators, since the vocabulary is unconfirmed', () {
-      expect(RequisitionStatus.fromWire('pending'), RequisitionStatus.pending);
-      expect(RequisitionStatus.fromWire('PENDING'), RequisitionStatus.pending);
-      expect(RequisitionStatus.fromWire(' Approved '), RequisitionStatus.approved);
-      expect(RequisitionStatus.fromWire('as_signed'), RequisitionStatus.assigned);
+  group('status mapping', () {
+    // Parsing itself is covered in test/domain/requisition_model_test.dart. These assert
+    // that the mapper hands the value through both status fields without rewriting it.
+    test('carries the raw value through the requisition status', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'status': 'Vehicle Assigned',
+      })!;
+
+      expect(requisition.status.rawValue, 'Vehicle Assigned');
+      expect(requisition.status.kind, RequisitionStatusKind.assigned);
     });
 
-    test('reads the server\'s bare `Cancel`, not just the adjective', () {
-      // Verified live: cancelling a requisition sets status to `Cancel`.
-      expect(RequisitionStatus.fromWire('Cancel'), RequisitionStatus.cancelled);
-      expect(RequisitionStatus.fromWire('Cancelled'), RequisitionStatus.cancelled);
-      expect(RequisitionStatus.fromWire('canceled'), RequisitionStatus.cancelled);
+    test('carries the raw value through an audit entry status', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'audit_logs': [
+          {'id': 9, 'requisition_status': 'Vehicle Assigned'},
+        ],
+      })!;
+
+      final entry = requisition.auditLog.single;
+      expect(entry.status.rawValue, 'Vehicle Assigned');
+      expect(entry.status.kind, RequisitionStatusKind.assigned);
     });
 
-    test('null and empty read as unknown', () {
-      expect(RequisitionStatus.fromWire(null), RequisitionStatus.unknown);
-      expect(RequisitionStatus.fromWire('  '), RequisitionStatus.unknown);
+    test('an audit entry with no status has nothing to display', () {
+      final requisition = RequisitionMapper.fromJson({
+        'id': 1,
+        'audit_logs': [
+          {'id': 9},
+        ],
+      })!;
+
+      expect(requisition.auditLog.single.status, RequisitionStatus.absent);
     });
   });
 
