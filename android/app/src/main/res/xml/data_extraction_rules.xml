@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup and transfer policy for API 31+. The API 30 side is covered by
+    android:allowBackup="false" in the manifest; this file exists because on 31+ that
+    flag stops *cloud* backup only — device-to-device transfer keeps running unless it
+    is excluded here as well.
+
+    Everything is excluded, in both channels, on purpose:
+
+    - The session (token, profile, expiry) lives in flutter_secure_storage, encrypted
+      under a key held in the Android Keystore. The key never leaves the device and is
+      never part of any backup, so a restored blob is undecryptable — the app would
+      carry a session-shaped file it cannot read.
+    - SessionLocalDataSource detects a fresh install through a shared_preferences
+      marker, which works precisely because prefs are wiped on uninstall. Restoring
+      prefs onto a new device would make that marker lie.
+    - Nothing else here is worth carrying across devices. Signing in again costs one
+      screen; a corporate bearer token silently following a user onto a second device
+      is not a trade worth making.
+
+    Excluding a domain wholesale rather than naming files means a future preference
+    cannot opt itself into a backup by accident.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

@@ -44,10 +44,18 @@ Future<Telemetry> bootstrapTelemetry() async {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     final crashlytics = FirebaseCrashlytics.instance;
-    // Collection is on in every build, debug included — a deliberate choice while the
-    // integration is being verified. Flip this to `!kDebugMode` to keep development
-    // crashes out of the production dashboard.
-    await crashlytics.setCrashlyticsCollectionEnabled(true);
+    // Off in debug, on everywhere else. A debug session throws deliberately — hot
+    // reload over a half-built widget, a deliberately broken endpoint, a forced crash
+    // during a smoke test — and every one of those lands in the same dashboard as the
+    // field reports, where they are indistinguishable from real defects and skew the
+    // crash-free-users number Play and Firebase both surface.
+    //
+    // Profile builds stay enabled on purpose: they are release-shaped, and a crash that
+    // only reproduces there is exactly the kind worth catching before upload.
+    //
+    // Note this only gates *collection*. The error handlers below are still installed,
+    // so debug errors keep reaching the console the way they always did.
+    await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
 
     final reporter = FirebaseCrashReporter(crashlytics);
     _installErrorHandlers(reporter);

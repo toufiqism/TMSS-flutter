@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Required in the main manifest, not just src/debug: the Flutter template only
          declares it for debug/profile, so a release build would have no network access
          at all once the app talks to https://tms.carcopolo.com/bt/api. -->
@@ -11,11 +12,26 @@
          on the requisition list returns to the dashboard" silently does nothing on device
          while still passing its widget test — tester.binding.handlePopRoute() drives the
          framework directly and bypasses the platform. -->
+    <!-- allowBackup / dataExtractionRules: both are needed, they cover different Android
+         versions. allowBackup="false" is the API 30 lever; from API 31 it governs cloud
+         backup only, so res/xml/data_extraction_rules.xml excludes device-to-device
+         transfer as well. Restoring this app's data is never correct — the session is
+         encrypted under a Keystore key that does not travel, and the fresh-install
+         detection in SessionLocalDataSource depends on prefs actually being wiped.
+
+         usesCleartextTraffic="false": the production base URL is HTTPS, so release builds
+         have no reason to be able to speak plaintext. src/debug and src/profile override
+         it back to true for local servers reached over http:// via a TMS_BASE_URL
+         dart-define. -->
     <application
         android:label="TracGo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="31">
         <activity
             android:name=".MainActivity"
             android:exported="true"

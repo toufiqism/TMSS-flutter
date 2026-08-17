@@ -48,10 +48,18 @@ flutter test test/path/to/file.dart    # a single target
 dart run build_runner watch            # regenerate codegen while iterating
 
 flutter build apk --debug
-flutter build appbundle --release      # Play delivery — per-device ~20MB
 flutter build apk --release --split-per-abi   # sideloading: one APK per ABI
 flutter build ios --release            # requires macOS + Xcode
+
+# Play delivery — per-device ~20MB. Never build the upload artifact without the
+# obfuscation flags; see "Obfuscation and symbols" below and docs/play/README.md.
+flutter build appbundle --release \
+  --obfuscate --split-debug-info=build/symbols/1.0.0+1
 ```
+
+**Uploading to Google Play?** Follow `docs/play/README.md` — it is the ordered
+checklist, and it covers the parts that live outside this repo (Data Safety answers,
+reviewer credentials, listing copy, privacy policy).
 
 ### Release signing
 
@@ -115,6 +123,48 @@ both worth having for a release artifact.
 ⚠️ **Retain `build/app/outputs/mapping/release/mapping.txt` for every release you ship.**
 Release stack traces are obfuscated and cannot be read without the mapping file for that
 exact build. Upload it to Play Console, or archive it alongside the artifact.
+
+### Obfuscation and symbols
+
+Release builds pass `--obfuscate --split-debug-info=build/symbols/<version>`. That is a
+second, separate obfuscation from R8's: R8 renames the Java/Kotlin surface, while this
+one renames the Dart symbols inside `libapp.so`, which is where essentially all of this
+app's logic lives. Without it the Dart code is trivially recoverable from the artifact.
+
+The cost is that Dart stack traces stop being readable — including the ones Crashlytics
+shows. The symbol files are the only way back:
+
+```bash
+flutter symbolize -i crash.txt -d build/symbols/1.0.0+1/app.android-arm64.symbols
+```
+
+⚠️ **`build/` is gitignored and `flutter clean` deletes it.** Copy the symbol directory
+out of the tree, next to `mapping.txt`, the moment the artifact is built — a release
+whose symbols were thrown away can never have its crashes read again. `docs/play/README.md`
+makes that an explicit step.
+
+Three separate artifacts have to be kept per release, and they are not interchangeable:
+
+| Artifact | Reads | Where it comes from |
+|---|---|---|
+| `mapping.txt` | Java/Kotlin frames | uploaded to Crashlytics automatically by the Gradle plugin; also include it in the Play upload |
+| `build/symbols/<version>/` | Dart frames | `--split-debug-info`, archived by hand |
+| `.aab` | — | the upload itself; keep it to reproduce what shipped |
+
+### 16 KB page sizes
+
+Play requires apps targeting API 35+ to run on 16 KB-page devices, and this app targets
+36. Verify before every upload:
+
+```bash
+tool/check_native_alignment.sh                      # defaults to the release APK
+tool/check_native_alignment.sh path/to/other.apk
+```
+
+It checks both halves of the requirement — PT_LOAD segment alignment inside each `.so`,
+and 16 KB zip alignment of the entries — and fails loudly on either. Last run: all 8
+bundled libraries pass (`libapp.so` and `libflutter.so` at 0x10000, the plugin libraries
+at 0x4000). A failure there is a dependency to bump, not something fixable in this repo.
 
 ## Architecture
 
@@ -211,6 +261,17 @@ Keychain on iOS, Keystore-backed on Android. Three behaviours worth knowing:
   launch rather than sent and bounced by a 401.
 - Sign-out calls `POST /logout` to revoke server-side before clearing locally. Tokens
   last about a year, so a purely local sign-out would leave a working token behind.
+- Android backup and device-to-device transfer are **both disabled**
+  (`android:allowBackup="false"` plus `res/xml/data_extraction_rules.xml`, because from
+  API 31 the flag governs cloud backup only). Restoring this app's data is never
+  correct: the session is encrypted under a Keystore key that does not travel, so a
+  restored blob is undecryptable, and the fresh-install marker above only works because
+  prefs really are wiped. The user signs in again on a new device, which is one screen.
+
+Release builds also set `android:usesCleartextTraffic="false"` — the production host is
+HTTPS and a shipped build has no business speaking plaintext. `src/debug` and
+`src/profile` override it back to `true` (with `tools:replace`, which the merger
+requires) so a local `http://10.0.2.2/api` still works during development.
 
 iOS accessibility is pinned to `first_unlock_this_device` — readable after the first
 unlock following a reboot, and never synced to iCloud Keychain, so a corporate session
@@ -232,10 +293,14 @@ secrets — access is controlled by Firebase security rules, not by hiding them.
 `main()` calls `bootstrapTelemetry()` before `runApp`. It **never throws**: if Firebase
 fails to start, the app runs on `Telemetry.disabled` (a no-op reporter and the
 compiled-in config defaults) with Flutter's own error handlers left untouched, so
-errors still reach the console. Crash collection is currently **enabled in debug builds
-too** — flip the `setCrashlyticsCollectionEnabled(true)` call in
-`core/telemetry/telemetry_bootstrap.dart` to `!kDebugMode` to keep development crashes
-out of the dashboard.
+errors still reach the console.
+
+Collection is `!kDebugMode` — **off in debug, on in profile and release**. Debug sessions
+throw deliberately, and those reports are indistinguishable from field defects in the
+dashboard while dragging down the crash-free-users number. Profile stays on because it is
+release-shaped and a crash that only reproduces there is worth catching pre-upload. Only
+collection is gated: the error handlers are installed in every build, so debug errors
+still print.
 
 ### What gets reported
 
@@ -286,8 +351,9 @@ that the dSYM phase runs on an Archive.
 
 ### Verifying it works
 
-Force a crash from a debug build, then restart the app — Crashlytics uploads on the
-next launch, never during the crash itself:
+Collection is off in debug, so a debug crash reports nothing — use a **profile or
+release** build (`flutter run --profile`). Force a crash, then restart the app;
+Crashlytics uploads on the next launch, never during the crash itself:
 
 ```dart
 FirebaseCrashlytics.instance.crash();      // fatal
@@ -296,8 +362,14 @@ throw StateError('non-fatal smoke test');  // caught by PlatformDispatcher.onErr
 
 Reports land in the Firebase console within a few minutes. Android release builds
 upload their R8 mapping automatically via the Crashlytics Gradle plugin
-(`com.google.firebase.crashlytics` 3.0.7); Flutter's own `libapp.so` frames stay
-unsymbolicated unless NDK symbol upload is added separately.
+(`com.google.firebase.crashlytics` 3.0.7), so Java/Kotlin frames arrive readable.
+
+Dart frames do not. Release builds are obfuscated, and nothing uploads the Dart symbols —
+run `flutter symbolize` against the archived symbol directory for that exact build (see
+"Obfuscation and symbols"). Separately, a **native** crash inside `libflutter.so` or
+`libapp.so` is not captured at all: that needs Crashlytics NDK, which is not wired up.
+Dart-level exceptions, which is what nearly every real defect here surfaces as, are
+reported normally.
 
 ## Fonts
 
