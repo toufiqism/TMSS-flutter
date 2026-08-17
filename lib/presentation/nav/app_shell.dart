@@ -7,6 +7,7 @@ import '../../theme/colors.dart';
 import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../common/page_width.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
 import '../common/strings.dart';
@@ -228,7 +229,9 @@ class _AppDrawer extends ConsumerWidget {
     final user = ref.watch(sessionStreamProvider).value?.user;
 
     return Drawer(
-      width: MediaQuery.of(context).size.width * 0.82,
+      // Proportional on a phone, capped on a tablet: 82% of an iPad in landscape is a
+      // 1088pt panel holding three menu rows and a logout link.
+      width: tracGoDrawerWidth(context),
       backgroundColor: tracGoSurfaceWhite,
       // Square inner edge, per the design: the drawer is a panel, not a floating card.
       shape: const RoundedRectangleBorder(),

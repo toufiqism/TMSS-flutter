@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
+import '../common/page_width.dart';
 import '../common/safe_insets.dart';
 import '../common/skeleton.dart';
 import '../common/strings.dart';
@@ -27,7 +28,7 @@ class RequisitionDetailSkeleton extends StatelessWidget {
             20,
             20,
             26,
-          ).addBottomSystemInset(context),
+          ).addBottomSystemInset(context).constrainToContentWidth(context),
           children: const [
             _HeroSkeleton(),
             SizedBox(height: 20),

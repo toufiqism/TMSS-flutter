@@ -11,6 +11,7 @@ import '../../theme/typography.dart';
 import '../../theme/motion.dart';
 import '../common/choice_pill.dart';
 import '../common/motion.dart';
+import '../common/page_width.dart';
 import '../common/requisition_row.dart';
 import '../common/section_label.dart';
 import '../common/strings.dart';
@@ -157,7 +158,12 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
       bottomNavigationBar: SafeArea(
         child: Container(
           color: tracGoSurfaceWhite,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          // Constrained on the padding, not with a ConstrainedBox: the white bar stays
+          // edge-to-edge while the button inside it lines up with the list column above.
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 14,
+          ).constrainToContentWidth(context),
           // Row(end), not Align(centerRight). Scaffold measures bottomNavigationBar with
           // *loose* constraints, and an Align without a heightFactor expands to the
           // largest size those allow — so this bar grew to roughly half the screen and
@@ -277,7 +283,12 @@ class _GroupedList extends StatelessWidget {
       // fires on exactly the screens where the user most wants it (empty or
       // nearly-empty results).
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        18,
+        20,
+        20,
+      ).constrainToContentWidth(context),
       itemCount: groups.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= groups.length) {
@@ -432,7 +443,13 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
 
     return Container(
       color: tracGoSurfaceWhite,
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+      // Same arrangement as the footer bar: full-bleed band, column-aligned contents.
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        4,
+        20,
+        16,
+      ).constrainToContentWidth(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -539,7 +556,10 @@ class _EmptyOrErrorState extends StatelessWidget {
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              // Constrained like every other column on this screen: the message is one
+              // centred paragraph, and left unbounded it sets a single line across the
+              // full width of an iPad.
+              padding: const EdgeInsets.all(24).constrainToContentWidth(context),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

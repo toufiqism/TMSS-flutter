@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ import '../../theme/typography.dart';
 import '../common/choice_pill.dart';
 import '../common/date_time_field.dart';
 import '../common/motion.dart';
+import '../common/page_width.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
 import '../common/strings.dart';
@@ -164,7 +166,7 @@ class _RequisitionCreateScreenState
                 20,
                 20,
                 keyboardVisible ? 24 : 8,
-              ),
+              ).constrainToContentWidth(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -236,7 +238,7 @@ class _RequisitionCreateScreenState
                 12,
                 20,
                 16,
-              ).addBottomSystemInset(context),
+              ).addBottomSystemInset(context).constrainToContentWidth(context),
               child: submitButton,
             ),
         ],
@@ -1001,9 +1003,18 @@ class _EmployeePickerState extends State<_EmployeePicker> {
     if (!_expanded) return null;
 
     if (widget.results.isNotEmpty) {
+      // 220 is the resting height, but it is more than the whole viewport in landscape
+      // with the keyboard up — an iPhone in landscape is ~390pt tall and the keyboard
+      // takes half of that, so a fixed 220 leaves no room for the field being typed in.
+      // Half the remaining height, floored so it never collapses below two rows.
+      final available =
+          MediaQuery.sizeOf(context).height -
+          MediaQuery.viewInsetsOf(context).bottom;
+      final maxHeight = math.min(220.0, math.max(120.0, available * 0.5));
+
       return Container(
         margin: const EdgeInsets.only(top: 10),
-        constraints: const BoxConstraints(maxHeight: 220),
+        constraints: BoxConstraints(maxHeight: maxHeight),
         // A Material, not a DecoratedBox: the rows are ListTiles, and a ListTile paints
         // its ink on the nearest Material ancestor — which was the page behind this
         // panel, so every tap on a rider splashed *underneath* the dropdown's own fill

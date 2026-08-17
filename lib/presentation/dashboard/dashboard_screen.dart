@@ -9,6 +9,7 @@ import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/motion.dart';
+import '../common/page_width.dart';
 import '../common/requisition_row.dart';
 import '../common/safe_insets.dart';
 import '../common/strings.dart';
@@ -108,7 +109,7 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24).constrainToContentWidth(context),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -236,7 +237,7 @@ class _DashboardContent extends StatelessWidget {
         22,
         20,
         20,
-      ).addBottomSystemInset(context),
+      ).addBottomSystemInset(context).constrainToContentWidth(context),
       children: [
         for (var i = 0; i < blocks.length; i++) ...[
           if (i > 0) SizedBox(height: gaps[i - 1]),

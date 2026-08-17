@@ -7,6 +7,7 @@ import '../../theme/colors.dart';
 import '../../theme/motion.dart';
 import '../../theme/typography.dart';
 import '../common/motion.dart';
+import '../common/page_width.dart';
 import '../common/strings.dart';
 import '../common/synced_text_field.dart';
 import '../common/tracgo_logo_mark.dart';
@@ -112,7 +113,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(30, 26, 30, 32),
+            // 420 rather than the app-wide 600: a sign-in form is two fields and a
+            // button, and stretched to the full content column on a tablet it reads as a
+            // page with a hole in the middle. This keeps it near the width the design
+            // drew it at, centred on whatever the window turns out to be.
+            padding: const EdgeInsets.fromLTRB(
+              30,
+              26,
+              30,
+              32,
+            ).constrainToContentWidth(context, maxContentWidth: 420),
             child: AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
