@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/shapes.dart';
+import '../common/page_width.dart';
 import '../common/safe_insets.dart';
 import '../common/skeleton.dart';
 import '../common/strings.dart';
@@ -28,7 +29,7 @@ class DashboardSkeleton extends StatelessWidget {
             22,
             20,
             20,
-          ).addBottomSystemInset(context),
+          ).addBottomSystemInset(context).constrainToContentWidth(context),
           children: [
             // Hero count line + period badge.
             Row(

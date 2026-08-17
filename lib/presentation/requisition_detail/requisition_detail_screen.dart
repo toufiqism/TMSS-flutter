@@ -11,6 +11,7 @@ import '../../theme/typography.dart';
 import '../../theme/motion.dart';
 import '../common/key_value_row.dart';
 import '../common/motion.dart';
+import '../common/page_width.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
 import '../common/status_chip.dart';
@@ -165,7 +166,7 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24).constrainToContentWidth(context),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -343,7 +344,7 @@ class _Content extends StatelessWidget {
         20,
         20,
         26,
-      ).addBottomSystemInset(context),
+      ).addBottomSystemInset(context).constrainToContentWidth(context),
       children: [
         for (var i = 0; i < sections.length; i++) ...[
           if (i > 0) SizedBox(height: gaps[i - 1]),

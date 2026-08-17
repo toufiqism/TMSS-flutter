@@ -24,6 +24,11 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- The app uses HTTPS and the Keychain and nothing else cryptographic, both of which
+	     are exempt. Declared here so every TestFlight and App Store upload stops asking
+	     the export-compliance question and stalling the build in processing. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

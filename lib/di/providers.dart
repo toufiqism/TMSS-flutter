@@ -134,8 +134,11 @@ String _redactSecrets(String line) {
   var result = line;
   result = mask(RegExp(r'(password:\s*)[^,}\s]+'), result);
   result = mask(RegExp(r'("password"\s*:\s*")[^"]*'), result);
-  result = mask(RegExp(r'(token:\s*)[^,}\s]+'), result);
-  result = mask(RegExp(r'("token"\s*:\s*")[^"]*'), result);
+  result = mask(RegExp(r'([a-z_]*token:\s*)[^,}\s]+'), result);
+  // `[a-z_]*` before the closing quote of the key, not a bare `"token"`: `GET /user`
+  // returns `remember_token` in plaintext, and an anchored `"token"` does not match it —
+  // the character before `token` there is an underscore, not the opening quote.
+  result = mask(RegExp(r'("[a-z_]*token"\s*:\s*")[^"]*'), result);
   result = mask(RegExp(r'(Bearer\s+)\S+'), result);
   return result;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../common/page_width.dart';
 import '../common/skeleton.dart';
 import '../common/strings.dart';
 import '../common/surface_card.dart';
@@ -22,7 +23,12 @@ class RequisitionListSkeleton extends StatelessWidget {
       child: SkeletonHost(
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            18,
+            20,
+            20,
+          ).constrainToContentWidth(context),
           children: const [
             _GroupSkeleton(rows: 3),
             SizedBox(height: 18),

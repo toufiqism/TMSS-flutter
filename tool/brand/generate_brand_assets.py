@@ -13,6 +13,7 @@ Outputs (all overwritten in place):
     android/.../drawable/tracgo_splash_logo.xml        cold-start mark
     android/.../drawable/tracgo_splash_logo_mono.xml   cold-start mark, dark mode
     ios/.../AppIcon.appiconset/*.png           every size listed in Contents.json
+    ios/.../LaunchImage.imageset/*.png         cold-start mark, @1x/@2x/@3x
 
 Requirements (macOS): `brew install potrace resvg`, `pip3 install pillow`, and Node for
 `npx svg2vectordrawable`. Intermediates land in build/brand/ and are disposable.
@@ -52,6 +53,13 @@ COLOR_SVG = REPO / "assets/images/tracgo_logo.svg"
 MONO_SVG = REPO / "assets/images/tracgo_logo_mono.svg"
 ANDROID_RES = REPO / "android/app/src/main/res"
 IOS_APPICON = REPO / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
+IOS_LAUNCH = REPO / "ios/Runner/Assets.xcassets/LaunchImage.imageset"
+
+# Point size of the launch mark. The storyboard centres the image at its natural size —
+# pixels divided by scale — so emitting 120/240/360 renders a 120pt mark on every device.
+# Matches the 108pt logo the Sign In screen opens with closely enough that the handoff
+# from launch screen to first frame does not visibly jump.
+IOS_LAUNCH_MARK_PT = 120
 
 # Hand-picked, not median-cut. Median cut allocates slots by area, which spent five of
 # twelve on indistinguishable navies and dropped the traffic light and signal arcs
@@ -452,6 +460,20 @@ def build_platform_assets() -> None:
         render_png(ios_svg, Image.open(png).size[0], png, opaque=True)
         count += 1
     print(f"  ios app icons: {count}")
+
+    # The launch mark is tight to its canvas — unlike the app icon, which is inset to
+    # survive the rounded-rect mask — and keeps its alpha, so it sits on the colour the
+    # storyboard paints rather than carrying a white square of its own.
+    launch_svg = padded_svg(COLOR_SVG, 100, 100, WORK / "launch_ios.svg")
+    for scale in (1, 2, 3):
+        suffix = "" if scale == 1 else f"@{scale}x"
+        render_png(
+            launch_svg,
+            IOS_LAUNCH_MARK_PT * scale,
+            IOS_LAUNCH / f"LaunchImage{suffix}.png",
+            opaque=False,
+        )
+    print("  ios launch images: 3")
 
 
 def main() -> None:

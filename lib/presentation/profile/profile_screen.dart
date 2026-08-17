@@ -13,6 +13,7 @@ import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/key_value_row.dart';
 import '../common/motion.dart';
+import '../common/page_width.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
 import '../common/skeleton.dart';
@@ -119,7 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             24,
             20,
             24,
-          ).addBottomSystemInset(context),
+          ).addBottomSystemInset(context).constrainToContentWidth(context),
           children: [
             // Staggered by hand rather than through `staggerAll`, because the first two
             // blocks are conditional: the indexes have to keep counting from zero when
