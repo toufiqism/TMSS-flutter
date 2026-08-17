@@ -20,6 +20,7 @@ import '../requisition_list/requisition_list_screen.dart';
 import '../../theme/typography.dart';
 import 'app_shell.dart';
 import 'back_navigation.dart';
+import 'page_transitions.dart';
 import 'route_paths.dart';
 
 /// Bridges the Riverpod session stream into a Listenable go_router can watch, so `redirect`
@@ -167,7 +168,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final sessionAsync = ref.read(sessionStreamProvider);
       if (!sessionAsync.hasValue) {
         // Still hydrating the secure-storage read — stay on /splash until it resolves.
-        return state.matchedLocation == RoutePaths.splash ? null : RoutePaths.splash;
+        return state.matchedLocation == RoutePaths.splash
+            ? null
+            : RoutePaths.splash;
       }
       final isAuthenticated = sessionAsync.value != null;
       final atSplash = state.matchedLocation == RoutePaths.splash;
@@ -180,16 +183,29 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: RoutePaths.splash,
-        builder: (context, state) => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        pageBuilder: (context, state) => scaleFadePage(
+          context: context,
+          key: state.pageKey,
+          child: const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+        ),
       ),
       GoRoute(
         path: RoutePaths.login,
-        builder: (context, state) => LoginScreen(onLoginSuccess: () => context.go(RoutePaths.dashboard)),
+        pageBuilder: (context, state) => scaleFadePage(
+          context: context,
+          key: state.pageKey,
+          child: LoginScreen(
+            onLoginSuccess: () => context.go(RoutePaths.dashboard),
+          ),
+        ),
       ),
       ShellRoute(
         observers: [shellObserver],
         builder: (context, state, child) {
-          final topBarTitle = state.matchedLocation == RoutePaths.requisitionList
+          final topBarTitle =
+              state.matchedLocation == RoutePaths.requisitionList
               ? const Text(
                   TracGoStrings.requisitionListTitle,
                   style: tracGoScreenTitleStyle,
@@ -208,14 +224,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           // predictive back asks about. Wrapping `AppShell` instead put them one
           // navigator too high and the platform closed the app without consulting
           // them — see `DashboardBackScope`.
+          // Both shell destinations use the sibling transition: they are peers reached
+          // from the same drawer, and neither is "inside" the other.
           GoRoute(
             path: RoutePaths.dashboard,
-            builder: (context, state) => DashboardBackScope(
-              child: DashboardScreen(
-                onViewAllRequisitions: () => context.go(RoutePaths.requisitionList),
-                onRequisitionNow: () => context.push(RoutePaths.newRequisition),
-                onOpenRequisition: (requisition) =>
-                    context.push(RoutePaths.detailFor(requisition.id)),
+            pageBuilder: (context, state) => fadeThroughPage(
+              context: context,
+              key: state.pageKey,
+              child: DashboardBackScope(
+                child: DashboardScreen(
+                  onViewAllRequisitions: () =>
+                      context.go(RoutePaths.requisitionList),
+                  onRequisitionNow: () =>
+                      context.push(RoutePaths.newRequisition),
+                  onOpenRequisition: (requisition) =>
+                      context.push(RoutePaths.detailFor(requisition.id)),
+                ),
               ),
             ),
           ),
@@ -223,11 +247,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: RoutePaths.requisitionList,
             // Reached with `go`, not `push`, so it has nothing to pop and would
             // otherwise drop straight out of the app.
-            builder: (context, state) => PopOrDashboardScope(
-              child: RequisitionListScreen(
-                onNewRequisition: () => context.push(RoutePaths.newRequisition),
-                onOpenRequisition: (requisition) =>
-                    context.push(RoutePaths.detailFor(requisition.id)),
+            pageBuilder: (context, state) => fadeThroughPage(
+              context: context,
+              key: state.pageKey,
+              child: PopOrDashboardScope(
+                child: RequisitionListScreen(
+                  onNewRequisition: () =>
+                      context.push(RoutePaths.newRequisition),
+                  onOpenRequisition: (requisition) =>
+                      context.push(RoutePaths.detailFor(requisition.id)),
+                ),
               ),
             ),
           ),
@@ -237,48 +266,60 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // otherwise match the literal "new" and shadow this route entirely.
       GoRoute(
         path: RoutePaths.newRequisition,
-        builder: (context, state) => PopOrDashboardScope(
-          child: RequisitionCreateScreen(
-            onBack: () => backOrDashboard(context),
-            onSubmitted: () {
-              backOrDashboard(context);
-              _refreshRequisitionViews(ref);
-            },
+        pageBuilder: (context, state) => axisPage(
+          context: context,
+          key: state.pageKey,
+          child: PopOrDashboardScope(
+            child: RequisitionCreateScreen(
+              onBack: () => backOrDashboard(context),
+              onSubmitted: () {
+                backOrDashboard(context);
+                _refreshRequisitionViews(ref);
+              },
+            ),
           ),
         ),
       ),
       GoRoute(
         path: RoutePaths.profile,
-        builder: (context, state) => PopOrDashboardScope(
-          child: ProfileScreen(onBack: () => backOrDashboard(context)),
+        pageBuilder: (context, state) => axisPage(
+          context: context,
+          key: state.pageKey,
+          child: PopOrDashboardScope(
+            child: ProfileScreen(onBack: () => backOrDashboard(context)),
+          ),
         ),
       ),
       GoRoute(
         path: RoutePaths.requisitionDetail,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
-          return PopOrDashboardScope(
-            child: RequisitionDetailScreen(
-              requisitionId: id,
-              onBack: () => backOrDashboard(context),
-              onEdit: (requisition) =>
-                  context.push(RoutePaths.editFor(id), extra: requisition),
-              onClosed: () {
-                // The requisition is gone (cancelled or deleted). Leave the screen and
-                // resync the views behind it rather than leaving a dead row on the
-                // list. Deep-linked here there is nothing to pop back to, so this
-                // lands on the dashboard instead of leaving the user staring at a
-                // requisition that no longer exists.
-                backOrDashboard(context);
-                _refreshRequisitionViews(ref);
-              },
+          return axisPage(
+            context: context,
+            key: state.pageKey,
+            child: PopOrDashboardScope(
+              child: RequisitionDetailScreen(
+                requisitionId: id,
+                onBack: () => backOrDashboard(context),
+                onEdit: (requisition) =>
+                    context.push(RoutePaths.editFor(id), extra: requisition),
+                onClosed: () {
+                  // The requisition is gone (cancelled or deleted). Leave the screen and
+                  // resync the views behind it rather than leaving a dead row on the
+                  // list. Deep-linked here there is nothing to pop back to, so this
+                  // lands on the dashboard instead of leaving the user staring at a
+                  // requisition that no longer exists.
+                  backOrDashboard(context);
+                  _refreshRequisitionViews(ref);
+                },
+              ),
             ),
           );
         },
       ),
       GoRoute(
         path: RoutePaths.requisitionEdit,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           // The requisition travels as `extra` rather than being refetched: the detail
           // screen has just loaded it, and a second GET would only add a spinner and a
           // failure mode between tapping Edit and seeing the form.
@@ -290,29 +331,38 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             // Wrapped like every other pushed route: this is on screen for a frame, but
             // a back press landing in that frame would otherwise reach no handler at all
             // and drop the user out of the app from a deep link.
-            return PopOrDashboardScope(
-              child: _MissingEditPayload(
-                onRedirect: () =>
-                    context.pushReplacement(RoutePaths.detailFor(state.pathParameters['id']!)),
+            return axisPage(
+              context: context,
+              key: state.pageKey,
+              child: PopOrDashboardScope(
+                child: _MissingEditPayload(
+                  onRedirect: () => context.pushReplacement(
+                    RoutePaths.detailFor(state.pathParameters['id']!),
+                  ),
+                ),
               ),
             );
           }
-          return PopOrDashboardScope(
-            child: RequisitionCreateScreen(
-              existing: existing,
-              onBack: () => backOrDashboard(context),
-              onSubmitted: () {
-                backOrDashboard(context);
-                _refreshRequisitionViews(ref);
-              },
-              // A 409 means the requisition left `Pending` while the form was open. The
-              // detail screen underneath still shows the old status — and therefore
-              // still offers Edit and Cancel — so it has to resync, or the user's next
-              // tap earns another 409.
-              onEditRejected: () {
-                backOrDashboard(context);
-                _refreshRequisitionViews(ref);
-              },
+          return axisPage(
+            context: context,
+            key: state.pageKey,
+            child: PopOrDashboardScope(
+              child: RequisitionCreateScreen(
+                existing: existing,
+                onBack: () => backOrDashboard(context),
+                onSubmitted: () {
+                  backOrDashboard(context);
+                  _refreshRequisitionViews(ref);
+                },
+                // A 409 means the requisition left `Pending` while the form was open. The
+                // detail screen underneath still shows the old status — and therefore
+                // still offers Edit and Cancel — so it has to resync, or the user's next
+                // tap earns another 409.
+                onEditRejected: () {
+                  backOrDashboard(context);
+                  _refreshRequisitionViews(ref);
+                },
+              ),
             ),
           );
         },

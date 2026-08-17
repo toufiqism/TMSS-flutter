@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import 'motion.dart';
 
 /// The small pill used for an inline choice inside a form card — trip type, loading
 /// capacity, who the trip is for.
@@ -27,26 +29,38 @@ class ChoicePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
+    final motion = TracGoMotion.of(context);
     return Semantics(
       button: true,
       selected: selected,
       enabled: enabled,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: pillBorderRadius,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color: selected ? tracGoLimeTintStrong : tracGoInputBackground,
-            borderRadius: pillBorderRadius,
-          ),
-          child: Text(
-            label,
-            style: tracGoTextTheme.bodySmall?.copyWith(
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-              color: selected
-                  ? tracGoGreen
-                  : (enabled ? tracGoTextMuted : tracGoPlaceholder),
+      child: PressableScale(
+        enabled: enabled,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: pillBorderRadius,
+          // Animated fill and label colour: selecting one pill in a row deselects
+          // another, and two chips changing at once is exactly the moment a hard cut is
+          // most visible. `AnimatedDefaultTextStyle` carries the weight change too, so
+          // the label thickens over the same 120ms rather than jumping a frame early.
+          child: AnimatedContainer(
+            duration: motion.fast,
+            curve: tracGoMotionCurve,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: selected ? tracGoLimeTintStrong : tracGoInputBackground,
+              borderRadius: pillBorderRadius,
+            ),
+            child: AnimatedDefaultTextStyle(
+              duration: motion.fast,
+              curve: tracGoMotionCurve,
+              style: (tracGoTextTheme.bodySmall ?? const TextStyle()).copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected
+                    ? tracGoGreen
+                    : (enabled ? tracGoTextMuted : tracGoPlaceholder),
+              ),
+              child: Text(label),
             ),
           ),
         ),
@@ -114,34 +128,49 @@ class FilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? tracGoSurfaceWhite : tracGoTextBody;
+    final motion = TracGoMotion.of(context);
     return Semantics(
       button: true,
       selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: pillBorderRadius,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? tracGoInk : tracGoSurfaceWhite,
-            borderRadius: pillBorderRadius,
-            border: Border.all(color: selected ? tracGoInk : tracGoBorder),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 14, color: foreground),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                style: tracGoTextTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: foreground,
+      child: PressableScale(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: pillBorderRadius,
+          // White-to-navy is the largest colour jump in the app; crossing it in one frame
+          // reads as the chip being replaced rather than changing state.
+          child: AnimatedContainer(
+            duration: motion.fast,
+            curve: tracGoMotionCurve,
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected ? tracGoInk : tracGoSurfaceWhite,
+              borderRadius: pillBorderRadius,
+              border: Border.all(color: selected ? tracGoInk : tracGoBorder),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  // The icon has to be animated separately: it takes a colour, not a
+                  // text style, so the DefaultTextStyle below does not reach it.
+                  TweenAnimationBuilder<Color?>(
+                    tween: ColorTween(end: foreground),
+                    duration: motion.fast,
+                    curve: tracGoMotionCurve,
+                    builder: (context, color, _) =>
+                        Icon(icon, size: 14, color: color ?? foreground),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                AnimatedDefaultTextStyle(
+                  duration: motion.fast,
+                  curve: tracGoMotionCurve,
+                  style: (tracGoTextTheme.bodySmall ?? const TextStyle())
+                      .copyWith(fontWeight: FontWeight.w600, color: foreground),
+                  child: Text(label),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

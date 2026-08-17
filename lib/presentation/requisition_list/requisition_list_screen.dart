@@ -8,13 +8,16 @@ import '../../domain/model/requisition.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../../theme/motion.dart';
 import '../common/choice_pill.dart';
+import '../common/motion.dart';
 import '../common/requisition_row.dart';
 import '../common/section_label.dart';
 import '../common/strings.dart';
 import '../common/surface_card.dart';
 import '../common/synced_text_field.dart';
 import 'requisition_list_notifier.dart';
+import 'requisition_list_skeleton.dart';
 import 'requisition_list_state.dart';
 
 final _chipDateFormatter = DateFormat('dd MMM');
@@ -147,6 +150,10 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
 
     return Scaffold(
       backgroundColor: tracGoPageBackground,
+      // Above the list, so it survives every scroll: it remembers which day groups have
+      // already played their entrance, and `ListView.builder` rebuilding a recycled group
+      // does not make it fade in a second time.
+      body: MotionEntranceScope(child: _body(context, uiState, notifier)),
       bottomNavigationBar: SafeArea(
         child: Container(
           color: tracGoSurfaceWhite,
@@ -173,7 +180,9 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
                     children: [
                       Icon(Icons.add, size: 16),
                       SizedBox(width: 8),
-                      Flexible(child: Text(TracGoStrings.requisitionListNewFab)),
+                      Flexible(
+                        child: Text(TracGoStrings.requisitionListNewFab),
+                      ),
                     ],
                   ),
                 ),
@@ -182,37 +191,48 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          _SearchAndFilters(
-            searchQuery: uiState.searchQuery,
-            startDate: uiState.startDate,
-            endDate: uiState.endDate,
-            onSearchQueryChange: notifier.onSearchQueryChange,
-            onDateRangeChange: notifier.onDateRangeChange,
-            onReset: notifier.resetFilters,
-          ),
-          Expanded(
-            // The list had no pull-to-refresh at all, which mattered because its only
-            // other refresh trigger was changing a filter — a failed load left the user
-            // with no way back short of restarting the app.
-            child: RefreshIndicator(
-              onRefresh: notifier.refresh,
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    RequisitionListUiState uiState,
+    RequisitionListNotifier notifier,
+  ) {
+    return Column(
+      children: [
+        _SearchAndFilters(
+          searchQuery: uiState.searchQuery,
+          startDate: uiState.startDate,
+          endDate: uiState.endDate,
+          onSearchQueryChange: notifier.onSearchQueryChange,
+          onDateRangeChange: notifier.onDateRangeChange,
+          onReset: notifier.resetFilters,
+        ),
+        Expanded(
+          // The list had no pull-to-refresh at all, which mattered because its only
+          // other refresh trigger was changing a filter — a failed load left the user
+          // with no way back short of restarting the app.
+          child: RefreshIndicator(
+            onRefresh: notifier.refresh,
+            child: MotionSwitcher(
               child: switch (uiState) {
-                RequisitionListUiState(isInitialLoading: true) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                RequisitionListUiState(isInitialLoading: true) =>
+                  const RequisitionListSkeleton(key: ValueKey('loading')),
                 RequisitionListUiState(items: [], :final errorMessage)
                     when errorMessage != null =>
                   _EmptyOrErrorState(
+                    key: const ValueKey('error'),
                     message: errorMessage,
                     onRetry: () => unawaited(notifier.refresh()),
                   ),
                 RequisitionListUiState(items: []) => const _EmptyOrErrorState(
+                  key: ValueKey('empty'),
                   message: TracGoStrings.requisitionListEmpty,
                 ),
                 RequisitionListUiState(:final items, :final isLoadingMore) =>
                   _GroupedList(
+                    key: const ValueKey('content'),
                     controller: _scrollController,
                     groups: _groupByDay(items),
                     isLoadingMore: isLoadingMore,
@@ -222,14 +242,15 @@ class _RequisitionListScreenState extends ConsumerState<RequisitionListScreen> {
               },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class _GroupedList extends StatelessWidget {
   const _GroupedList({
+    super.key,
     required this.controller,
     required this.groups,
     required this.isLoadingMore,
@@ -248,6 +269,7 @@ class _GroupedList extends StatelessWidget {
     // Resolved once per build rather than per group, so every header on screen agrees
     // about what "today" is even if the build straddles midnight.
     final now = DateTime.now();
+    final motion = TracGoMotion.of(context);
 
     return ListView.builder(
       controller: controller,
@@ -259,13 +281,18 @@ class _GroupedList extends StatelessWidget {
       itemCount: groups.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= groups.length) {
+          // The pagination spinner fades in rather than appearing under the last row the
+          // instant a scroll crosses the threshold — it is a response to scrolling, not
+          // to anything the user asked for, so it should not snap into view.
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            child: FadeSlideIn(
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
             ),
           );
@@ -274,30 +301,41 @@ class _GroupedList extends StatelessWidget {
         final group = groups[index];
         return Padding(
           padding: EdgeInsets.only(top: index == 0 ? 0 : 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 9),
-                child: SectionLabel(_dayLabel(group.day, now)),
-              ),
-              SurfaceCard.rows(
-                rows: [
-                  for (final requisition in group.items)
-                    RequisitionRow(
-                      requisition: requisition,
-                      timeOnly: true,
-                      onTap: () => onOpenRequisition(requisition),
-                      trailingAction:
-                          requisition.status == RequisitionStatus.pending
-                          ? _CancelAction(
-                              onTap: () => onCancel(requisition.id),
-                            )
-                          : null,
-                    ),
-                ],
-              ),
-            ],
+          // Keyed by the day this group covers, so the enclosing MotionEntranceScope can
+          // tell "a group the user has never seen" from "a group being rebuilt because it
+          // scrolled back into view". Only the former animates. Page two's groups are new
+          // keys, so they animate in as they arrive.
+          child: FadeSlideIn(
+            entranceKey: group.day,
+            delay: motion.staggerDelay(index),
+            travel: tracGoMotionTravelLarge,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: SectionLabel(_dayLabel(group.day, now)),
+                ),
+                SurfaceCard.rows(
+                  rows: [
+                    for (final requisition in group.items)
+                      PressableScale(
+                        child: RequisitionRow(
+                          requisition: requisition,
+                          timeOnly: true,
+                          onTap: () => onOpenRequisition(requisition),
+                          trailingAction:
+                              requisition.status == RequisitionStatus.pending
+                              ? _CancelAction(
+                                  onTap: () => onCancel(requisition.id),
+                                )
+                              : null,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -376,7 +414,9 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
         : widget.startDate;
     final newEnd = target == _DatePickerTarget.end ? picked : widget.endDate;
     if (newStart != null && newEnd != null && newEnd.isBefore(newStart)) {
-      setState(() => _rangeError = TracGoStrings.requisitionListDateRangeInvalid);
+      setState(
+        () => _rangeError = TracGoStrings.requisitionListDateRangeInvalid,
+      );
       return;
     }
     setState(() => _rangeError = null);
@@ -480,7 +520,7 @@ class _SearchAndFiltersState extends State<_SearchAndFilters> {
 }
 
 class _EmptyOrErrorState extends StatelessWidget {
-  const _EmptyOrErrorState({required this.message, this.onRetry});
+  const _EmptyOrErrorState({super.key, required this.message, this.onRetry});
 
   final String message;
 

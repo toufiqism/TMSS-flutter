@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_result.dart';
 import '../../di/providers.dart';
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/safe_insets.dart';
@@ -513,13 +514,19 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final motion = TracGoMotion.of(context);
     return Semantics(
       selected: selected,
       button: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: tracGoBorderRadius(tracGoRadiusSmall),
-        child: Container(
+        // The selected row's tint and dot animate because the drawer stays open for the
+        // frame in which the selection moves — the tap closes it, but the close is itself
+        // animated, so a hard colour cut underneath is visible on the way out.
+        child: AnimatedContainer(
+          duration: motion.fast,
+          curve: tracGoMotionCurve,
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
@@ -528,7 +535,9 @@ class _DrawerItem extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: motion.fast,
+                curve: tracGoMotionCurve,
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
@@ -540,12 +549,17 @@ class _DrawerItem extends StatelessWidget {
               // Expanded so the label wraps inside the drawer rather than overflowing
               // it at large accessibility text sizes.
               Expanded(
-                child: Text(
-                  label,
-                  style: tracGoTextTheme.bodyLarge?.copyWith(
-                    color: selected ? tracGoInk : tracGoTextBody,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  ),
+                child: AnimatedDefaultTextStyle(
+                  duration: motion.fast,
+                  curve: tracGoMotionCurve,
+                  style: (tracGoTextTheme.bodyLarge ?? const TextStyle())
+                      .copyWith(
+                        color: selected ? tracGoInk : tracGoTextBody,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
+                  child: Text(label),
                 ),
               ),
             ],

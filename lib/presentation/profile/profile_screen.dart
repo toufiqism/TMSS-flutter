@@ -8,11 +8,14 @@ import '../../core/api_result.dart';
 import '../../di/providers.dart';
 import '../../domain/model/user.dart';
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/key_value_row.dart';
+import '../common/motion.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
+import '../common/skeleton.dart';
 import '../common/strings.dart';
 import '../common/surface_card.dart';
 import '../nav/logout_notifier.dart';
@@ -21,7 +24,18 @@ import 'profile_state.dart';
 
 final _dateFormatter = DateFormat('dd MMM yyyy');
 
-const _honorifics = {'md', 'md.', 'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'dr', 'dr.'};
+const _honorifics = {
+  'md',
+  'md.',
+  'mr',
+  'mr.',
+  'mrs',
+  'mrs.',
+  'ms',
+  'ms.',
+  'dr',
+  'dr.',
+};
 
 /// Initials for the avatar, skipping honorifics so "Md. Tofiq Akbar" reads TA, not MT.
 String _initialsOf(String name) {
@@ -58,8 +72,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _eventSub = notifier.events.listen((event) {
         if (!mounted) return;
         if (event is ProfileSessionExpired) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(event.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(event.message)));
         }
       });
       unawaited(notifier.load());
@@ -80,6 +95,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     // notifier state: it is already on the device, renders on the first frame, and is
     // unaffected by whether the account fetch succeeds.
     final user = ref.watch(sessionStreamProvider).value?.user;
+    final motion = TracGoMotion.of(context);
 
     return Scaffold(
       backgroundColor: tracGoPageBackground,
@@ -105,37 +121,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             24,
           ).addBottomSystemInset(context),
           children: [
+            // Staggered by hand rather than through `staggerAll`, because the first two
+            // blocks are conditional: the indexes have to keep counting from zero when
+            // the session has no user to render.
             if (user != null) ...[
-              _Identity(user: user, activeStatus: uiState.account?.activeStatus),
+              FadeSlideIn(
+                child: _Identity(
+                  user: user,
+                  activeStatus: uiState.account?.activeStatus,
+                ),
+              ),
               const SizedBox(height: 24),
-              _Section(
-                title: TracGoStrings.profileSectionContact,
-                rows: [
-                  KeyValueRow(
-                    TracGoStrings.profileEmail,
-                    user.email,
-                    placeholder: TracGoStrings.profileNotProvided,
-                  ),
-                  KeyValueRow(
-                    TracGoStrings.profilePhone,
-                    user.phone,
-                    placeholder: TracGoStrings.profileNotProvided,
-                  ),
-                  KeyValueRow(
-                    TracGoStrings.profileCompany,
-                    user.companyName,
-                    placeholder: TracGoStrings.profileNotProvided,
-                  ),
-                ],
+              FadeSlideIn(
+                delay: motion.staggerDelay(1),
+                child: _Section(
+                  title: TracGoStrings.profileSectionContact,
+                  rows: [
+                    KeyValueRow(
+                      TracGoStrings.profileEmail,
+                      user.email,
+                      placeholder: TracGoStrings.profileNotProvided,
+                    ),
+                    KeyValueRow(
+                      TracGoStrings.profilePhone,
+                      user.phone,
+                      placeholder: TracGoStrings.profileNotProvided,
+                    ),
+                    KeyValueRow(
+                      TracGoStrings.profileCompany,
+                      user.companyName,
+                      placeholder: TracGoStrings.profileNotProvided,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
             ],
-            _AccountSection(
-              state: uiState,
-              onRetry: () => unawaited(notifier.load()),
+            FadeSlideIn(
+              delay: motion.staggerDelay(user != null ? 2 : 0),
+              child: _AccountSection(
+                state: uiState,
+                onRetry: () => unawaited(notifier.load()),
+              ),
             ),
             const SizedBox(height: 28),
-            const _LogoutButton(),
+            FadeSlideIn(
+              delay: motion.staggerDelay(user != null ? 3 : 1),
+              child: const _LogoutButton(),
+            ),
           ],
         ),
       ),
@@ -163,7 +196,10 @@ class _Identity extends StatelessWidget {
         Container(
           width: 84,
           height: 84,
-          decoration: const BoxDecoration(color: tracGoInk, shape: BoxShape.circle),
+          decoration: const BoxDecoration(
+            color: tracGoInk,
+            shape: BoxShape.circle,
+          ),
           alignment: Alignment.center,
           // Fixed circle, so its contents cannot scale past it. The full name is
           // directly underneath at whatever size the user has chosen.
@@ -233,27 +269,53 @@ class _AccountSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cross-fades between skeleton, error and content. `AnimatedSize` on top because the
+    // three differ in height — four rows, a two-line error, sometimes two rows — and a
+    // fade between differently-sized cards would otherwise snap the Log Out button below
+    // it up or down the page mid-transition.
+    return AnimatedSize(
+      duration: TracGoMotion.of(context).base,
+      curve: tracGoMotionCurve,
+      alignment: Alignment.topCenter,
+      child: MotionSwitcher(child: _card(context)),
+    );
+  }
+
+  Widget _card(BuildContext context) {
+    // Identity above is already on screen from the stored session, so only this block is
+    // ever waiting — a skeleton of exactly the four rows `GET /user` fills in, rather
+    // than a spinner in a card whose height then changes when the data lands.
     if (state.isLoading) {
-      return const _Section(
-        title: TracGoStrings.profileSectionAccount,
-        rows: [
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 22),
-            child: Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
+      return SkeletonSemantics(
+        key: const ValueKey('loading'),
+        label: TracGoStrings.loadingProfile,
+        child: SkeletonHost(
+          child: _Section(
+            title: TracGoStrings.profileSectionAccount,
+            rows: [
+              // 13px vertical, matching `KeyValueRow` exactly — the card is already
+              // padded 16/6 by `_Section`, so the rows only supply their own inset.
+              for (var i = 0; i < 4; i++)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 13),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SkeletonBox(width: 104, height: 14, radius: 6),
+                      SkeletonBox(width: 88, height: 14, radius: 6),
+                    ],
+                  ),
+                ),
+            ],
           ),
-        ],
+        ),
       );
     }
 
     final error = state.errorMessage;
     if (error != null) {
       return _Section(
+        key: const ValueKey('error'),
         title: TracGoStrings.profileSectionAccount,
         rows: [
           Padding(
@@ -294,9 +356,12 @@ class _AccountSection extends StatelessWidget {
     }
 
     final account = state.account;
-    if (account == null) return const SizedBox.shrink();
+    if (account == null) {
+      return const SizedBox(key: ValueKey('none'), width: double.infinity);
+    }
 
     return _Section(
+      key: const ValueKey('content'),
       title: TracGoStrings.profileSectionAccount,
       rows: [
         KeyValueRow(
@@ -378,7 +443,7 @@ class _LogoutButton extends ConsumerWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.rows});
+  const _Section({super.key, required this.title, required this.rows});
 
   final String title;
   final List<Widget> rows;

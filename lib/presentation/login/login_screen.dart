@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/typography.dart';
+import '../common/motion.dart';
 import '../common/strings.dart';
 import '../common/synced_text_field.dart';
 import '../common/tracgo_logo_mark.dart';
@@ -97,6 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // strips the bottom view inset out of the MediaQuery it hands its body
     // (`removeBottomInset`), so the identical call one level down always reports 0.
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final motion = TracGoMotion.of(context);
 
     return Scaffold(
       backgroundColor: tracGoSignInBackground,
@@ -118,7 +121,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // sit outside the builder and are untouched by it, so a keyboard
                   // opening cannot disturb input state.
                   TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0, end: keyboardVisible ? 1 : 0),
+                    tween: Tween<double>(
+                      begin: 0,
+                      end: keyboardVisible ? 1 : 0,
+                    ),
                     duration: _headerCompactDuration,
                     curve: Curves.easeOutCubic,
                     builder: (context, t, _) => Column(
@@ -129,10 +135,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: Column(
                             children: [
                               TracGoLogoMark(
-                                size: _compacted(_logoSize, _logoSizeCompact, t),
+                                size: _compacted(
+                                  _logoSize,
+                                  _logoSizeCompact,
+                                  t,
+                                ),
                               ),
                               SizedBox(
-                                height: _compacted(_logoGap, _logoGapCompact, t),
+                                height: _compacted(
+                                  _logoGap,
+                                  _logoGapCompact,
+                                  t,
+                                ),
                               ),
                               Text(
                                 TracGoStrings.loginHeading,
@@ -148,7 +162,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               // The design caps the subtitle at 290px so it breaks into
                               // two balanced lines rather than one long one.
                               ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 290),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 290,
+                                ),
                                 child: Text(
                                   TracGoStrings.loginSubheading,
                                   textAlign: TextAlign.center,
@@ -167,44 +183,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
-                  if (uiState.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: Text(
-                        uiState.errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: tracGoTextTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  // A failed sign-in opens its own height rather than shoving the fields
+                  // down the page — the user's eyes are on the field they just typed in.
+                  AnimatedSize(
+                    duration: TracGoMotion.of(context).base,
+                    curve: tracGoMotionCurve,
+                    alignment: Alignment.topCenter,
+                    child: MotionSwitcher(
+                      child: uiState.errorMessage == null
+                          ? const SizedBox(
+                              key: ValueKey('no-error'),
+                              width: double.infinity,
+                            )
+                          : Padding(
+                              key: const ValueKey('error'),
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: Text(
+                                uiState.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: tracGoTextTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                     ),
-                  _UnderlinedField(
-                    label: TracGoStrings.loginUsernameLabel,
-                    value: uiState.username,
-                    onChanged: notifier.onUsernameChange,
-                    hint: TracGoStrings.loginUsernamePlaceholder,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.username],
-                    enabled: !uiState.isLoading,
+                  ),
+                  // The form enters a beat behind the header. Deliberately *not* wrapped
+                  // around the whole column: the header owns the keyboard-compaction
+                  // tween above, and nesting one animation inside another that resizes it
+                  // makes both look like jitter.
+                  FadeSlideIn(
+                    delay: motion.staggerDelay(1),
+                    child: _UnderlinedField(
+                      label: TracGoStrings.loginUsernameLabel,
+                      value: uiState.username,
+                      onChanged: notifier.onUsernameChange,
+                      hint: TracGoStrings.loginUsernamePlaceholder,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.username],
+                      enabled: !uiState.isLoading,
+                    ),
                   ),
                   const SizedBox(height: 26),
-                  _UnderlinedField(
-                    label: TracGoStrings.loginPasswordLabel,
-                    value: uiState.password,
-                    onChanged: notifier.onPasswordChange,
-                    hint: TracGoStrings.loginPasswordPlaceholder,
-                    obscureText: true,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.password],
-                    enabled: !uiState.isLoading,
-                    onSubmitted: () => unawaited(notifier.submit()),
+                  FadeSlideIn(
+                    delay: motion.staggerDelay(2),
+                    child: _UnderlinedField(
+                      label: TracGoStrings.loginPasswordLabel,
+                      value: uiState.password,
+                      onChanged: notifier.onPasswordChange,
+                      hint: TracGoStrings.loginPasswordPlaceholder,
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.password],
+                      enabled: !uiState.isLoading,
+                      onSubmitted: () => unawaited(notifier.submit()),
+                    ),
                   ),
                   const SizedBox(height: 36),
-                  _SignInButton(
-                    isLoading: uiState.isLoading,
-                    onPressed: () => unawaited(notifier.submit()),
+                  FadeSlideIn(
+                    delay: motion.staggerDelay(3),
+                    child: _SignInButton(
+                      isLoading: uiState.isLoading,
+                      onPressed: () => unawaited(notifier.submit()),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Wrap(
@@ -279,23 +322,28 @@ class _SignInButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         onPressed: isLoading ? null : onPressed,
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+        child: MotionSwitcher(
+          alignment: Alignment.center,
+          child: isLoading
+              ? const SizedBox(
+                  key: ValueKey('loading'),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  TracGoStrings.loginSignInButton,
+                  key: const ValueKey('idle'),
+                  style: tracGoTextTheme.labelLarge?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
-              )
-            : Text(
-                TracGoStrings.loginSignInButton,
-                style: tracGoTextTheme.labelLarge?.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
+        ),
       ),
     );
   }

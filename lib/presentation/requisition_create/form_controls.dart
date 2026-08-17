@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../common/motion.dart';
 import '../common/surface_card.dart';
 import '../common/synced_text_field.dart';
 
@@ -43,6 +45,7 @@ class FormFieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final message = error;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -51,16 +54,27 @@ class FormFieldRow extends StatelessWidget {
           Text(label, style: tracGoTextTheme.labelMedium),
           const SizedBox(height: 5),
           child,
-          if (error != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              error!,
-              style: tracGoTextTheme.bodySmall?.copyWith(
-                fontSize: 12,
-                color: tracGoDestructiveRed,
-              ),
-            ),
-          ],
+          // A validation message appearing shoves every field below it down the form.
+          // AnimatedSize makes the row open to fit rather than jumping, so the fields
+          // below travel with it instead of teleporting — which matters most when a
+          // failed submit turns on several of these at once.
+          AnimatedSize(
+            duration: TracGoMotion.of(context).base,
+            curve: tracGoMotionCurve,
+            alignment: Alignment.topLeft,
+            child: message == null
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      message,
+                      style: tracGoTextTheme.bodySmall?.copyWith(
+                        fontSize: 12,
+                        color: tracGoDestructiveRed,
+                      ),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -207,39 +221,59 @@ class SelectableTypeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final motion = TracGoMotion.of(context);
     return Semantics(
       button: true,
       selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
-        child: SurfaceCard(
-          radius: tracGoRadiusLarge,
-          borderColor: selected ? tracGoGreen : tracGoBorder,
-          // 2px on the selected card, per the design. The unselected card keeps its 1px
-          // hairline, so the two differ by weight as well as hue — which is what makes
-          // the selection legible without relying on colour alone.
-          borderWidth: selected ? 2 : 1,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: tracGoTextTheme.titleMedium?.copyWith(
-                  fontSize: 16,
-                  color: selected ? tracGoInk : tracGoTextMuted,
-                ),
+      child: PressableScale(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
+          // AnimatedContainer rather than SurfaceCard here, and only here: the ring is
+          // what confirms the tap, and it has to draw its own animated border to do that.
+          // The decoration is kept identical to `SurfaceCard`'s so the two still match at
+          // rest — this is the one place in the app that reimplements it.
+          child: AnimatedContainer(
+            duration: motion.fast,
+            curve: tracGoMotionCurve,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: tracGoSurfaceWhite,
+              borderRadius: tracGoBorderRadius(tracGoRadiusLarge),
+              // 2px on the selected card, per the design. The unselected card keeps its
+              // 1px hairline, so the two differ by weight as well as hue — which is what
+              // makes the selection legible without relying on colour alone.
+              border: Border.all(
+                color: selected ? tracGoGreen : tracGoBorder,
+                width: selected ? 2 : 1,
               ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: tracGoTextTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  color: selected ? tracGoTextFaint : tracGoPlaceholder,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedDefaultTextStyle(
+                  duration: motion.fast,
+                  curve: tracGoMotionCurve,
+                  style: (tracGoTextTheme.titleMedium ?? const TextStyle())
+                      .copyWith(
+                        fontSize: 16,
+                        color: selected ? tracGoInk : tracGoTextMuted,
+                      ),
+                  child: Text(title),
                 ),
-              ),
-            ],
+                const SizedBox(height: 3),
+                AnimatedDefaultTextStyle(
+                  duration: motion.fast,
+                  curve: tracGoMotionCurve,
+                  style: (tracGoTextTheme.bodySmall ?? const TextStyle())
+                      .copyWith(
+                        fontSize: 12,
+                        color: selected ? tracGoTextFaint : tracGoPlaceholder,
+                      ),
+                  child: Text(subtitle),
+                ),
+              ],
+            ),
           ),
         ),
       ),

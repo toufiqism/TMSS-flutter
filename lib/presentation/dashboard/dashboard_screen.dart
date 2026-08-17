@@ -5,13 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/model/requisition.dart';
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../common/motion.dart';
 import '../common/requisition_row.dart';
 import '../common/safe_insets.dart';
 import '../common/strings.dart';
 import '../common/surface_card.dart';
 import 'dashboard_notifier.dart';
+import 'dashboard_skeleton.dart';
 import 'dashboard_state.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -65,28 +68,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: tracGoPageBackground,
-      body: switch (uiState) {
-        DashboardLoading() => const Center(child: CircularProgressIndicator()),
-        DashboardError(:final message) => _ErrorState(
-          message: message,
-          onRetry: notifier.load,
-        ),
-        DashboardSuccess(:final summary) => RefreshIndicator(
-          onRefresh: notifier.refresh,
-          child: _DashboardContent(
-            summary: summary,
-            onViewAllRequisitions: widget.onViewAllRequisitions,
-            onRequisitionNow: widget.onRequisitionNow,
-            onOpenRequisition: widget.onOpenRequisition,
+      // The three states cross-fade rather than snapping. Each branch carries a distinct
+      // key: the switcher compares child keys, and two `RefreshIndicator`s of the same
+      // type would otherwise look like one child being rebuilt, so the fade would never
+      // run on the load-to-content swap that matters most.
+      body: MotionSwitcher(
+        child: switch (uiState) {
+          DashboardLoading() => const DashboardSkeleton(
+            key: ValueKey('loading'),
           ),
-        ),
-      },
+          DashboardError(:final message) => _ErrorState(
+            key: const ValueKey('error'),
+            message: message,
+            onRetry: notifier.load,
+          ),
+          DashboardSuccess(:final summary) => RefreshIndicator(
+            key: const ValueKey('content'),
+            onRefresh: notifier.refresh,
+            child: _DashboardContent(
+              summary: summary,
+              onViewAllRequisitions: widget.onViewAllRequisitions,
+              onRequisitionNow: widget.onRequisitionNow,
+              onOpenRequisition: widget.onOpenRequisition,
+            ),
+          ),
+        },
+      ),
     );
   }
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({super.key, required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -133,6 +146,87 @@ class _DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final motion = TracGoMotion.of(context);
+
+    // The four blocks that make up the page, and the gaps between them. Kept as parallel
+    // lists so the stagger indexes the *blocks* — a spacer given its own beat would
+    // double every gap in the timing and animate nothing visible.
+    final blocks = <Widget>[
+      _HeroCount(total: summary.allCount),
+      _StatGrid(summary: summary),
+      // Wrap, not Row: the section title plus both actions outgrow a single line
+      // at large accessibility text sizes, and a Wrap reflows them onto another
+      // run instead of overflowing.
+      Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          Text(
+            TracGoStrings.dashboardRecentRequisitions,
+            style: tracGoTextTheme.titleMedium,
+          ),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              _NewRequisitionButton(onPressed: onRequisitionNow),
+              TextButton(
+                onPressed: onViewAllRequisitions,
+                style: TextButton.styleFrom(
+                  // Default TextButton padding is 16dp a side and a 64dp minimum,
+                  // which is what pushes this action onto a second run at phone
+                  // widths. The 48dp tap target is preserved by the default
+                  // MaterialTapTargetSize.
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                  minimumSize: Size.zero,
+                ),
+                child: Text(
+                  TracGoStrings.dashboardViewAll,
+                  style: tracGoTextTheme.bodySmall?.copyWith(
+                    color: tracGoGreen,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      if (summary.recentRequisitions.isEmpty)
+        SurfaceCard(
+          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+          child: Text(
+            TracGoStrings.dashboardNoRecentRequisitions,
+            textAlign: TextAlign.center,
+            style: tracGoTextTheme.bodyMedium?.copyWith(
+              color: tracGoTextMutedAlt,
+            ),
+          ),
+        )
+      else
+        SurfaceCard.rows(
+          rows: [
+            for (final requisition in summary.recentRequisitions)
+              // Press feedback on the row itself rather than the card: the card holds
+              // several rows, and scaling all of them because one was touched would say
+              // the wrong thing about what the tap is going to open.
+              PressableScale(
+                child: RequisitionRecentRow(
+                  requisition: requisition,
+                  onTap: () => onOpenRequisition(requisition),
+                ),
+              ),
+          ],
+        ),
+    ];
+    const gaps = [14.0, 24.0, 12.0];
+
     return ListView(
       // Without this the dashboard cannot be over-scrolled when its content is
       // shorter than the viewport, and the enclosing RefreshIndicator never fires.
@@ -144,76 +238,10 @@ class _DashboardContent extends StatelessWidget {
         20,
       ).addBottomSystemInset(context),
       children: [
-        _HeroCount(total: summary.allCount),
-        const SizedBox(height: 14),
-        _StatGrid(summary: summary),
-        const SizedBox(height: 24),
-        // Wrap, not Row: the section title plus both actions outgrow a single line
-        // at large accessibility text sizes, and a Wrap reflows them onto another
-        // run instead of overflowing.
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            Text(
-              TracGoStrings.dashboardRecentRequisitions,
-              style: tracGoTextTheme.titleMedium,
-            ),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                _NewRequisitionButton(onPressed: onRequisitionNow),
-                TextButton(
-                  onPressed: onViewAllRequisitions,
-                  style: TextButton.styleFrom(
-                    // Default TextButton padding is 16dp a side and a 64dp minimum,
-                    // which is what pushes this action onto a second run at phone
-                    // widths. The 48dp tap target is preserved by the default
-                    // MaterialTapTargetSize.
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                    minimumSize: Size.zero,
-                  ),
-                  child: Text(
-                    TracGoStrings.dashboardViewAll,
-                    style: tracGoTextTheme.bodySmall?.copyWith(
-                      color: tracGoGreen,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (summary.recentRequisitions.isEmpty)
-          SurfaceCard(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-            child: Text(
-              TracGoStrings.dashboardNoRecentRequisitions,
-              textAlign: TextAlign.center,
-              style: tracGoTextTheme.bodyMedium?.copyWith(
-                color: tracGoTextMutedAlt,
-              ),
-            ),
-          )
-        else
-          SurfaceCard.rows(
-            rows: [
-              for (final requisition in summary.recentRequisitions)
-                RequisitionRecentRow(
-                  requisition: requisition,
-                  onTap: () => onOpenRequisition(requisition),
-                ),
-            ],
-          ),
+        for (var i = 0; i < blocks.length; i++) ...[
+          if (i > 0) SizedBox(height: gaps[i - 1]),
+          FadeSlideIn(delay: motion.staggerDelay(i), child: blocks[i]),
+        ],
       ],
     );
   }
@@ -252,29 +280,40 @@ class _HeroCount extends StatelessWidget {
         // with its 13px qualifier, and inline spans share a baseline for free. A Row
         // would need `CrossAxisAlignment.baseline`, which silently top-aligns any child
         // that reports no baseline.
-        Text.rich(
-          TextSpan(
-            children: [
+        // Counts up rather than appearing at its final value. The one number on the
+        // dashboard big enough for the movement to read as intent rather than a glitch —
+        // and it lands on `safeTotal` in 220ms, so it is never what the user is waiting
+        // for. Semantics announce the real total, not whatever frame the tween is on.
+        Semantics(
+          label: '$safeTotal ${TracGoStrings.dashboardStatQualifier}',
+          excludeSemantics: true,
+          child: AnimatedCount(
+            value: safeTotal,
+            builder: (context, animated) => Text.rich(
               TextSpan(
-                text: '$safeTotal',
-                style: tracGoTextTheme.titleLarge?.copyWith(
-                  fontSize: 34,
-                  height: 0.9,
-                  letterSpacing: -1.02, // -0.03em at 34px
-                ),
+                children: [
+                  TextSpan(
+                    text: '$animated',
+                    style: tracGoTextTheme.titleLarge?.copyWith(
+                      fontSize: 34,
+                      height: 0.9,
+                      letterSpacing: -1.02, // -0.03em at 34px
+                    ),
+                  ),
+                  TextSpan(
+                    text: '  ${TracGoStrings.dashboardStatQualifier}',
+                    style: tracGoTextTheme.bodySmall?.copyWith(
+                      color: tracGoTextMuted,
+                    ),
+                  ),
+                ],
               ),
-              TextSpan(
-                text: '  ${TracGoStrings.dashboardStatQualifier}',
-                style: tracGoTextTheme.bodySmall?.copyWith(
-                  color: tracGoTextMuted,
-                ),
-              ),
-            ],
+              // A five-digit total plus the qualifier does not fit one line on a phone,
+              // and neither does either of them at a large text scale. Wrapping is the
+              // graceful failure; ellipsis on a headline number is not.
+              maxLines: 2,
+            ),
           ),
-          // A five-digit total plus the qualifier does not fit one line on a phone, and
-          // neither does either of them at a large text scale. Wrapping is the graceful
-          // failure; ellipsis on a headline number is not.
-          maxLines: 2,
         ),
         const _PeriodBadge(),
       ],
@@ -453,14 +492,21 @@ class _StatTile extends StatelessWidget {
           const SizedBox(height: 6),
           // scaleDown: a four-digit count does not fit a quarter-width tile, and neither
           // does a two-digit one at a large text scale.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              '${spec.count}',
-              style: tracGoTextTheme.titleLarge?.copyWith(
-                fontSize: 19,
-                height: 1,
-                letterSpacing: 0,
+          Semantics(
+            label: '${spec.count}',
+            excludeSemantics: true,
+            child: AnimatedCount(
+              value: spec.count,
+              builder: (context, animated) => FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '$animated',
+                  style: tracGoTextTheme.titleLarge?.copyWith(
+                    fontSize: 19,
+                    height: 1,
+                    letterSpacing: 0,
+                  ),
+                ),
               ),
             ),
           ),

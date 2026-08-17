@@ -36,6 +36,14 @@ class TracGoStrings {
   static const loginErrorRequiredFields = 'Username and password are required';
   static const loginErrorInvalidCredentials = 'Username/Password is invalid!';
 
+  // Announced in place of a screen full of placeholder blocks while data loads. A
+  // skeleton is a visual affordance only — to a screen reader it is two dozen unlabelled
+  // boxes, so each one is hidden behind a single sentence instead. See `SkeletonSemantics`.
+  static const loadingDashboard = 'Loading dashboard';
+  static const loadingRequisitions = 'Loading requisitions';
+  static const loadingRequisitionDetails = 'Loading requisition details';
+  static const loadingProfile = 'Loading profile';
+
   static const navDashboard = 'Dashboard';
   static const navMyRequisition = 'My Requisition';
   static const navLogout = 'Log Out';

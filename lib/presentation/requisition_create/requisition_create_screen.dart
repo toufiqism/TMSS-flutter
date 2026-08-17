@@ -8,10 +8,12 @@ import '../../domain/model/employee.dart';
 import '../../domain/model/requisition.dart';
 import '../../domain/requisition_field_limits.dart';
 import '../../theme/colors.dart';
+import '../../theme/motion.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
 import '../common/choice_pill.dart';
 import '../common/date_time_field.dart';
+import '../common/motion.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
 import '../common/strings.dart';
@@ -49,10 +51,12 @@ class RequisitionCreateScreen extends ConsumerStatefulWidget {
   final Requisition? existing;
 
   @override
-  ConsumerState<RequisitionCreateScreen> createState() => _RequisitionCreateScreenState();
+  ConsumerState<RequisitionCreateScreen> createState() =>
+      _RequisitionCreateScreenState();
 }
 
-class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScreen> {
+class _RequisitionCreateScreenState
+    extends ConsumerState<RequisitionCreateScreen> {
   StreamSubscription<RequisitionCreateEvent>? _eventSub;
 
   @override
@@ -67,12 +71,16 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
           case RequisitionSubmitted():
             widget.onSubmitted();
           case RequisitionEditRejected(:final message):
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
             // Nothing here can succeed any more; hand control back so the detail
             // underneath refetches and shows what the requisition actually is now.
             (widget.onEditRejected ?? widget.onBack)();
           case RequisitionCreateSessionExpired(:final message):
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
         }
       });
       final existing = widget.existing;
@@ -102,21 +110,31 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
     final submitButton = ElevatedButton(
       // minimumSize, not a fixed height, so the label survives large text scales.
       style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(58)),
-      onPressed: uiState.isSubmitting ? null : () => unawaited(notifier.submit()),
-      child: uiState.isSubmitting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: tracGoSurfaceWhite,
+      onPressed: uiState.isSubmitting
+          ? null
+          : () => unawaited(notifier.submit()),
+      // The one control in the app whose in-flight state the user is definitely
+      // watching. Cross-faded so the label does not vanish a frame before the spinner
+      // arrives, which reads as a dropped tap.
+      child: MotionSwitcher(
+        alignment: Alignment.center,
+        child: uiState.isSubmitting
+            ? const SizedBox(
+                key: ValueKey('submitting'),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: tracGoSurfaceWhite,
+                ),
+              )
+            : Text(
+                uiState.isEditing
+                    ? TracGoStrings.editRequisitionSave
+                    : TracGoStrings.newRequisitionSubmit,
+                key: const ValueKey('idle'),
               ),
-            )
-          : Text(
-              uiState.isEditing
-                  ? TracGoStrings.editRequisitionSave
-                  : TracGoStrings.newRequisitionSubmit,
-            ),
+      ),
     );
 
     return Scaffold(
@@ -141,7 +159,12 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
               // 8 at rest, because the pinned footer below supplies the rest of the gap.
               // With the keyboard up that footer is gone and this padding is the only
               // thing keeping the button off the keyboard's edge.
-              padding: EdgeInsets.fromLTRB(20, 20, 20, keyboardVisible ? 24 : 8),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                keyboardVisible ? 24 : 8,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -160,14 +183,36 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
                     _RequesterHeader(uiState: uiState),
                     const SizedBox(height: 22),
                   ],
-                  if (uiState.submitError != null) ...[
-                    _SubmitError(message: uiState.submitError!),
-                    const SizedBox(height: 18),
-                  ],
-                  if (uiState.formType == RequisitionFormType.passenger)
-                    _PassengerFormFields(uiState: uiState, notifier: notifier)
-                  else
-                    _LogisticsFormFields(uiState: uiState, notifier: notifier),
+                  // A submit failure arrives while the user is looking somewhere else on
+                  // the form, so the banner opens its own height rather than teleporting
+                  // the fields below it down the page. AnimatedSize handles the height,
+                  // the switcher the appearance and disappearance.
+                  MotionSwitcher(
+                    child: uiState.submitError == null
+                        ? const SizedBox(key: ValueKey('no-error'), width: 0)
+                        : Padding(
+                            key: const ValueKey('error'),
+                            padding: const EdgeInsets.only(bottom: 18),
+                            child: _SubmitError(message: uiState.submitError!),
+                          ),
+                  ),
+                  // Passenger and Logistics are alternatives, not a hierarchy, so they
+                  // fade through each other exactly as the two shell destinations do.
+                  // Keyed by form type: the two variants are different widget types, but
+                  // being explicit is what keeps the switcher honest if that changes.
+                  MotionSwitcher(
+                    child: uiState.formType == RequisitionFormType.passenger
+                        ? _PassengerFormFields(
+                            key: const ValueKey('passenger'),
+                            uiState: uiState,
+                            notifier: notifier,
+                          )
+                        : _LogisticsFormFields(
+                            key: const ValueKey('logistics'),
+                            uiState: uiState,
+                            notifier: notifier,
+                          ),
+                  ),
                   // While the keyboard is up, the pinned footer would spend ~86px of an
                   // already-halved viewport on a button the user is not reaching for
                   // mid-typing. It moves into the form instead, so every one of those
@@ -186,8 +231,12 @@ class _RequisitionCreateScreenState extends ConsumerState<RequisitionCreateScree
               // Scaffold reserves no space for it and nothing applies the system inset —
               // it rendered under Android's navigation buttons. Only needed on this
               // branch: `padding.bottom` is already 0 whenever the keyboard is open.
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16)
-                  .addBottomSystemInset(context),
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                16,
+              ).addBottomSystemInset(context),
               child: submitButton,
             ),
         ],
@@ -261,7 +310,10 @@ class _RequesterHeader extends StatelessWidget {
     // Department and company are joined on one line to keep the card two lines tall at
     // default text size; the Text below still wraps at large scales rather than
     // clipping.
-    final secondary = [department, company].where((v) => v.isNotEmpty).join(' · ');
+    final secondary = [
+      department,
+      company,
+    ].where((v) => v.isNotEmpty).join(' · ');
 
     return SurfaceCard(
       padding: const EdgeInsets.all(16),
@@ -324,7 +376,9 @@ class _PillSegmentedToggle extends StatelessWidget {
                   label: TracGoStrings.newRequisitionTogglePassenger,
                   selected: selected == RequisitionFormType.passenger,
                   enabled: !locked,
-                  onTap: locked ? null : () => onSelect(RequisitionFormType.passenger),
+                  onTap: locked
+                      ? null
+                      : () => onSelect(RequisitionFormType.passenger),
                 ),
               ),
               Expanded(
@@ -368,6 +422,7 @@ class _SegmentPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final motion = TracGoMotion.of(context);
     return Semantics(
       enabled: enabled,
       selected: selected,
@@ -375,22 +430,30 @@ class _SegmentPill extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: pillBorderRadius,
-        child: Container(
+        // The navy thumb grows into place on the segment being selected while it fades
+        // out of the other one. Not a sliding thumb: the two segments are separate
+        // widgets inside a Row, and faking a slide across them would mean rebuilding the
+        // toggle around a Stack for a 120ms effect.
+        child: AnimatedContainer(
+          duration: motion.fast,
+          curve: tracGoMotionCurve,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
             color: selected ? tracGoInk : Colors.transparent,
             borderRadius: pillBorderRadius,
           ),
           alignment: Alignment.center,
-          child: Text(
-            label,
+          child: AnimatedDefaultTextStyle(
+            duration: motion.fast,
+            curve: tracGoMotionCurve,
             textAlign: TextAlign.center,
-            style: tracGoTextTheme.bodyMedium?.copyWith(
+            style: (tracGoTextTheme.bodyMedium ?? const TextStyle()).copyWith(
               color: selected
                   ? tracGoSurfaceWhite
                   : (enabled ? tracGoTextMuted : tracGoPlaceholder),
               fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             ),
+            child: Text(label, textAlign: TextAlign.center),
           ),
         ),
       ),
@@ -412,19 +475,36 @@ class _FormStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        StepSectionLabel(step: step, label: label),
-        const SizedBox(height: 12),
-        ...children,
-      ],
+    final motion = TracGoMotion.of(context);
+
+    // The step number *is* the stagger index — the form is already numbered 1..n on
+    // screen, so deriving the delay from it keeps the entrance in the order the design
+    // asks the user to read, without any call site having to pass an index.
+    //
+    // This animates once per mount. Typing rebuilds the form on every keystroke and does
+    // not restart it; switching Passenger/Logistics does, because that is a genuinely
+    // different form arriving.
+    return FadeSlideIn(
+      delay: motion.staggerDelay(step - 1),
+      travel: tracGoMotionTravelLarge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StepSectionLabel(step: step, label: label),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
     );
   }
 }
 
 class _PassengerFormFields extends StatelessWidget {
-  const _PassengerFormFields({required this.uiState, required this.notifier});
+  const _PassengerFormFields({
+    super.key,
+    required this.uiState,
+    required this.notifier,
+  });
 
   final RequisitionCreateUiState uiState;
   final RequisitionCreateNotifier notifier;
@@ -596,7 +676,11 @@ class _PassengerFormFields extends StatelessWidget {
 }
 
 class _LogisticsFormFields extends StatelessWidget {
-  const _LogisticsFormFields({required this.uiState, required this.notifier});
+  const _LogisticsFormFields({
+    super.key,
+    required this.uiState,
+    required this.notifier,
+  });
 
   final RequisitionCreateUiState uiState;
   final RequisitionCreateNotifier notifier;

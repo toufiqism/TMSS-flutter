@@ -8,13 +8,16 @@ import '../../domain/model/requisition.dart';
 import '../../theme/colors.dart';
 import '../../theme/shapes.dart';
 import '../../theme/typography.dart';
+import '../../theme/motion.dart';
 import '../common/key_value_row.dart';
+import '../common/motion.dart';
 import '../common/safe_insets.dart';
 import '../common/section_label.dart';
 import '../common/status_chip.dart';
 import '../common/strings.dart';
 import '../common/surface_card.dart';
 import 'requisition_detail_notifier.dart';
+import 'requisition_detail_skeleton.dart';
 import 'requisition_detail_state.dart';
 
 final _dateTimeFormatter = DateFormat('dd MMM yyyy, hh:mm a');
@@ -44,7 +47,8 @@ class RequisitionDetailScreen extends ConsumerStatefulWidget {
       _RequisitionDetailScreenState();
 }
 
-class _RequisitionDetailScreenState extends ConsumerState<RequisitionDetailScreen> {
+class _RequisitionDetailScreenState
+    extends ConsumerState<RequisitionDetailScreen> {
   StreamSubscription<RequisitionDetailEvent>? _eventSub;
 
   @override
@@ -58,11 +62,13 @@ class _RequisitionDetailScreenState extends ConsumerState<RequisitionDetailScree
         switch (event) {
           case RequisitionDetailShowMessage(:final message):
           case RequisitionDetailSessionExpired(:final message):
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
           case RequisitionDetailClosed(:final message):
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
             widget.onClosed();
         }
       });
@@ -117,31 +123,38 @@ class _RequisitionDetailScreenState extends ConsumerState<RequisitionDetailScree
           onPressed: widget.onBack,
         ),
       ),
-      body: switch (uiState) {
-        RequisitionDetailLoading() => const Center(child: CircularProgressIndicator()),
-        RequisitionDetailError(:final message, :final canRetry) => _ErrorState(
-            message: message,
-            onRetry: canRetry
-                ? () => unawaited(notifier.load(widget.requisitionId))
-                : null,
+      body: MotionSwitcher(
+        child: switch (uiState) {
+          RequisitionDetailLoading() => const RequisitionDetailSkeleton(
+            key: ValueKey('loading'),
           ),
-        RequisitionDetailSuccess(:final requisition, :final isCancelling) =>
-          RefreshIndicator(
-            onRefresh: notifier.refresh,
-            child: _Content(
-              requisition: requisition,
-              isCancelling: isCancelling,
-              onEdit: () => widget.onEdit(requisition),
-              onCancel: () => unawaited(_confirmCancel()),
+          RequisitionDetailError(:final message, :final canRetry) =>
+            _ErrorState(
+              key: const ValueKey('error'),
+              message: message,
+              onRetry: canRetry
+                  ? () => unawaited(notifier.load(widget.requisitionId))
+                  : null,
             ),
-          ),
-      },
+          RequisitionDetailSuccess(:final requisition, :final isCancelling) =>
+            RefreshIndicator(
+              key: const ValueKey('content'),
+              onRefresh: notifier.refresh,
+              child: _Content(
+                requisition: requisition,
+                isCancelling: isCancelling,
+                onEdit: () => widget.onEdit(requisition),
+                onCancel: () => unawaited(_confirmCancel()),
+              ),
+            ),
+        },
+      ),
     );
   }
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, this.onRetry});
+  const _ErrorState({super.key, required this.message, this.onRetry});
 
   final String message;
 
@@ -159,7 +172,9 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: tracGoTextTheme.bodyMedium?.copyWith(color: tracGoTextMutedAlt),
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                color: tracGoTextMutedAlt,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
@@ -191,6 +206,133 @@ class _Content extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final details = requisition.details;
+    final motion = TracGoMotion.of(context);
+
+    // Every section, in order, with the 20px gaps left out — they are re-inserted below
+    // so the stagger counts sections rather than whitespace.
+    final sections = <Widget>[
+      _HeroCard(requisition: requisition),
+      // Pickup and drop are the hero's subject, so the Trip section carries only what
+      // the hero does not already say.
+      _Section(
+        title: TracGoStrings.requisitionDetailSectionTrip,
+        rows: [
+          KeyValueRow(
+            TracGoStrings.requisitionDetailPickupAt,
+            _dateTimeFormatter.format(requisition.pickupDateTime),
+          ),
+          // Only filled in once dispatch sets it; null on every pending row.
+          if (requisition.endDateTime != null)
+            KeyValueRow(
+              TracGoStrings.requisitionDetailEndsAt,
+              _dateTimeFormatter.format(requisition.endDateTime!),
+            ),
+          if (requisition.remarks != null && requisition.remarks!.isNotEmpty)
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldRemarks,
+              requisition.remarks!,
+            ),
+        ],
+      ),
+      switch (details) {
+        PassengerDetails() => _Section(
+          title: TracGoStrings.requisitionDetailSectionPassenger,
+          rows: [
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldUsedType,
+              details.usedType.label,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldCustomerName,
+              details.customerName,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldNumberOfPersons,
+              '${details.numberOfPersons}',
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldRequiredFor,
+              details.requiredFor.label,
+            ),
+            if (details.userType != null)
+              KeyValueRow(
+                TracGoStrings.newRequisitionFieldUserType,
+                details.userType!.label,
+              ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldPurpose,
+              details.purpose,
+            ),
+            ..._riderRows(details.riders),
+          ],
+        ),
+        LogisticsDetails() => _Section(
+          title: TracGoStrings.requisitionDetailSectionLogistics,
+          rows: [
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldLoadingCapacity,
+              details.loadingCapacity.label,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldGoodsWeight,
+              details.goodsWeight,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldStoreName,
+              details.storeName,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldGoodsDetails,
+              details.goodsDetails,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldCustomerName,
+              details.customerName,
+            ),
+            KeyValueRow(
+              TracGoStrings.newRequisitionFieldUserDepartment,
+              details.userDepartment,
+            ),
+          ],
+        ),
+      },
+      // Rendered for both requisition types, and unconditionally: the requester is
+      // part of what a requisition *is*, so an absent name reads as an em dash rather
+      // than as a section that quietly disappears.
+      _Section(
+        title: TracGoStrings.requisitionDetailSectionRequester,
+        rows: [
+          KeyValueRow(
+            TracGoStrings.requisitionDetailRequestedBy,
+            _personLabel(requisition.requesterName, requisition.requesterCode),
+          ),
+          if (requisition.departmentName != null)
+            KeyValueRow(
+              TracGoStrings.requisitionDetailDepartment,
+              requisition.departmentName!,
+            ),
+          if (requisition.companyName != null)
+            KeyValueRow(
+              TracGoStrings.requisitionDetailCompany,
+              requisition.companyName!,
+            ),
+        ],
+      ),
+      _AssignmentSection(requisition: requisition),
+      _ActivitySection(
+        entries: requisition.auditLog,
+        canBeModified: requisition.canBeModified,
+      ),
+      _Actions(
+        requisition: requisition,
+        isCancelling: isCancelling,
+        onEdit: onEdit,
+        onCancel: onCancel,
+      ),
+    ];
+    // Parallel to `sections`: the gap that goes *above* each one after the first. The
+    // actions block sits 22 below the timeline rather than 20, as it did before.
+    const gaps = [20.0, 20.0, 20.0, 20.0, 20.0, 22.0];
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -203,130 +345,10 @@ class _Content extends StatelessWidget {
         26,
       ).addBottomSystemInset(context),
       children: [
-        _HeroCard(requisition: requisition),
-        const SizedBox(height: 20),
-        // Pickup and drop are the hero's subject, so the Trip section carries only what
-        // the hero does not already say.
-        _Section(
-          title: TracGoStrings.requisitionDetailSectionTrip,
-          rows: [
-            KeyValueRow(
-              TracGoStrings.requisitionDetailPickupAt,
-              _dateTimeFormatter.format(requisition.pickupDateTime),
-            ),
-            // Only filled in once dispatch sets it; null on every pending row.
-            if (requisition.endDateTime != null)
-              KeyValueRow(
-                TracGoStrings.requisitionDetailEndsAt,
-                _dateTimeFormatter.format(requisition.endDateTime!),
-              ),
-            if (requisition.remarks != null && requisition.remarks!.isNotEmpty)
-              KeyValueRow(
-                TracGoStrings.newRequisitionFieldRemarks,
-                requisition.remarks!,
-              ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        switch (details) {
-          PassengerDetails() => _Section(
-              title: TracGoStrings.requisitionDetailSectionPassenger,
-              rows: [
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldUsedType,
-                  details.usedType.label,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldCustomerName,
-                  details.customerName,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldNumberOfPersons,
-                  '${details.numberOfPersons}',
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldRequiredFor,
-                  details.requiredFor.label,
-                ),
-                if (details.userType != null)
-                  KeyValueRow(
-                    TracGoStrings.newRequisitionFieldUserType,
-                    details.userType!.label,
-                  ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldPurpose,
-                  details.purpose,
-                ),
-                ..._riderRows(details.riders),
-              ],
-            ),
-          LogisticsDetails() => _Section(
-              title: TracGoStrings.requisitionDetailSectionLogistics,
-              rows: [
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldLoadingCapacity,
-                  details.loadingCapacity.label,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldGoodsWeight,
-                  details.goodsWeight,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldStoreName,
-                  details.storeName,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldGoodsDetails,
-                  details.goodsDetails,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldCustomerName,
-                  details.customerName,
-                ),
-                KeyValueRow(
-                  TracGoStrings.newRequisitionFieldUserDepartment,
-                  details.userDepartment,
-                ),
-              ],
-            ),
-        },
-        const SizedBox(height: 20),
-        // Rendered for both requisition types, and unconditionally: the requester is
-        // part of what a requisition *is*, so an absent name reads as an em dash rather
-        // than as a section that quietly disappears.
-        _Section(
-          title: TracGoStrings.requisitionDetailSectionRequester,
-          rows: [
-            KeyValueRow(
-              TracGoStrings.requisitionDetailRequestedBy,
-              _personLabel(requisition.requesterName, requisition.requesterCode),
-            ),
-            if (requisition.departmentName != null)
-              KeyValueRow(
-                TracGoStrings.requisitionDetailDepartment,
-                requisition.departmentName!,
-              ),
-            if (requisition.companyName != null)
-              KeyValueRow(
-                TracGoStrings.requisitionDetailCompany,
-                requisition.companyName!,
-              ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _AssignmentSection(requisition: requisition),
-        const SizedBox(height: 20),
-        _ActivitySection(
-          entries: requisition.auditLog,
-          canBeModified: requisition.canBeModified,
-        ),
-        const SizedBox(height: 22),
-        _Actions(
-          requisition: requisition,
-          isCancelling: isCancelling,
-          onEdit: onEdit,
-          onCancel: onCancel,
-        ),
+        for (var i = 0; i < sections.length; i++) ...[
+          if (i > 0) SizedBox(height: gaps[i - 1]),
+          FadeSlideIn(delay: motion.staggerDelay(i), child: sections[i]),
+        ],
       ],
     );
   }
@@ -431,10 +453,7 @@ class _HeroCard extends StatelessWidget {
                     height: 14,
                     color: tracGoSurfaceWhite.withValues(alpha: 0.25),
                   ),
-                  _RoutePoint(
-                    label: requisition.dropLocation,
-                    isOrigin: false,
-                  ),
+                  _RoutePoint(label: requisition.dropLocation, isOrigin: false),
                   const SizedBox(height: 12),
                   Text(
                     '${TracGoStrings.requisitionDetailPickupAt} '
@@ -584,7 +603,8 @@ class _AssignmentSection extends StatelessWidget {
         if (driver?.name != null)
           KeyValueRow(TracGoStrings.requisitionDetailDriver, driver!.name!),
         if (driver?.phone != null) KeyValueRow('Phone', driver!.phone!),
-        if (driver?.identifier != null) KeyValueRow('Driver ID', driver!.identifier!),
+        if (driver?.identifier != null)
+          KeyValueRow('Driver ID', driver!.identifier!),
         if (vehicle?.registrationNumber != null)
           KeyValueRow(
             TracGoStrings.requisitionDetailVehicle,
@@ -789,16 +809,26 @@ class _Actions extends StatelessWidget {
             textStyle: tracGoTextTheme.labelLarge?.copyWith(fontSize: 15),
           ),
           onPressed: isCancelling ? null : onCancel,
-          child: isCancelling
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: tracGoDestructiveRed,
+          // Cross-faded rather than swapped: the label and the spinner are different
+          // sizes, so a hard cut makes the button's contents jump at the exact moment
+          // the user is watching to see whether their tap registered.
+          child: MotionSwitcher(
+            alignment: Alignment.center,
+            child: isCancelling
+                ? const SizedBox(
+                    key: ValueKey('cancelling'),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: tracGoDestructiveRed,
+                    ),
+                  )
+                : const Text(
+                    TracGoStrings.requisitionListCancel,
+                    key: ValueKey('idle'),
                   ),
-                )
-              : const Text(TracGoStrings.requisitionListCancel),
+          ),
         ),
       ],
     );
