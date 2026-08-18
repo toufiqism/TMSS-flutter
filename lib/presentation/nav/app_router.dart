@@ -12,7 +12,10 @@ import '../dashboard/dashboard_notifier.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../requisition_detail/requisition_detail_notifier.dart';
 import '../requisition_detail/requisition_detail_screen.dart';
+import '../login/login_notifier.dart';
 import '../login/login_screen.dart';
+import '../password_reset/password_reset_handoff.dart';
+import '../password_reset/password_reset_screen.dart';
 import '../profile/profile_screen.dart';
 import '../requisition_create/requisition_create_screen.dart';
 import '../requisition_list/requisition_list_notifier.dart';
@@ -123,6 +126,67 @@ void _refreshRequisitionViews(Ref ref) {
   }
 }
 
+/// Leaves the password-reset flow.
+///
+/// `backOrDashboard` is wrong here: the fallback would send a user who deep-linked into
+/// `/forgot-password` to the dashboard, which the redirect immediately bounces back to
+/// login anyway. Going there directly skips the flicker.
+void _leaveResetFlow(BuildContext context) {
+  final router = GoRouter.of(context);
+  if (router.canPop()) {
+    router.pop();
+    return;
+  }
+  router.go(RoutePaths.login);
+}
+
+/// Finishes the reset flow, from whichever entry point started it.
+///
+/// The two differ in one thing that matters: whether there is a session to end.
+///
+/// * **From Login** — nothing to clear, and the login screen is still mounted under the
+///   pushed route, so its notifier is prefilled directly and the flow simply pops.
+/// * **From Profile** — `POST /reset-password` has just invalidated this account's
+///   `api_token` server-side. The session on this device is already dead; leaving it in
+///   place would only mean the next request 401s and the user is thrown out mid-tap. So
+///   it is cleared here, deliberately *without* `POST /logout` — the token that call
+///   would present is the one the server has already revoked. Clearing emits on the
+///   session stream, which is what carries the user to Login.
+///
+/// The email travels through [passwordResetHandoffProvider] on the Profile path because
+/// the login notifier does not exist yet at this moment; it is created, and consumes the
+/// handoff, once the router swaps Login in.
+Future<void> _completePasswordReset(
+  Ref ref,
+  BuildContext context,
+  String userName,
+) async {
+  final router = GoRouter.of(context);
+  final isSignedIn = ref.read(sessionStreamProvider).value != null;
+
+  if (!isSignedIn) {
+    // `ref.exists` first: `loginNotifierProvider` is auto-dispose, so reading it when
+    // nothing is listening would create an instance, prefill it, and throw it away
+    // again. A deep link straight into the reset flow leaves no screen to prefill, and
+    // the handoff covers that case for the Login screen that is about to be built.
+    if (ref.exists(loginNotifierProvider)) {
+      ref.read(loginNotifierProvider.notifier).onPasswordResetComplete(userName);
+    } else {
+      ref.read(passwordResetHandoffProvider).stage(userName);
+    }
+    _leaveResetFlow(context);
+    return;
+  }
+
+  ref.read(passwordResetHandoffProvider).stage(userName);
+  await ref.read(sessionExpirationHandlerProvider).handle();
+  // `go`, not `pop`: popping would land on Profile for the frame before the cleared
+  // session redirects away from it, and the user would watch their own account screen
+  // flash past on the way out. `ref` here belongs to the router provider, which outlives
+  // every screen, so there is nothing to check for mountedness.
+  router.go(RoutePaths.login);
+}
+
 /// Shown for the fraction of a frame it takes to bounce a payload-less `/edit` deep
 /// link over to the detail screen, which knows how to load the requisition itself.
 class _MissingEditPayload extends StatefulWidget {
@@ -175,8 +239,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = sessionAsync.value != null;
       final atSplash = state.matchedLocation == RoutePaths.splash;
       final atLogin = state.matchedLocation == RoutePaths.login;
+      // The reset flow is the one other place a signed-out user is allowed to be.
+      // Without this it is redirected straight back to login and the flow is
+      // unreachable — the screen would appear for a frame and vanish.
+      final atForgotPassword = state.matchedLocation == RoutePaths.forgotPassword;
 
-      if (!isAuthenticated && !atLogin) return RoutePaths.login;
+      if (!isAuthenticated && !atLogin && !atForgotPassword) return RoutePaths.login;
+      // Note what is *not* bounced to the dashboard: the reset route, which Profile
+      // opens while signed in. There is no authenticated change-password endpoint, so
+      // both entry points land on the same unauthenticated flow.
       if (isAuthenticated && (atLogin || atSplash)) return RoutePaths.dashboard;
       return null;
     },
@@ -198,6 +269,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: LoginScreen(
             onLoginSuccess: () => context.go(RoutePaths.dashboard),
+            onForgotPassword: () => context.push(RoutePaths.forgotPassword),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.forgotPassword,
+        pageBuilder: (context, state) => axisPage(
+          context: context,
+          key: state.pageKey,
+          child: PasswordResetScreen(
+            onBack: () => _leaveResetFlow(context),
+            onCompleted: (userName) =>
+                unawaited(_completePasswordReset(ref, context, userName)),
+            // Prefilled when the flow was opened from Profile; null from Login, where
+            // by definition there is no session to read an address from.
+            initialEmail: ref.read(sessionStreamProvider).value?.user.email,
           ),
         ),
       ),
@@ -286,7 +373,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           context: context,
           key: state.pageKey,
           child: PopOrDashboardScope(
-            child: ProfileScreen(onBack: () => backOrDashboard(context)),
+            child: ProfileScreen(
+              onBack: () => backOrDashboard(context),
+              onChangePassword: () => context.push(RoutePaths.forgotPassword),
+            ),
           ),
         ),
       ),

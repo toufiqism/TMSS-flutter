@@ -15,7 +15,7 @@ class TracGoApiClient {
 
   final Dio _dio;
 
-  /// `POST /login` — the only unauthenticated endpoint.
+  /// `POST /login` — unauthenticated, like the two password-reset endpoints below.
   Future<Response<dynamic>> login({
     required String userName,
     required String password,
@@ -23,6 +23,47 @@ class TracGoApiClient {
     return _dio.post<dynamic>(
       '/login',
       data: <String, dynamic>{'user_name': userName, 'password': password},
+    );
+  }
+
+  /// `POST /forgot-password` — asks the server to email a 6-digit reset OTP.
+  ///
+  /// Unauthenticated, like `/login`: [AuthInterceptor] skips this path, so a stale
+  /// token left over from an expired session is never attached to it.
+  ///
+  /// Answers the same generic 200 whether or not the account exists — by design, so the
+  /// endpoint cannot be used to enumerate registered addresses — and 429 once the
+  /// caller exceeds its own scoped throttle of 5/min.
+  Future<Response<dynamic>> forgotPassword({required String userName}) {
+    return _dio.post<dynamic>(
+      '/forgot-password',
+      data: <String, dynamic>{'user_name': userName},
+    );
+  }
+
+  /// `POST /reset-password` — verifies the OTP and writes the new password.
+  ///
+  /// `password_confirmation` is sent as its own field because the server validates the
+  /// pair; it is not redundant on the wire even though the client checks the match
+  /// first.
+  ///
+  /// A wrong or expired OTP comes back as 422, the same status as ordinary validation
+  /// failure — the two are told apart by whether the body carries an `errors` map, not
+  /// by the status code.
+  Future<Response<dynamic>> resetPassword({
+    required String userName,
+    required String otpCode,
+    required String password,
+    required String passwordConfirmation,
+  }) {
+    return _dio.post<dynamic>(
+      '/reset-password',
+      data: <String, dynamic>{
+        'user_name': userName,
+        'otp_code': otpCode,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
     );
   }
 

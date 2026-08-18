@@ -20,6 +20,7 @@ import 'dto/json_reader.dart';
 /// | 404  | `error` | no requisition with that id |
 /// | 409  | `error` (code 409) | "usually means the local copy is stale — refetch" |
 /// | 422  | `error` + fieldErrors | "map `errors` onto the offending form fields" |
+/// | 429  | `error` (code 429) | throttled — wait and retry |
 /// | 503  | `maintenance` | — |
 ///
 /// The error envelope itself is unverified ("No error payload appears anywhere in the
@@ -214,6 +215,10 @@ ApiResult<T> _mapFailure<T>(int status, dynamic body) {
         422,
         _fieldErrorsFrom(body),
       ),
+    // Scoped per endpoint on the server (login and forgot-password throttle
+    // independently), so this is never fatal to the session — the caller retries after
+    // a wait rather than treating it as a failure of what was asked.
+    429 => ApiResult.error(message ?? NetworkMessages.tooManyRequests, 429),
     503 => ApiResult.maintenance(message ?? NetworkMessages.maintenance, 503),
     _ => ApiResult.error(message ?? NetworkMessages.generic, status),
   };

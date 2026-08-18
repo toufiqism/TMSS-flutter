@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
-/// Attaches `Authorization: Bearer <token>` to every request except the login call.
+/// Attaches `Authorization: Bearer <token>` to every request except the unauthenticated
+/// ones (login and the two password-reset steps).
 ///
 /// The token is read through a callback rather than captured at construction time,
 /// because it changes at runtime: it does not exist before login and must stop being
@@ -19,7 +20,20 @@ class AuthInterceptor extends Interceptor {
 
   final String? Function() _tokenProvider;
 
-  static const _unauthenticatedPaths = {'/login'};
+  /// The endpoints that take no bearer token.
+  ///
+  /// The password-reset pair belongs here for a concrete reason, not for tidiness: the
+  /// flow is reached from the login screen, and a session that has *expired* rather
+  /// than been signed out can still leave a token in secure storage. Sending it would
+  /// attach a dead credential to a request that is specified as unauthenticated, and
+  /// Laravel answers a bad bearer token with a 401 before the route ever runs — which
+  /// `safeApiCall` maps to `logout`, bouncing the user out of a flow they are only in
+  /// because they cannot sign in.
+  static const _unauthenticatedPaths = {
+    '/login',
+    '/forgot-password',
+    '/reset-password',
+  };
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {

@@ -24,6 +24,8 @@ import '../domain/usecase/get_user_account_use_case.dart';
 import '../domain/usecase/login_use_case.dart';
 import '../domain/usecase/logout_use_case.dart';
 import '../domain/usecase/observe_session_use_case.dart';
+import '../domain/usecase/request_password_reset_use_case.dart';
+import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/search_employees_use_case.dart';
 import '../domain/usecase/submit_requisition_use_case.dart';
 import '../domain/usecase/update_requisition_use_case.dart';
@@ -134,6 +136,18 @@ String _redactSecrets(String line) {
   var result = line;
   result = mask(RegExp(r'(password:\s*)[^,}\s]+'), result);
   result = mask(RegExp(r'("password"\s*:\s*")[^"]*'), result);
+  // `"password_confirmation"` is not covered by the line above: that pattern anchors on
+  // the closing quote of the key, and there is an underscore where it expects one. The
+  // reset flow posts both fields, so without this the new password went to the console
+  // in plaintext next to a masked copy of itself.
+  result = mask(RegExp(r'("password_confirmation"\s*:\s*")[^"]*'), result);
+  // Dio's LogInterceptor prints a request body as a Dart Map, so the same field also
+  // appears unquoted as `password_confirmation: value`.
+  result = mask(RegExp(r'(password_confirmation:\s*)[^,}\s]+'), result);
+  // The reset OTP is a single-use credential for the duration of its ten minutes, and
+  // it arrives in a request body like any other field.
+  result = mask(RegExp(r'("otp_code"\s*:\s*")[^"]*'), result);
+  result = mask(RegExp(r'(otp_code:\s*)[^,}\s]+'), result);
   result = mask(RegExp(r'([a-z_]*token:\s*)[^,}\s]+'), result);
   // `[a-z_]*` before the closing quote of the key, not a bare `"token"`: `GET /user`
   // returns `remember_token` in plaintext, and an anchored `"token"` does not match it —
@@ -182,6 +196,15 @@ final getUserAccountUseCaseProvider = Provider<GetUserAccountUseCase>((ref) {
 
 final observeSessionUseCaseProvider = Provider<ObserveSessionUseCase>((ref) {
   return ObserveSessionUseCase(ref.watch(authRepositoryProvider));
+});
+
+final requestPasswordResetUseCaseProvider =
+    Provider<RequestPasswordResetUseCase>((ref) {
+  return RequestPasswordResetUseCase(ref.watch(authRepositoryProvider));
+});
+
+final resetPasswordUseCaseProvider = Provider<ResetPasswordUseCase>((ref) {
+  return ResetPasswordUseCase(ref.watch(authRepositoryProvider));
 });
 
 final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {

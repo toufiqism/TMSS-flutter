@@ -14,7 +14,11 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LoginUiState {
 
- String get username; String get password; bool get isLoading; String? get errorMessage;
+ String get username; String get password; bool get isLoading; String? get errorMessage;/// A non-failure note shown in the same slot as [errorMessage] — set only by
+/// [LoginNotifier.onPasswordResetComplete], so the user who just changed their
+/// password is told to sign in with the new one rather than landing on a form that
+/// looks like nothing happened.
+ String? get infoMessage;
 /// Create a copy of LoginUiState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +29,16 @@ $LoginUiStateCopyWith<LoginUiState> get copyWith => _$LoginUiStateCopyWithImpl<L
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginUiState&&(identical(other.username, username) || other.username == username)&&(identical(other.password, password) || other.password == password)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginUiState&&(identical(other.username, username) || other.username == username)&&(identical(other.password, password) || other.password == password)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.infoMessage, infoMessage) || other.infoMessage == infoMessage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,username,password,isLoading,errorMessage);
+int get hashCode => Object.hash(runtimeType,username,password,isLoading,errorMessage,infoMessage);
 
 @override
 String toString() {
-  return 'LoginUiState(username: $username, password: $password, isLoading: $isLoading, errorMessage: $errorMessage)';
+  return 'LoginUiState(username: $username, password: $password, isLoading: $isLoading, errorMessage: $errorMessage, infoMessage: $infoMessage)';
 }
 
 
@@ -45,7 +49,7 @@ abstract mixin class $LoginUiStateCopyWith<$Res>  {
   factory $LoginUiStateCopyWith(LoginUiState value, $Res Function(LoginUiState) _then) = _$LoginUiStateCopyWithImpl;
 @useResult
 $Res call({
- String username, String password, bool isLoading, String? errorMessage
+ String username, String password, bool isLoading, String? errorMessage, String? infoMessage
 });
 
 
@@ -62,12 +66,13 @@ class _$LoginUiStateCopyWithImpl<$Res>
 
 /// Create a copy of LoginUiState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? username = null,Object? password = null,Object? isLoading = null,Object? errorMessage = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? username = null,Object? password = null,Object? isLoading = null,Object? errorMessage = freezed,Object? infoMessage = freezed,}) {
   return _then(_self.copyWith(
 username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
 as String,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as String?,infoMessage: freezed == infoMessage ? _self.infoMessage : infoMessage // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -153,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String username,  String password,  bool isLoading,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String username,  String password,  bool isLoading,  String? errorMessage,  String? infoMessage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginUiState() when $default != null:
-return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage);case _:
+return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage,_that.infoMessage);case _:
   return orElse();
 
 }
@@ -174,10 +179,10 @@ return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String username,  String password,  bool isLoading,  String? errorMessage)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String username,  String password,  bool isLoading,  String? errorMessage,  String? infoMessage)  $default,) {final _that = this;
 switch (_that) {
 case _LoginUiState():
-return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage);case _:
+return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage,_that.infoMessage);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +199,10 @@ return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String username,  String password,  bool isLoading,  String? errorMessage)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String username,  String password,  bool isLoading,  String? errorMessage,  String? infoMessage)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginUiState() when $default != null:
-return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage);case _:
+return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage,_that.infoMessage);case _:
   return null;
 
 }
@@ -209,13 +214,18 @@ return $default(_that.username,_that.password,_that.isLoading,_that.errorMessage
 
 
 class _LoginUiState implements LoginUiState {
-  const _LoginUiState({this.username = '', this.password = '', this.isLoading = false, this.errorMessage});
+  const _LoginUiState({this.username = '', this.password = '', this.isLoading = false, this.errorMessage, this.infoMessage});
   
 
 @override@JsonKey() final  String username;
 @override@JsonKey() final  String password;
 @override@JsonKey() final  bool isLoading;
 @override final  String? errorMessage;
+/// A non-failure note shown in the same slot as [errorMessage] — set only by
+/// [LoginNotifier.onPasswordResetComplete], so the user who just changed their
+/// password is told to sign in with the new one rather than landing on a form that
+/// looks like nothing happened.
+@override final  String? infoMessage;
 
 /// Create a copy of LoginUiState
 /// with the given fields replaced by the non-null parameter values.
@@ -227,16 +237,16 @@ _$LoginUiStateCopyWith<_LoginUiState> get copyWith => __$LoginUiStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginUiState&&(identical(other.username, username) || other.username == username)&&(identical(other.password, password) || other.password == password)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginUiState&&(identical(other.username, username) || other.username == username)&&(identical(other.password, password) || other.password == password)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.infoMessage, infoMessage) || other.infoMessage == infoMessage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,username,password,isLoading,errorMessage);
+int get hashCode => Object.hash(runtimeType,username,password,isLoading,errorMessage,infoMessage);
 
 @override
 String toString() {
-  return 'LoginUiState(username: $username, password: $password, isLoading: $isLoading, errorMessage: $errorMessage)';
+  return 'LoginUiState(username: $username, password: $password, isLoading: $isLoading, errorMessage: $errorMessage, infoMessage: $infoMessage)';
 }
 
 
@@ -247,7 +257,7 @@ abstract mixin class _$LoginUiStateCopyWith<$Res> implements $LoginUiStateCopyWi
   factory _$LoginUiStateCopyWith(_LoginUiState value, $Res Function(_LoginUiState) _then) = __$LoginUiStateCopyWithImpl;
 @override @useResult
 $Res call({
- String username, String password, bool isLoading, String? errorMessage
+ String username, String password, bool isLoading, String? errorMessage, String? infoMessage
 });
 
 
@@ -264,12 +274,13 @@ class __$LoginUiStateCopyWithImpl<$Res>
 
 /// Create a copy of LoginUiState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? username = null,Object? password = null,Object? isLoading = null,Object? errorMessage = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? username = null,Object? password = null,Object? isLoading = null,Object? errorMessage = freezed,Object? infoMessage = freezed,}) {
   return _then(_LoginUiState(
 username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
 as String,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as String?,infoMessage: freezed == infoMessage ? _self.infoMessage : infoMessage // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

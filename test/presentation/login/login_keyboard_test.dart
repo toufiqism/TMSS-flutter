@@ -44,7 +44,7 @@ Future<void> _pumpLogin(WidgetTester tester, {required double inset}) async {
   await tester.pumpWidget(
     ProviderScope(
       child: _withKeyboard(
-        LoginScreen(onLoginSuccess: () {}),
+        LoginScreen(onLoginSuccess: () {}, onForgotPassword: () {}),
         inset: inset,
       ),
     ),

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:tracgo/core/api_result.dart';
+import 'package:tracgo/core/network_messages.dart';
 import 'package:tracgo/data/local/session_local_data_source.dart';
 import 'package:tracgo/data/remote/tracgo_api_client.dart';
 import 'package:tracgo/data/repository/remote_auth_repository.dart';
@@ -210,5 +211,207 @@ void main() {
       verify(storage.clear).called(1);
       verifyNever(api.logout);
     });
+  });
+
+  // ---------------------------------------------------------------------------------
+  // Password reset — POST /forgot-password, POST /reset-password
+  // ---------------------------------------------------------------------------------
+
+  void stubForgot(Response<dynamic> response) {
+    when(() => api.forgotPassword(userName: any(named: 'userName')))
+        .thenAnswer((_) async => response);
+  }
+
+  void stubResetPassword(Response<dynamic> response) {
+    when(() => api.resetPassword(
+          userName: any(named: 'userName'),
+          otpCode: any(named: 'otpCode'),
+          password: any(named: 'password'),
+          passwordConfirmation: any(named: 'passwordConfirmation'),
+        )).thenAnswer((_) async => response);
+  }
+
+  test('forgot password returns the server message and touches no local state',
+      () async {
+    stubForgot(_response(200, {
+      'success': true,
+      'message': 'If an account matches, a password reset OTP has been sent.',
+    }));
+
+    final result = await repository.requestPasswordReset('tofiq.akbar@btracsl.com');
+
+    expect(
+      (result as ApiSuccess<String>).response,
+      'If an account matches, a password reset OTP has been sent.',
+    );
+    verify(() => api.forgotPassword(userName: 'tofiq.akbar@btracsl.com')).called(1);
+    // Nothing is signed in or out by asking for a code.
+    verifyNever(() => storage.save(any()));
+    verifyNever(storage.clear);
+  });
+
+  test('a 200 with no message falls back to the client string', () async {
+    stubForgot(_response(200, {'success': true}));
+
+    final result = await repository.requestPasswordReset('tofiq.akbar@btracsl.com');
+
+    expect(
+      (result as ApiSuccess<String>).response,
+      NetworkMessages.passwordResetCodeSent,
+    );
+  });
+
+  test('a 200 that declares failure is not reported as success', () async {
+    // Undocumented — every specified failure is a 422 — but a self-declared failure
+    // read as success would tell the user their password had changed when it had not.
+    stubResetPassword(_response(200, {
+      'success': false,
+      'message': 'The OTP is invalid or has expired.',
+    }));
+
+    final result = await repository.resetPassword(
+      userName: 'tofiq.akbar@btracsl.com',
+      otpCode: '123456',
+      password: 'demo12345',
+      passwordConfirmation: 'demo12345',
+    );
+
+    expect((result as ApiError<String>).message, 'The OTP is invalid or has expired.');
+  });
+
+  test('a 422 on forgot password carries the field errors through', () async {
+    stubForgot(_response(422, {
+      'success': false,
+      'message': 'The given data was invalid.',
+      'errors': {
+        'user_name': ['The user name field is required.'],
+      },
+    }));
+
+    final result = await repository.requestPasswordReset('nope');
+
+    final error = result as ApiError<String>;
+    expect(error.errorCode, 422);
+    expect(error.fieldErrors, {'user_name': 'The user name field is required.'});
+  });
+
+  test('a 429 on forgot password is an error, never a logout', () async {
+    stubForgot(_response(429, {'success': false, 'message': 'Too Many Attempts.'}));
+
+    final result = await repository.requestPasswordReset('tofiq.akbar@btracsl.com');
+
+    final error = result as ApiError<String>;
+    expect(error.errorCode, 429);
+    expect(error.message, 'Too Many Attempts.');
+  });
+
+  test('a 429 with no message uses the throttle wording', () async {
+    stubForgot(_response(429));
+
+    final result = await repository.requestPasswordReset('tofiq.akbar@btracsl.com');
+
+    expect((result as ApiError<String>).message, NetworkMessages.tooManyRequests);
+  });
+
+  test('reset password sends all four fields and returns the message', () async {
+    stubResetPassword(_response(200, {
+      'success': true,
+      'message': 'Password has been reset successfully.',
+    }));
+
+    final result = await repository.resetPassword(
+      userName: 'tofiq.akbar@btracsl.com',
+      otpCode: '123456',
+      password: 'demo12345',
+      passwordConfirmation: 'demo12345',
+    );
+
+    expect(
+      (result as ApiSuccess<String>).response,
+      'Password has been reset successfully.',
+    );
+    verify(() => api.resetPassword(
+          userName: 'tofiq.akbar@btracsl.com',
+          otpCode: '123456',
+          password: 'demo12345',
+          passwordConfirmation: 'demo12345',
+        )).called(1);
+    // The server invalidates the account's token, but this device has no session to
+    // clear — the flow only runs while signed out.
+    verifyNever(storage.clear);
+  });
+
+  test('an invalid OTP arrives as a 422 with a message and no field errors', () async {
+    stubResetPassword(_response(422, {
+      'success': false,
+      'message': 'The OTP is invalid or has expired.',
+    }));
+
+    final result = await repository.resetPassword(
+      userName: 'tofiq.akbar@btracsl.com',
+      otpCode: '000000',
+      password: 'demo12345',
+      passwordConfirmation: 'demo12345',
+    );
+
+    final error = result as ApiError<String>;
+    expect(error.errorCode, 422);
+    expect(error.message, 'The OTP is invalid or has expired.');
+    expect(error.fieldErrors, isNull);
+  });
+
+  test('a 422 confirmation mismatch is pinned to its field', () async {
+    stubResetPassword(_response(422, {
+      'success': false,
+      'message': 'The given data was invalid.',
+      'errors': {
+        'password': ['The password confirmation does not match.'],
+      },
+    }));
+
+    final result = await repository.resetPassword(
+      userName: 'tofiq.akbar@btracsl.com',
+      otpCode: '123456',
+      password: 'demo12345',
+      passwordConfirmation: 'demo54321',
+    );
+
+    expect(
+      (result as ApiError<String>).fieldErrors,
+      {'password': 'The password confirmation does not match.'},
+    );
+  });
+
+  test('a dropped connection on reset is offline, not a failed reset', () async {
+    when(() => api.resetPassword(
+          userName: any(named: 'userName'),
+          otpCode: any(named: 'otpCode'),
+          password: any(named: 'password'),
+          passwordConfirmation: any(named: 'passwordConfirmation'),
+        )).thenThrow(DioException(
+      requestOptions: RequestOptions(path: '/reset-password'),
+      type: DioExceptionType.connectionError,
+    ));
+
+    final result = await repository.resetPassword(
+      userName: 'tofiq.akbar@btracsl.com',
+      otpCode: '123456',
+      password: 'demo12345',
+      passwordConfirmation: 'demo12345',
+    );
+
+    expect(result, isA<ApiOffline<String>>());
+  });
+
+  test('a 401 on the unauthenticated endpoints is an error, not a session expiry',
+      () async {
+    stubForgot(_response(401, {'message': 'Unauthenticated.'}));
+
+    final result = await repository.requestPasswordReset('tofiq.akbar@btracsl.com');
+
+    // `ApiLogout` here would route the user to login — the screen they are on because
+    // they cannot sign in.
+    expect(result, isA<ApiError<String>>());
+    expect((result as ApiError<String>).errorCode, 401);
   });
 }

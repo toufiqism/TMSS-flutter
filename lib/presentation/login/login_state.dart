@@ -9,6 +9,12 @@ abstract class LoginUiState with _$LoginUiState {
     @Default('') String password,
     @Default(false) bool isLoading,
     String? errorMessage,
+
+    /// A non-failure note shown in the same slot as [errorMessage] — set only by
+    /// [LoginNotifier.onPasswordResetComplete], so the user who just changed their
+    /// password is told to sign in with the new one rather than landing on a form that
+    /// looks like nothing happened.
+    String? infoMessage,
   }) = _LoginUiState;
 }
 

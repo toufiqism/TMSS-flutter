@@ -18,6 +18,9 @@ import 'package:tracgo/presentation/common/surface_card.dart';
 import 'package:tracgo/presentation/dashboard/dashboard_screen.dart';
 import 'package:tracgo/presentation/login/login_screen.dart';
 import 'package:tracgo/presentation/nav/app_shell.dart';
+import 'package:tracgo/presentation/password_reset/password_reset_notifier.dart';
+import 'package:tracgo/presentation/password_reset/password_reset_screen.dart';
+import 'package:tracgo/presentation/password_reset/password_reset_state.dart';
 import 'package:tracgo/presentation/nav/route_paths.dart';
 import 'package:tracgo/presentation/profile/profile_screen.dart';
 import 'package:tracgo/presentation/requisition_create/requisition_create_screen.dart';
@@ -255,12 +258,34 @@ Future<void> _expectNoOverflow(
   );
 }
 
+/// Puts the reset flow on its second step without a network round-trip.
+///
+/// The step is notifier state, so there is no constructor argument that reaches it. The
+/// seeded values are the worst case for layout rather than the typical one: a long
+/// address in the subtitle, a two-digit countdown beside the caption, and a field error
+/// under the code — each of which adds a line the resting screen does not have.
+class _SeededVerifyStepNotifier extends PasswordResetNotifier {
+  @override
+  PasswordResetUiState build() {
+    return super.build().copyWith(
+      step: PasswordResetStep.enterCode,
+      userName: 'mohammad.tofiq.akbar@btracsolutions.example.com',
+      otpCode: '1234',
+      resendSecondsLeft: 45,
+      expirySecondsLeft: 570,
+      fieldErrors: const {
+        'otp_code': 'The OTP is invalid or has expired.',
+      },
+    );
+  }
+}
+
 void main() {
   setUpAll(() => registerFallbackValue(const RequisitionListFilter()));
 
   final screens = <String, ({Widget widget, bool shell})>{
     'Sign In': (
-      widget: LoginScreen(onLoginSuccess: () {}),
+      widget: LoginScreen(onLoginSuccess: () {}, onForgotPassword: () {}),
       // No shell: Login sits outside it, and is the one screen with no AppBar to supply
       // a top inset.
       shell: false,
@@ -293,7 +318,24 @@ void main() {
       widget: RequisitionCreateScreen(onBack: () {}, onSubmitted: () {}),
       shell: false,
     ),
-    'Profile': (widget: ProfileScreen(onBack: () {}), shell: false),
+    'Reset password': (
+      widget: PasswordResetScreen(onBack: () {}, onCompleted: (_) {}),
+      // Outside the shell for the same reason Sign In is: it is reachable while signed
+      // out, and draws its own back control.
+      shell: false,
+    ),
+    'Reset password code step': (
+      // A nested ProviderScope so only this entry gets the seeded notifier; the entry
+      // above still exercises the first step.
+      widget: ProviderScope(
+        overrides: [
+          passwordResetNotifierProvider.overrideWith(_SeededVerifyStepNotifier.new),
+        ],
+        child: PasswordResetScreen(onBack: () {}, onCompleted: (_) {}),
+      ),
+      shell: false,
+    ),
+    'Profile': (widget: ProfileScreen(onBack: () {}, onChangePassword: () {}), shell: false),
   };
 
   for (final entry in screens.entries) {
@@ -351,7 +393,7 @@ void main() {
       ),
       (
         name: 'Profile',
-        widget: ProfileScreen(onBack: () {}),
+        widget: ProfileScreen(onBack: () {}, onChangePassword: () {}),
         shell: false,
       ),
     ]) {

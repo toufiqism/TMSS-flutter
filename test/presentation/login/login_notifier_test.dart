@@ -6,6 +6,7 @@ import 'package:tracgo/di/providers.dart';
 import 'package:tracgo/domain/model/user.dart';
 import 'package:tracgo/domain/usecase/login_use_case.dart';
 import 'package:tracgo/presentation/login/login_notifier.dart';
+import 'package:tracgo/presentation/password_reset/password_reset_handoff.dart';
 import 'package:tracgo/presentation/login/login_state.dart';
 
 class MockLoginUseCase extends Mock implements LoginUseCase {}
@@ -132,5 +133,47 @@ void main() {
     await notifier.submit();
 
     expect(container.read(loginNotifierProvider).errorMessage, 'No internet connection available');
+  });
+
+  // ---------------------------------------------------------------------------------
+  // Handoff from the password-reset flow
+  // ---------------------------------------------------------------------------------
+
+  test('a staged reset email prefills the username and the note on first build',
+      () async {
+    // Its own container: the shared one in setUp already built the notifier, which is
+    // the very act being tested here.
+    final ownContainer = ProviderContainer(
+      overrides: [loginUseCaseProvider.overrideWithValue(mockLoginUseCase)],
+    );
+    addTearDown(ownContainer.dispose);
+    ownContainer
+        .read(passwordResetHandoffProvider)
+        .stage('tofiq.akbar@btracsl.com');
+    ownContainer.listen(loginNotifierProvider, (_, _) {}, fireImmediately: true);
+
+    final built = ownContainer.read(loginNotifierProvider);
+    expect(built.username, 'tofiq.akbar@btracsl.com');
+    expect(built.infoMessage, isNotNull);
+    expect(built.password, isEmpty);
+    // Delivered once: the slot is empty afterwards, so a later visit to Login is not
+    // greeted by a stale "password updated" note.
+    expect(ownContainer.read(passwordResetHandoffProvider).isStaged, isFalse);
+  });
+
+  test('an empty handoff leaves the login form untouched', () async {
+    expect(container.read(loginNotifierProvider), const LoginUiState());
+  });
+
+  test('the reset note is cleared as soon as the user types', () async {
+    final notifier = container.read(loginNotifierProvider.notifier);
+    notifier.onPasswordResetComplete('tofiq.akbar@btracsl.com');
+    expect(container.read(loginNotifierProvider).infoMessage, isNotNull);
+
+    notifier.onPasswordChange('demo1234');
+
+    expect(container.read(loginNotifierProvider).infoMessage, isNull);
+    // The prefilled username survives; it is the part the user should not retype.
+    expect(container.read(loginNotifierProvider).username, 'tofiq.akbar@btracsl.com');
   });
 }

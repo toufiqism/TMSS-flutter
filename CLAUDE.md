@@ -331,7 +331,12 @@ oversight; re-adding them needs backend support first):
   history, not the current month.
 - No ±  stepper on `No. of Persons` — the server requires it to equal the rider count
   exactly, so it renders as a derived value (`DerivedValueRow`).
-- No "Change password" button on Profile — there is no such endpoint.
+- Profile's "Change password" button runs the **unauthenticated email-OTP reset**
+  (`/forgot-password` + `/reset-password`), because no authenticated
+  change-password endpoint exists. It therefore never asks for the current
+  password, and succeeding invalidates the account's `api_token` — so the flow
+  ends by clearing the session and landing on Login. The button's caption says so
+  before the tap.
 - The list screen keeps its existing date-range filters rather than the design's
   status/"This week" chips, which the list API does not support.
 - The dashboard's **`+ New` button is unchanged** (small pill in the "Recent" header row)

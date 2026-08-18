@@ -25,7 +25,9 @@ class TracGoStrings {
   /// guess that activating it changes anything.
   static const loginShowPassword = 'Show password';
   static const loginHidePassword = 'Hide password';
-  static const loginContactAdmin = 'Contact admin';
+  /// The link beside [loginForgotPassword]. Replaced "Contact admin", which was the
+  /// honest answer only while there was no reset endpoint to send the user to.
+  static const loginResetPassword = 'Reset it';
   static const loginSignInButton = 'Sign in';
 
   /// Label on the password reveal control. Short and uppercase per the Sign In design;
@@ -35,6 +37,63 @@ class TracGoStrings {
   static const loginHidePasswordShort = 'Hide';
   static const loginErrorRequiredFields = 'Username and password are required';
   static const loginErrorInvalidCredentials = 'Username/Password is invalid!';
+
+  /// Shown on Login after the reset flow pops back to it.
+  static const loginPasswordResetSuccess =
+      'Password updated. Sign in with your new password.';
+
+  // ---------------------------------------------------------------------------------
+  // Password reset (POST /forgot-password, POST /reset-password)
+  // ---------------------------------------------------------------------------------
+
+  static const resetHeading = 'Reset password.';
+
+  /// Step 1. Deliberately says "if we find your account" rather than promising an
+  /// email: the endpoint answers identically for an address that is not registered, so
+  /// any wording that implied delivery would be a claim the client cannot make.
+  static const resetRequestSubheading =
+      'Enter your work email and we will send a 6-digit code if we find your account.';
+  static const resetVerifySubheading = 'Enter the 6-digit code sent to';
+  static const resetEmailLabel = 'Work email';
+  static const resetEmailPlaceholder = 'yourname@company.com';
+  static const resetCodeLabel = 'Verification code';
+  static const resetNewPasswordLabel = 'New password';
+  static const resetConfirmPasswordLabel = 'Confirm new password';
+  static const resetPasswordPlaceholder = '••••••••';
+  static const resetSendCodeButton = 'Send code';
+  static const resetSubmitButton = 'Reset password';
+  static const resetResendButton = 'Resend code';
+  static const resetBackToEmail = 'Use a different email';
+  static const resetBackSemanticLabel = 'Back';
+
+  static const profileChangePassword = 'Change password';
+
+  /// Under the Profile button. The consequence is stated before the tap, not
+  /// discovered after it: `POST /reset-password` invalidates the account's token,
+  /// so finishing the flow ends this device's session.
+  static const profileChangePasswordNote =
+      "You'll be signed out and will need to sign in again with the new password.";
+
+  /// Announced to a screen reader in place of the six boxes, which are one field as far
+  /// as input is concerned.
+  static const resetCodeSemanticLabel = 'Verification code, 6 digits';
+
+  static const resetErrorEmailRequired = 'Enter your work email';
+  static const resetErrorEmailInvalid = 'Enter a valid email address';
+  static const resetErrorCodeRequired = 'Enter the 6-digit code';
+  static const resetErrorPasswordRequired = 'Enter a new password';
+  static const resetErrorPasswordTooShort =
+      'Use at least 8 characters';
+  static const resetErrorConfirmMismatch = 'Both passwords must match';
+
+  /// Shown when the client-side countdown reaches zero. The server is still the
+  /// authority — the code is submitted anyway if the user tries — so this reads as
+  /// guidance, not as a refusal.
+  static const resetCodeExpired = 'Code expired — request a new one.';
+
+  static String resetCodeExpiresIn(String remaining) =>
+      'Code expires in $remaining';
+  static String resetResendIn(int seconds) => 'Resend code in ${seconds}s';
 
   // Announced in place of a screen full of placeholder blocks while data loads. A
   // skeleton is a visual affordance only — to a screen reader it is two dozen unlabelled

@@ -10,7 +10,8 @@ import '../remote/dto/wire_date_time.dart';
 import '../remote/safe_api_call.dart';
 import '../remote/tracgo_api_client.dart';
 
-/// Auth against `POST /login` and `POST /logout`.
+/// Auth against `POST /login`, `POST /logout` and the unauthenticated password-reset
+/// pair (`POST /forgot-password`, `POST /reset-password`).
 ///
 /// Login is a single round-trip. The contract implied two would be needed — it recorded
 /// only `data.token` as confirmed — but the live response also carries `name` and
@@ -131,6 +132,83 @@ class RemoteAuthRepository implements AuthRepository {
     // to `logout`, which the caller would otherwise have to special-case anyway.
     if (result is ApiLogout<void>) return const ApiResult.success(null);
     return result;
+  }
+
+  /// Step 1 of the reset flow. See [AuthRepository.requestPasswordReset].
+  @override
+  Future<ApiResult<String>> requestPasswordReset(String userName) async {
+    final result = await safeApiCall<Map<String, dynamic>?>(
+      () => _apiClient.forgotPassword(userName: userName),
+      decode: (body) => body is Map<String, dynamic> ? body : null,
+      reporter: _reporter,
+      operation: 'POST /forgot-password',
+    );
+    return _passwordResetOutcome(result, NetworkMessages.passwordResetCodeSent);
+  }
+
+  /// Step 2 of the reset flow. See [AuthRepository.resetPassword].
+  ///
+  /// Nothing is written locally on success. The account has no session on this device —
+  /// that is why the user is here — and the token this invalidates server-side belongs
+  /// to whatever device still holds one.
+  @override
+  Future<ApiResult<String>> resetPassword({
+    required String userName,
+    required String otpCode,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final result = await safeApiCall<Map<String, dynamic>?>(
+      () => _apiClient.resetPassword(
+        userName: userName,
+        otpCode: otpCode,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+      ),
+      decode: (body) => body is Map<String, dynamic> ? body : null,
+      reporter: _reporter,
+      operation: 'POST /reset-password',
+    );
+    return _passwordResetOutcome(result, NetworkMessages.passwordResetComplete);
+  }
+
+  /// Collapses a decoded reset-flow envelope to the message the UI shows.
+  ///
+  /// Two things it does that a bare `mapSuccess` would not:
+  ///
+  /// * **Honours `success: false` on a 200.** The contract tells callers to branch on
+  ///   the payload rather than on the message text, and the payload's own flag is the
+  ///   most direct form of that. Every documented failure is a 422, so this should
+  ///   never fire — but treating a self-declared failure as a success would tell the
+  ///   user their password had been changed when it had not, which is the one outcome
+  ///   here worth defending against.
+  /// * **Never returns `logout`.** These endpoints are unauthenticated, so a 401 cannot
+  ///   mean "your session ended"; routing on it would throw the user out of the flow
+  ///   they entered *because* they have no session.
+  ApiResult<String> _passwordResetOutcome(
+    ApiResult<Map<String, dynamic>?> result,
+    String fallbackMessage,
+  ) {
+    switch (result) {
+      case ApiSuccess<Map<String, dynamic>?>(:final response):
+        final message = response?.stringOrNull('message');
+        if (response?['success'] == false) {
+          return ApiResult.error(message ?? NetworkMessages.generic, 200);
+        }
+        return ApiResult.success(message ?? fallbackMessage);
+      case ApiError<Map<String, dynamic>?>(
+          :final message,
+          :final errorCode,
+          :final fieldErrors,
+        ):
+        return ApiResult.error(message, errorCode, fieldErrors);
+      case ApiLogout<Map<String, dynamic>?>(:final message):
+        return ApiResult.error(message, 401);
+      case ApiMaintenance<Map<String, dynamic>?>(:final message, :final code):
+        return ApiResult.maintenance(message, code);
+      case ApiOffline<Map<String, dynamic>?>(:final message):
+        return ApiResult.offline(message);
+    }
   }
 
   /// Local-only clear for the session-expired path. No network call: see

@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/colors.dart';
 import '../../theme/motion.dart';
 import '../../theme/typography.dart';
+import '../common/auth_form_controls.dart';
 import '../common/motion.dart';
 import '../common/page_width.dart';
 import '../common/strings.dart';
-import '../common/synced_text_field.dart';
 import '../common/tracgo_logo_mark.dart';
 import 'login_notifier.dart';
 import 'login_state.dart';
@@ -46,10 +46,6 @@ const Duration _headerCompactDuration = Duration(milliseconds: 220);
 double _compacted(double rest, double compact, double t) =>
     rest + (compact - rest) * t;
 
-/// Minimum height of a field's input row, set by the tallest thing that can sit in one
-/// — the reveal toggle, whose padding buys it a 44px tap target.
-const double _fieldContentHeight = 44;
-
 /// Ceiling on text scaling for the logo/headline block.
 ///
 /// iOS accessibility sizes reach roughly 3.1x. The 40px headline at that scale is 124px
@@ -58,9 +54,17 @@ const double _fieldContentHeight = 44;
 const double _headerMaxTextScale = 1.4;
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key, required this.onLoginSuccess});
+  const LoginScreen({
+    super.key,
+    required this.onLoginSuccess,
+    required this.onForgotPassword,
+  });
 
   final VoidCallback onLoginSuccess;
+
+  /// Opens the password-reset flow. Routed from here rather than pushed inline so the
+  /// screen stays free of `go_router` — every other navigation on it is a callback too.
+  final VoidCallback onForgotPassword;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -101,6 +105,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // (`removeBottomInset`), so the identical call one level down always reports 0.
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     final motion = TracGoMotion.of(context);
+    // Error wins when both are somehow set: a stale success note over a fresh failure
+    // would tell the user the opposite of what just happened.
+    final bannerMessage = uiState.errorMessage ?? uiState.infoMessage;
 
     return Scaffold(
       backgroundColor: tracGoSignInBackground,
@@ -193,26 +200,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
-                  // A failed sign-in opens its own height rather than shoving the fields
-                  // down the page — the user's eyes are on the field they just typed in.
+                  // One slot for both messages: a failed sign-in opens its own height
+                  // rather than shoving the fields down the page, and the green
+                  // "password reset, sign in again" note lands in the same place. They
+                  // are mutually exclusive — any keystroke or submit clears both — so a
+                  // second slot would only ever be an empty gap.
                   AnimatedSize(
                     duration: TracGoMotion.of(context).base,
                     curve: tracGoMotionCurve,
                     alignment: Alignment.topCenter,
                     child: MotionSwitcher(
-                      child: uiState.errorMessage == null
+                      child: bannerMessage == null
                           ? const SizedBox(
-                              key: ValueKey('no-error'),
+                              key: ValueKey('no-banner'),
                               width: double.infinity,
                             )
                           : Padding(
-                              key: const ValueKey('error'),
+                              key: ValueKey(bannerMessage),
                               padding: const EdgeInsets.only(bottom: 20),
                               child: Text(
-                                uiState.errorMessage!,
+                                bannerMessage,
                                 textAlign: TextAlign.center,
                                 style: tracGoTextTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.error,
+                                  color: uiState.errorMessage != null
+                                      ? Theme.of(context).colorScheme.error
+                                      : tracGoGreen,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -225,7 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // makes both look like jitter.
                   FadeSlideIn(
                     delay: motion.staggerDelay(1),
-                    child: _UnderlinedField(
+                    child: AuthUnderlinedField(
                       label: TracGoStrings.loginUsernameLabel,
                       value: uiState.username,
                       onChanged: notifier.onUsernameChange,
@@ -239,7 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 26),
                   FadeSlideIn(
                     delay: motion.staggerDelay(2),
-                    child: _UnderlinedField(
+                    child: AuthUnderlinedField(
                       label: TracGoStrings.loginPasswordLabel,
                       value: uiState.password,
                       onChanged: notifier.onPasswordChange,
@@ -254,7 +266,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 36),
                   FadeSlideIn(
                     delay: motion.staggerDelay(3),
-                    child: _SignInButton(
+                    child: AuthPillButton(
+                      label: TracGoStrings.loginSignInButton,
                       isLoading: uiState.isLoading,
                       onPressed: () => unawaited(notifier.submit()),
                     ),
@@ -272,12 +285,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           color: tracGoTextMuted,
                         ),
                       ),
-                      Text(
-                        TracGoStrings.loginContactAdmin,
-                        style: tracGoTextTheme.bodyLarge?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: tracGoGreen,
+                      // Was static "Contact admin" text, which was accurate only while
+                      // there was no reset endpoint to send the user to.
+                      TextButton(
+                        onPressed: uiState.isLoading
+                            // Not merely cosmetic: navigating away mid-request leaves
+                            // the sign-in in flight with nothing to show its result.
+                            ? null
+                            : widget.onForgotPassword,
+                        style: TextButton.styleFrom(
+                          foregroundColor: tracGoGreen,
+                          // The design draws a bare word; the padding restores a 48px
+                          // tap target without moving it.
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 12,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.padded,
+                        ),
+                        child: Text(
+                          TracGoStrings.loginResetPassword,
+                          style: tracGoTextTheme.bodyLarge?.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: tracGoGreen,
+                          ),
                         ),
                       ),
                     ],
@@ -286,258 +319,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The pill sign-in button from the design: flat green, no Material elevation, with a
-/// soft green-tinted drop shadow of its own.
-class _SignInButton extends StatelessWidget {
-  const _SignInButton({required this.isLoading, required this.onPressed});
-
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: isLoading
-            // The shadow reads as "raised, press me". Dropping it while the request is
-            // in flight is the same signal as the disabled fill.
-            ? const []
-            : const [
-                BoxShadow(
-                  color: Color(0x3D2E5C34), // rgba(46,92,52,0.24)
-                  blurRadius: 26,
-                  offset: Offset(0, 12),
-                ),
-              ],
-      ),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: tracGoGreen,
-          disabledBackgroundColor: tracGoGreen.withValues(alpha: 0.55),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          shape: const StadiumBorder(),
-          // minimumSize rather than a fixed height, so the label still fits when the
-          // user scales text up. 20px of padding each side matches the design's 60px
-          // resting height.
-          minimumSize: const Size.fromHeight(60),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-        ),
-        onPressed: isLoading ? null : onPressed,
-        child: MotionSwitcher(
-          alignment: Alignment.center,
-          child: isLoading
-              ? const SizedBox(
-                  key: ValueKey('loading'),
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  TracGoStrings.loginSignInButton,
-                  key: const ValueKey('idle'),
-                  style: tracGoTextTheme.labelLarge?.copyWith(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A field drawn as a baseline rule rather than a filled box, per the design: uppercase
-/// caption, then the input, then a 1.5px underline.
-///
-/// When [obscureText] is set it also gains a reveal toggle, because a masked field with
-/// no way to check what was typed is the usual cause of a login failure that is really a
-/// typo.
-class _UnderlinedField extends StatefulWidget {
-  const _UnderlinedField({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    required this.hint,
-    this.obscureText = false,
-    this.keyboardType,
-    this.textInputAction,
-    this.autofillHints,
-    this.onSubmitted,
-    this.enabled = true,
-  });
-
-  final String label;
-  final String value;
-  final ValueChanged<String> onChanged;
-  final String hint;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final List<String>? autofillHints;
-  final VoidCallback? onSubmitted;
-  final bool enabled;
-
-  @override
-  State<_UnderlinedField> createState() => _UnderlinedFieldState();
-}
-
-class _UnderlinedFieldState extends State<_UnderlinedField> {
-  /// Starts masked, and is never persisted or lifted into [LoginUiState]: it is view
-  /// state with no meaning outside this widget, and a revealed password surviving a
-  /// rebuild — or worse, a navigation — is a shoulder-surfing hazard rather than a
-  /// convenience.
-  bool _revealed = false;
-
-  /// Keeps the toggle out of the focus chain.
-  ///
-  /// A focusable button here takes focus when tapped, which closes the keyboard — so
-  /// every peek at the password would cost the user a tap to get back to typing. Screen
-  /// readers reach it by touch exploration regardless, and it carries a semantics label.
-  final FocusNode _toggleFocusNode = FocusNode(
-    canRequestFocus: false,
-    skipTraversal: true,
-  );
-
-  @override
-  void dispose() {
-    _toggleFocusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final inputStyle = tracGoTextTheme.bodyLarge?.copyWith(
-      fontSize: 18,
-      color: tracGoInk,
-      letterSpacing: widget.obscureText ? 1.08 : null, // 0.06em at 18px
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label.toUpperCase(),
-          style: tracGoTextTheme.labelMedium?.copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.1, // 0.1em at 11px
-            color: tracGoTextMutedAlt,
-          ),
-        ),
-        const SizedBox(height: 8),
-        // A floor, not a fixed height, so the row still grows with text scaling. It
-        // exists because the reveal toggle is taller than a bare input: without it the
-        // password's rule sat ~20px lower than the username's, and the two fields the
-        // design draws as a matched pair visibly disagreed.
-        ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: _fieldContentHeight),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: SyncedTextField(
-                  value: widget.value,
-                  onChanged: widget.onChanged,
-                  hintText: widget.hint,
-                  obscureText: widget.obscureText && !_revealed,
-                  // Explicit, and load-bearing: `obscureText` above goes false while the
-                  // user is peeking, and this is what stops the keyboard learning the
-                  // password in that window.
-                  isSensitive: widget.obscureText,
-                  keyboardType: widget.keyboardType,
-                  textInputAction: widget.textInputAction,
-                  autofillHints: widget.autofillHints,
-                  onSubmitted: widget.onSubmitted,
-                  enabled: widget.enabled,
-                  style: inputStyle,
-                  hintStyle: inputStyle?.copyWith(
-                    color: tracGoPlaceholder,
-                    letterSpacing: null,
-                  ),
-                  // The rule below is drawn by this widget, so the field itself must not
-                  // add Material's own underline, fill or 48px content padding on top.
-                  bare: true,
-                ),
-              ),
-              if (widget.obscureText)
-                _RevealToggle(
-                  focusNode: _toggleFocusNode,
-                  revealed: _revealed,
-                  // Disabled alongside the field it belongs to: revealing the password
-                  // during a sign-in attempt would toggle a field the user cannot edit.
-                  onPressed: widget.enabled
-                      ? () => setState(() => _revealed = !_revealed)
-                      : null,
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        const ColoredBox(
-          color: tracGoRule,
-          child: SizedBox(height: 1.5, width: double.infinity),
-        ),
-      ],
-    );
-  }
-}
-
-/// The design's uppercase SHOW / HIDE text button.
-class _RevealToggle extends StatelessWidget {
-  const _RevealToggle({
-    required this.focusNode,
-    required this.revealed,
-    required this.onPressed,
-  });
-
-  final FocusNode focusNode;
-  final bool revealed;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      // "SHOW" on its own describes nothing to a screen reader; this says what pressing
-      // it does.
-      label: revealed
-          ? TracGoStrings.loginHidePassword
-          : TracGoStrings.loginShowPassword,
-      excludeSemantics: true,
-      child: TextButton(
-        focusNode: focusNode,
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: tracGoGreen,
-          // The design shows a bare word, but a 12px word is a 12px tap target. The
-          // padding restores a 48px-tall hit area without moving the text.
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.padded,
-          textStyle: tracGoTextTheme.labelMedium?.copyWith(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.72, // 0.06em at 12px
-          ),
-        ),
-        child: Text(
-          (revealed
-                  ? TracGoStrings.loginHidePasswordShort
-                  : TracGoStrings.loginShowPasswordShort)
-              .toUpperCase(),
         ),
       ),
     );

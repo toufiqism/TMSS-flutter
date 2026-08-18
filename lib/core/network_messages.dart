@@ -27,6 +27,19 @@ class NetworkMessages {
   /// user.
   static const stale = 'This requisition just changed. The list has been refreshed.';
 
+  /// 429. Both `/login` and `/forgot-password` carry their own scoped throttle, and
+  /// the framework's own wording ("Too Many Attempts.") says nothing about what to do
+  /// next, so this is used whenever the server sends no message of its own.
+  static const tooManyRequests =
+      'Too many attempts. Please wait a minute and try again.';
+
+  /// Fallbacks for the two password-reset endpoints, used only when the server answers
+  /// 200 with no `message`. Both are worded to match the contract's own: the first
+  /// deliberately does not confirm that the account exists.
+  static const passwordResetCodeSent =
+      'If an account matches, a password reset code has been sent.';
+  static const passwordResetComplete = 'Password has been reset successfully.';
+
   /// Operations the contract does not define. Surfaced if one is somehow reached
   /// despite the `ApiCapabilities` gates in the UI.
   static const unsupportedOperation =

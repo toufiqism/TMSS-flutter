@@ -53,9 +53,18 @@ String _initialsOf(String name) {
 /// fetch degrades that block alone — it never blanks a page whose main content is
 /// already known and correct.
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key, required this.onBack});
+  const ProfileScreen({
+    super.key,
+    required this.onBack,
+    required this.onChangePassword,
+  });
 
   final VoidCallback onBack;
+
+  /// Opens the password-reset flow. There is no authenticated change-password endpoint,
+  /// so this is the same email-OTP flow the Login screen offers — see
+  /// [_ChangePasswordButton] for what that costs the current session.
+  final VoidCallback onChangePassword;
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -168,6 +177,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 28),
             FadeSlideIn(
               delay: motion.staggerDelay(user != null ? 3 : 1),
+              child: _ChangePasswordButton(onPressed: widget.onChangePassword),
+            ),
+            const SizedBox(height: 14),
+            FadeSlideIn(
+              delay: motion.staggerDelay(user != null ? 4 : 2),
               child: const _LogoutButton(),
             ),
           ],
@@ -390,9 +404,49 @@ class _AccountSection extends StatelessWidget {
   }
 }
 
-/// The design pairs this with a "Change password" button. That is deliberately not
-/// reproduced: the API exposes no password-change endpoint, and a button that opens
-/// nothing is worse than an absent one.
+/// The design's "Change password" button, wired to the email-OTP reset flow.
+///
+/// It is **not** an authenticated password change, because the API has no such endpoint:
+/// there is only the unauthenticated `/forgot-password` + `/reset-password` pair. Two
+/// consequences follow, and the caption states the second one before the tap rather than
+/// letting the user discover it afterwards:
+///
+/// * the current password is never asked for — mail access is what authorises the
+///   change, here exactly as on the Login screen;
+/// * `/reset-password` invalidates the account's `api_token`, so this device's session
+///   dies the moment the reset succeeds and the flow ends on Login.
+class _ChangePasswordButton extends StatelessWidget {
+  const _ChangePasswordButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextButton(
+          style: TextButton.styleFrom(
+            minimumSize: const Size.fromHeight(56),
+            backgroundColor: tracGoSurfaceSoft,
+            foregroundColor: tracGoGreen,
+            shape: pillShape,
+            textStyle: tracGoTextTheme.labelLarge?.copyWith(fontSize: 15),
+          ),
+          onPressed: onPressed,
+          child: const Text(TracGoStrings.profileChangePassword),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          TracGoStrings.profileChangePasswordNote,
+          textAlign: TextAlign.center,
+          style: tracGoTextTheme.bodySmall?.copyWith(color: tracGoTextMutedAlt),
+        ),
+      ],
+    );
+  }
+}
+
 class _LogoutButton extends ConsumerWidget {
   const _LogoutButton();
 
