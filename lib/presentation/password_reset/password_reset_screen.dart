@@ -25,6 +25,20 @@ const double _logoSize = 72;
 /// Everything the user has to operate below stays fully scalable.
 const double _headerMaxTextScale = 1.4;
 
+/// How long the header takes to fold away, and to come back.
+///
+/// Close enough to the platform keyboard's own slide that the two read as one movement
+/// rather than two things happening at once — the same 220ms Sign In uses to compact its
+/// header.
+const Duration _headerCollapseDuration = Duration(milliseconds: 220);
+
+/// How much sooner the header finishes fading than it finishes shrinking.
+///
+/// At 1.0 the text is still half-visible when the block is nearly closed, and the
+/// letters visibly squash into the field below. Fading it out over the first ~62% of the
+/// collapse means what remains sliding shut is empty space.
+const double _headerFadeRate = 1.6;
+
 /// Both halves of the password reset flow, on one route.
 ///
 /// The step is notifier state rather than a second route: step 2 is meaningless without
@@ -121,6 +135,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
     // says the opposite of what just happened.
     final bannerMessage = uiState.errorMessage ?? uiState.infoMessage;
     final isError = uiState.errorMessage != null;
+    // Read from *this* context, which sits above the Scaffold: the Scaffold strips the
+    // bottom view inset out of the MediaQuery it hands its body, so the identical call
+    // one level down always reports 0.
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return PopScope(
       // On step 2, back means "back to the email", not "out of the flow" — the same
@@ -167,34 +185,51 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                         icon: const Icon(Icons.arrow_back, color: tracGoInk),
                       ),
                     ),
-                    MediaQuery.withClampedTextScaling(
-                      maxScaleFactor: _headerMaxTextScale,
+                    // The mark, the headline and the subtitle fold away entirely
+                    // while the keyboard is up, and unfold when it goes down. Step 2
+                    // stacks a code row, two password fields, a resend link and a
+                    // button under this block; with a keyboard covering half the
+                    // screen, a header that merely *shrank* would still push the
+                    // submit button below the fold. Nothing here is needed to operate
+                    // the form — it says which screen this is, which the user already
+                    // knows by the time they are typing in it.
+                    _CollapsingHeader(
+                      collapsed: keyboardVisible,
                       child: Column(
                         children: [
-                          const TracGoLogoMark(size: _logoSize),
-                          const SizedBox(height: 24),
-                          Text(
-                            TracGoStrings.resetHeading,
-                            textAlign: TextAlign.center,
-                            style: tracGoTextTheme.headlineSmall?.copyWith(
-                              fontSize: 34,
-                              height: 1.0,
-                              letterSpacing: -1.0, // -0.03em at 34px
-                              color: tracGoInk,
+                          MediaQuery.withClampedTextScaling(
+                            maxScaleFactor: _headerMaxTextScale,
+                            child: Column(
+                              children: [
+                                const TracGoLogoMark(size: _logoSize),
+                                const SizedBox(height: 24),
+                                Text(
+                                  TracGoStrings.resetHeading,
+                                  textAlign: TextAlign.center,
+                                  style: tracGoTextTheme.headlineSmall?.copyWith(
+                                    fontSize: 34,
+                                    height: 1.0,
+                                    letterSpacing: -1.0, // -0.03em at 34px
+                                    color: tracGoInk,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 320),
+                                  child: _Subtitle(
+                                    state: uiState,
+                                    isEmailLocked: widget.isEmailLocked,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 320),
-                            child: _Subtitle(
-                              state: uiState,
-                              isEmailLocked: widget.isEmailLocked,
-                            ),
-                          ),
+                          // Inside the collapsing block, so the gap goes with it rather
+                          // than leaving 32px of nothing above the first field.
+                          const SizedBox(height: 32),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
                     AnimatedSize(
                       duration: TracGoMotion.of(context).base,
                       curve: tracGoMotionCurve,
@@ -250,6 +285,48 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Folds its child away to nothing, and back, over [_headerCollapseDuration].
+///
+/// `AnimatedSize` was the obvious choice and is the wrong one: it animates to whatever
+/// its child reports, so collapsing means swapping the child for a `SizedBox` and the
+/// header's own text reflows to a narrower box on the way out. Driving a height factor
+/// keeps the child laid out at its full size throughout and clips it, which is what
+/// `SizeTransition` does — this is the same thing on a tween rather than a controller,
+/// because the trigger is a MediaQuery value rather than an animation this screen owns.
+class _CollapsingHeader extends StatelessWidget {
+  const _CollapsingHeader({required this.collapsed, required this.child});
+
+  final bool collapsed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: collapsed ? 1 : 0),
+      duration: _headerCollapseDuration,
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) {
+        // Fully folded: dropped from the tree rather than kept at zero height, so a
+        // screen reader is not still offered a heading nobody can see.
+        if (t >= 1) return const SizedBox.shrink();
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: 1 - t,
+            child: Opacity(
+              opacity: (1 - t * _headerFadeRate).clamp(0.0, 1.0),
+              child: child,
+            ),
+          ),
+        );
+      },
+      // Built once and passed through the builder: the header is a logo, a headline and
+      // a subtitle, and none of it depends on the animation value.
+      child: child,
     );
   }
 }
