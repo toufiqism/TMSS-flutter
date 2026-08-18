@@ -53,8 +53,22 @@ class TracGoStrings {
   /// any wording that implied delivery would be a claim the client cannot make.
   static const resetRequestSubheading =
       'Enter your work email and we will send a 6-digit code if we find your account.';
+  /// Step 1, opened from Profile. The address is fixed to the signed-in account, so
+  /// this cannot ask the user to enter one — and must not promise delivery either,
+  /// for the same reason [resetRequestSubheading] does not.
+  static const resetRequestSubheadingLocked =
+      'We will send a 6-digit code to the email registered to your account.';
   static const resetVerifySubheading = 'Enter the 6-digit code sent to';
   static const resetEmailLabel = 'Work email';
+
+  /// Under the locked email row. Says why the field cannot be typed in, so a
+  /// non-editable value does not read as a broken input.
+  static const resetEmailLockedNote =
+      "Locked to the account you're signed in to.";
+
+  /// The lock glyph beside that row is decorative on its own; this is what a screen
+  /// reader announces in its place.
+  static const resetEmailLockedSemanticLabel = 'Locked';
   static const resetEmailPlaceholder = 'yourname@company.com';
   static const resetCodeLabel = 'Verification code';
   static const resetNewPasswordLabel = 'New password';
@@ -64,6 +78,11 @@ class TracGoStrings {
   static const resetSubmitButton = 'Reset password';
   static const resetResendButton = 'Resend code';
   static const resetBackToEmail = 'Use a different email';
+
+  /// Same control, Profile entry point. It still returns to step 1 — that is where
+  /// "Send code" lives — but the address there cannot be changed, so the wording
+  /// must not offer something the screen will refuse.
+  static const resetBackToEmailLocked = 'Start over';
   static const resetBackSemanticLabel = 'Back';
 
   static const profileChangePassword = 'Change password';

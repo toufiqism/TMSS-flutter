@@ -36,6 +36,7 @@ class PasswordResetScreen extends ConsumerStatefulWidget {
     required this.onBack,
     required this.onCompleted,
     this.initialEmail,
+    this.lockEmail = false,
   });
 
   /// Leaves the flow entirely — from step 1, or from the app bar arrow on either step
@@ -48,10 +49,28 @@ class PasswordResetScreen extends ConsumerStatefulWidget {
   /// Seeds the email field. Supplied when the flow is opened from Profile, where the
   /// signed-in account's address is already known; null from the Login screen, where
   /// the whole point is that nobody is signed in.
-  ///
-  /// A seed, not a lock: the field stays editable, because the account's registered
-  /// address is not necessarily the one the session was opened with.
   final String? initialEmail;
+
+  /// Fixes [initialEmail] in place instead of merely seeding it.
+  ///
+  /// Set on the Profile entry point. That flow is "change *my* password": the code goes
+  /// to the account this device is signed in as, and finishing it invalidates that
+  /// account's token and drops the session — none of which makes sense for an address
+  /// the user typed over the top. From Login the field stays editable, because there is
+  /// no account in context to fix it to.
+  ///
+  /// Ignored when [initialEmail] is null or blank; a lock with nothing to lock would
+  /// leave the user staring at an empty row and no way to fill it.
+  final bool lockEmail;
+
+  /// The trimmed address, or null when there is nothing usable to show.
+  String? get _seedEmail {
+    final seed = initialEmail?.trim() ?? '';
+    return seed.isEmpty ? null : seed;
+  }
+
+  /// Whether step 1 renders the address as a locked row rather than an input.
+  bool get isEmailLocked => lockEmail && _seedEmail != null;
 
   @override
   ConsumerState<PasswordResetScreen> createState() => _PasswordResetScreenState();
@@ -73,12 +92,16 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
         if (event is PasswordResetCompleted) widget.onCompleted(event.userName);
       });
 
-      // Only ever seeds an untouched field. The notifier is kept alive for the length
-      // of the flow, so a rebuild of this widget — a keyboard opening, a rotation —
-      // must not overwrite what the user has since typed.
-      final seed = widget.initialEmail?.trim() ?? '';
-      if (seed.isNotEmpty &&
-          ref.read(passwordResetNotifierProvider).userName.isEmpty) {
+      // Seeded here rather than in `build`: writing to a notifier while the widget
+      // tree is building is what Riverpod asserts against.
+      final seed = widget._seedEmail;
+      if (seed == null) return;
+      final current = ref.read(passwordResetNotifierProvider).userName;
+      // Locked: the seed is the only address this flow may use, so it wins outright.
+      // Unlocked: it only ever fills an untouched field. The notifier lives for the
+      // length of the flow, so a rebuild — a keyboard opening, a rotation — must not
+      // overwrite what the user has since typed.
+      if (widget.isEmailLocked ? current != seed : current.isEmpty) {
         notifier.onUserNameChange(seed);
       }
     });
@@ -163,7 +186,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                           const SizedBox(height: 10),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 320),
-                            child: _Subtitle(state: uiState),
+                            child: _Subtitle(
+                              state: uiState,
+                              isEmailLocked: widget.isEmailLocked,
+                            ),
                           ),
                         ],
                       ),
@@ -205,11 +231,15 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                                 key: const ValueKey('verify'),
                                 state: uiState,
                                 notifier: notifier,
+                                isEmailLocked: widget.isEmailLocked,
                               )
                             : _RequestStep(
                                 key: const ValueKey('request'),
                                 state: uiState,
                                 notifier: notifier,
+                                lockedEmail: widget.isEmailLocked
+                                    ? widget._seedEmail
+                                    : null,
                               ),
                       ),
                     ),
@@ -227,9 +257,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
 /// Step-dependent subtitle. On step 2 it names the address the code went to, because
 /// the commonest reason a code never arrives is that it was sent to a typo.
 class _Subtitle extends StatelessWidget {
-  const _Subtitle({required this.state});
+  const _Subtitle({required this.state, required this.isEmailLocked});
 
   final PasswordResetUiState state;
+  final bool isEmailLocked;
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +270,10 @@ class _Subtitle extends StatelessWidget {
     );
     if (!state.isEnteringCode) {
       return Text(
-        TracGoStrings.resetRequestSubheading,
+        // "Enter your work email" is an instruction the locked flow does not give.
+        isEmailLocked
+            ? TracGoStrings.resetRequestSubheadingLocked
+            : TracGoStrings.resetRequestSubheading,
         textAlign: TextAlign.center,
         style: base,
       );
@@ -262,45 +296,88 @@ class _Subtitle extends StatelessWidget {
 
 /// Step 1 — the email that the OTP is sent to.
 class _RequestStep extends StatelessWidget {
-  const _RequestStep({super.key, required this.state, required this.notifier});
+  const _RequestStep({
+    super.key,
+    required this.state,
+    required this.notifier,
+    this.lockedEmail,
+  });
 
   final PasswordResetUiState state;
   final PasswordResetNotifier notifier;
 
+  /// Non-null on the Profile entry point: the one address this flow may use. The field
+  /// is then a read-only row rather than an input, and nothing on this step can change
+  /// `state.userName`.
+  final String? lockedEmail;
+
   @override
   Widget build(BuildContext context) {
+    final locked = lockedEmail;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AuthUnderlinedField(
-          label: TracGoStrings.resetEmailLabel,
-          value: state.userName,
-          onChanged: notifier.onUserNameChange,
-          hint: TracGoStrings.resetEmailPlaceholder,
-          errorText: state.fieldError(PasswordResetFields.userName),
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.done,
-          autofillHints: const [AutofillHints.username],
-          enabled: !state.isSubmitting,
-          onSubmitted: () => unawaited(notifier.sendCode()),
-        ),
+        if (locked != null)
+          AuthReadOnlyField(
+            label: TracGoStrings.resetEmailLabel,
+            value: locked,
+            note: TracGoStrings.resetEmailLockedNote,
+            errorText: state.fieldError(PasswordResetFields.userName),
+          )
+        else
+          AuthUnderlinedField(
+            label: TracGoStrings.resetEmailLabel,
+            value: state.userName,
+            onChanged: notifier.onUserNameChange,
+            hint: TracGoStrings.resetEmailPlaceholder,
+            errorText: state.fieldError(PasswordResetFields.userName),
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.username],
+            enabled: !state.isSubmitting,
+            onSubmitted: () => unawaited(notifier.sendCode()),
+          ),
         const SizedBox(height: 32),
         AuthPillButton(
           label: TracGoStrings.resetSendCodeButton,
           isLoading: state.isSubmitting,
-          onPressed: () => unawaited(notifier.sendCode()),
+          onPressed: () => _send(locked),
         ),
       ],
     );
+  }
+
+  /// Sends against the locked address, restoring it first if the notifier has not been
+  /// seeded yet.
+  ///
+  /// The seed lands in a post-frame callback, so there is one frame in which the button
+  /// is on screen and `state.userName` is still empty; without this, a tap in that frame
+  /// would fail validation with "Enter your work email" under a field the user cannot
+  /// type into. Cheap, and it also means the locked value is the one that is sent even
+  /// if some future code path writes over the notifier's copy.
+  void _send(String? locked) {
+    if (locked != null && state.userName != locked) {
+      notifier.onUserNameChange(locked);
+    }
+    unawaited(notifier.sendCode());
   }
 }
 
 /// Step 2 — the code, the new password, and its confirmation.
 class _VerifyStep extends StatelessWidget {
-  const _VerifyStep({super.key, required this.state, required this.notifier});
+  const _VerifyStep({
+    super.key,
+    required this.state,
+    required this.notifier,
+    required this.isEmailLocked,
+  });
 
   final PasswordResetUiState state;
   final PasswordResetNotifier notifier;
+
+  /// Only changes the wording of the "back to step 1" link — the step itself still
+  /// goes back, because that is where a fresh send is started from.
+  final bool isEmailLocked;
 
   @override
   Widget build(BuildContext context) {
@@ -431,7 +508,9 @@ class _VerifyStep extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.padded,
             ),
             child: Text(
-              TracGoStrings.resetBackToEmail,
+              isEmailLocked
+                  ? TracGoStrings.resetBackToEmailLocked
+                  : TracGoStrings.resetBackToEmail,
               style: tracGoTextTheme.bodyLarge?.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

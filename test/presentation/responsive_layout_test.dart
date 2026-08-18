@@ -324,6 +324,18 @@ void main() {
       // out, and draws its own back control.
       shell: false,
     ),
+    'Reset password locked email': (
+      // The Profile entry point: a fixed address rendered as a read-only row. Its own
+      // entry because it is a different widget in that slot, and a long email beside a
+      // lock glyph is exactly the pair that can run out of width on a narrow window.
+      widget: PasswordResetScreen(
+        onBack: () {},
+        onCompleted: (_) {},
+        initialEmail: 'tofiq.akbar@btracsl.com',
+        lockEmail: true,
+      ),
+      shell: false,
+    ),
     'Reset password code step': (
       // A nested ProviderScope so only this entry gets the seeded notifier; the entry
       // above still exercises the first step.

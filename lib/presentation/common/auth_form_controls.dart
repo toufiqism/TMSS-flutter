@@ -6,7 +6,7 @@ import 'motion.dart';
 import 'strings.dart';
 import 'synced_text_field.dart';
 
-/// The two controls the signed-out screens are built from.
+/// The controls the signed-out screens are built from.
 ///
 /// Both started life private to `login_screen.dart`. The password-reset flow needs the
 /// identical field and the identical button — same underline, same pill, same disabled
@@ -166,6 +166,111 @@ class _AuthUnderlinedFieldState extends State<AuthUnderlinedField> {
               style: tracGoTextTheme.bodyMedium?.copyWith(
                 fontSize: 13,
                 color: tracGoDestructiveRed,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A field-shaped row whose value the user is not allowed to change.
+///
+/// Same caption, same 1.5px rule and the same vertical rhythm as [AuthUnderlinedField],
+/// so it sits in a form beside one without breaking the column — but it is not a text
+/// field at all: no cursor, no keyboard, no autofill, nothing for a tap to focus. That
+/// is deliberate. A disabled `TextField` reads as *temporarily* unavailable, the way
+/// every other field on these screens looks while a request is in flight; this value is
+/// fixed for the life of the screen, and the lock glyph plus [note] say why.
+///
+/// [errorText] still applies: the server can reject a value this client did not let the
+/// user choose, and that message has to land somewhere the user can see it.
+class AuthReadOnlyField extends StatelessWidget {
+  const AuthReadOnlyField({
+    super.key,
+    required this.label,
+    required this.value,
+    this.note,
+    this.errorText,
+  });
+
+  final String label;
+  final String value;
+
+  /// One line under the rule explaining why the value cannot be edited.
+  final String? note;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasError = errorText != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: tracGoTextTheme.labelMedium?.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.1, // 0.1em at 11px
+            color: hasError ? tracGoDestructiveRed : tracGoTextMutedAlt,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ConstrainedBox(
+          // The same floor as an editable field's input row, so a locked field and a
+          // typed one are the same height at the same text scale.
+          constraints: const BoxConstraints(minHeight: _fieldContentHeight),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  // Wraps rather than ellipsises: this is the address the code is being
+                  // sent to, and a truncated one is exactly the detail the user is here
+                  // to check.
+                  style: tracGoTextTheme.bodyLarge?.copyWith(
+                    fontSize: 18,
+                    color: tracGoInk,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                Icons.lock_outline,
+                size: 18,
+                color: tracGoTextMutedAlt,
+                semanticLabel: TracGoStrings.resetEmailLockedSemanticLabel,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        ColoredBox(
+          color: hasError ? tracGoDestructiveRed : tracGoRule,
+          child: const SizedBox(height: 1.5, width: double.infinity),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              errorText!,
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                fontSize: 13,
+                color: tracGoDestructiveRed,
+              ),
+            ),
+          )
+        else if (note != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              note!,
+              style: tracGoTextTheme.bodyMedium?.copyWith(
+                fontSize: 13,
+                color: tracGoTextMuted,
               ),
             ),
           ),

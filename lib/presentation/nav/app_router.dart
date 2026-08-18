@@ -285,6 +285,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             // Prefilled when the flow was opened from Profile; null from Login, where
             // by definition there is no session to read an address from.
             initialEmail: ref.read(sessionStreamProvider).value?.user.email,
+            // And fixed, not merely prefilled, on that Profile path: this is the
+            // signed-in account changing its own password, and the code has to go to
+            // the address the session belongs to. From Login there is no account to
+            // lock to, so the field stays editable — which is the whole point of the
+            // "forgotten password" entry point.
+            lockEmail: ref.read(sessionStreamProvider).value != null,
           ),
         ),
       ),
