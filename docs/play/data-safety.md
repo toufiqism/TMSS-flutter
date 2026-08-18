@@ -22,7 +22,7 @@ policy violation, not a paperwork slip.
 |---|---|
 | Does your app collect or share any of the required user data types? | **Yes** |
 | Is all of the user data collected by your app encrypted in transit? | **Yes** — every request goes to `https://tms.carcopolo.com/bt/api`; release builds set `android:usesCleartextTraffic="false"`, so a plaintext request cannot be made at all |
-| Do you provide a way for users to request that their data be deleted? | **No** — see "Account deletion" below |
+| Do you provide a way for users to request that their data be deleted? | **Yes** — by writing to psd.btraccl@gmail.com; give the published privacy-policy URL as the request URL. See "Account deletion" below |
 
 ---
 
@@ -61,6 +61,17 @@ policy violation, not a paperwork slip.
 - **Declare pickup/drop under this, not under Location.** Play's Location category means
   location read from the device. This app holds no location permission and never calls a
   location API; these are addresses typed by the user.
+- **Also covers the sign-in password**, by decision of the owner on 18 August 2026: the
+  conservative reading, declared rather than omitted. Play publishes no "Passwords"
+  category, so credentials belong here. `POST /login` sends it over HTTPS to our own
+  authentication service, which answers with a token; it is never written to device
+  storage and never reaches the logs (the Dio logger is debug-only and masks `password`,
+  `password_confirmation`, `otp_code` and bearer tokens — `di/providers.dart`). The same
+  statement appears in `privacy-policy.md` under "What we collect", and the two must stay
+  identical.
+- **Why "Ephemeral: No" despite the password being ephemeral.** The flag applies to the
+  whole category, and this row also carries requisition details that the server stores.
+  One row cannot be both; the answer that is true of the category is the one to give.
 
 ### App activity → Other actions
 
@@ -105,7 +116,14 @@ policy violation, not a paperwork slip.
 | Contacts, Calendar | not requested |
 | Web browsing history, Search history | none |
 | Installed apps, Device or other IDs (advertising) | no analytics SDK, no ads SDK. Confirmed by the merged manifest: the release APK declares only `INTERNET`, `ACCESS_NETWORK_STATE` and Firebase's own `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` — no `AD_ID` |
-| Passwords / credentials | **Judgement call.** The password is transmitted to the company's own authentication endpoint to obtain a token, and is never stored or logged (the Dio logger is debug-only and redacts secrets — `di/providers.dart`). Play's guidance is that credentials sent solely to authenticate the user against your own service need not be declared. **TODO(owner):** if legal prefers the conservative reading, declare it under Personal info → Other info and say so in the privacy policy |
+
+**Passwords / credentials are NOT in this table.** Play's guidance would have allowed
+omitting them — credentials sent solely to authenticate against your own service need not
+be declared — but the owner chose the conservative reading on 18 August 2026, so the
+password is declared above under Personal info → Other info. Do not re-add it here
+without changing `privacy-policy.md` in the same pass: the policy states plainly that the
+password is collected, and a form that says otherwise is the contradiction Play rejects
+on.
 
 ---
 
@@ -116,12 +134,26 @@ create an account in the app**. TracGo does not: accounts exist in the Carcopolo
 backend and are provisioned by B-Trac, and the app offers no sign-up, so the requirement
 does not apply.
 
-Answer "No" to the deletion question, and give the contact route in the privacy policy
-instead — an employee asks their administrator, who removes the account server-side.
+What the app *does* offer is a request route, so answer **Yes** to "Do you provide a way
+for users to request that their data be deleted?" and give the published privacy-policy
+URL as the request URL — that page names the channel:
 
-**TODO(owner):** confirm with whoever administers TMS that an employee-initiated deletion
-request has a real internal path, and name it in `privacy-policy.md`. Play does check the
-policy text against the form.
+> Write to **psd.btraccl@gmail.com** to request that your account be closed and your
+> personal data removed.
+
+Two conditions this answer commits the company to, both outside the app:
+
+1. **Somebody reads that mailbox and can act on it.** A published deletion route that goes
+   unanswered is a policy violation, not merely bad service. The address is a free-mail
+   account belonging to one person; if it stops being monitored, this answer becomes
+   false — a role address on `btracsolutions.com` would not have that failure mode.
+2. **The request reaches whoever can delete rows in the TMS.** The app cannot delete an
+   account; the backend administrator does. Requisitions kept as business records may
+   lawfully survive the account — the policy says so, and the reply to a request should
+   say which records were removed and which were retained.
+
+In-app deletion remains genuinely not required: Play mandates it only for apps that let
+users create an account in the app, and TracGo has no sign-up.
 
 ---
 
