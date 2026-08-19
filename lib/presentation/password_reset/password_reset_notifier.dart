@@ -316,7 +316,9 @@ class PasswordResetNotifier extends Notifier<PasswordResetUiState>
           TracGoStrings.resetErrorPasswordRequired;
     } else if (state.password.length < PasswordResetUiState.minPasswordLength) {
       errors[PasswordResetFields.password] =
-          TracGoStrings.resetErrorPasswordTooShort;
+          TracGoStrings.resetErrorPasswordTooShort(
+        PasswordResetUiState.minPasswordLength,
+      );
     } else if (state.password != state.confirmPassword) {
       // Reported on the confirmation, not on the password: that is the field the user
       // is asked to fix, and flagging both reads as two separate problems.

@@ -8,6 +8,7 @@ import 'package:tracgo/core/api_result.dart';
 import 'package:tracgo/di/providers.dart';
 import 'package:tracgo/domain/usecase/request_password_reset_use_case.dart';
 import 'package:tracgo/domain/usecase/reset_password_use_case.dart';
+import 'package:tracgo/presentation/common/strings.dart';
 import 'package:tracgo/presentation/password_reset/password_reset_notifier.dart';
 import 'package:tracgo/presentation/password_reset/password_reset_state.dart';
 
@@ -248,6 +249,50 @@ void main() {
 
     expect(state().fieldError(PasswordResetFields.otpCode), isNotNull);
     expect(state().fieldError(PasswordResetFields.password), isNotNull);
+    verifyNever(() => resetPassword(
+          userName: any(named: 'userName'),
+          otpCode: any(named: 'otpCode'),
+          password: any(named: 'password'),
+          passwordConfirmation: any(named: 'passwordConfirmation'),
+        ));
+  });
+
+  test('the floor is inclusive: exactly minPasswordLength characters submits',
+      () async {
+    final atFloor = 'a' * PasswordResetUiState.minPasswordLength;
+    await reachVerifyStep();
+    notifier().onOtpChange('123456');
+    notifier().onPasswordChange(atFloor);
+    notifier().onConfirmPasswordChange(atFloor);
+    stubReset(const ApiResult.success('Password has been reset successfully.'));
+
+    await notifier().submitReset();
+
+    expect(state().fieldError(PasswordResetFields.password), isNull);
+    verify(() => resetPassword(
+          userName: email,
+          otpCode: '123456',
+          password: atFloor,
+          passwordConfirmation: atFloor,
+        )).called(1);
+  });
+
+  test('one character under the floor is rejected before spending a request',
+      () async {
+    final underFloor = 'a' * (PasswordResetUiState.minPasswordLength - 1);
+    await reachVerifyStep();
+    notifier().onOtpChange('123456');
+    notifier().onPasswordChange(underFloor);
+    notifier().onConfirmPasswordChange(underFloor);
+
+    await notifier().submitReset();
+
+    expect(
+      state().fieldError(PasswordResetFields.password),
+      TracGoStrings.resetErrorPasswordTooShort(
+        PasswordResetUiState.minPasswordLength,
+      ),
+    );
     verifyNever(() => resetPassword(
           userName: any(named: 'userName'),
           otpCode: any(named: 'otpCode'),

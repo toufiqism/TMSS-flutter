@@ -101,8 +101,12 @@ class TracGoStrings {
   static const resetErrorEmailInvalid = 'Enter a valid email address';
   static const resetErrorCodeRequired = 'Enter the 6-digit code';
   static const resetErrorPasswordRequired = 'Enter a new password';
-  static const resetErrorPasswordTooShort =
-      'Use at least 8 characters';
+
+  /// Takes the minimum so the wording cannot drift from
+  /// `PasswordResetUiState.minPasswordLength`, the rule that actually gates submit.
+  static String resetErrorPasswordTooShort(int minimum) =>
+      'Use at least $minimum characters';
+
   static const resetErrorConfirmMismatch = 'Both passwords must match';
 
   /// Shown when the client-side countdown reaches zero. The server is still the
