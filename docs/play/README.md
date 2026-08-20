@@ -47,14 +47,16 @@ is the harder path and the one that was asked for. If you switch to a private ap
 
 ## 2. Set the version
 
-`pubspec.yaml` → `version: 1.0.0+1`. The `+N` build number becomes Android's
+`pubspec.yaml` → `version: 1.0.1+2003`. The `+N` build number becomes Android's
 `versionCode`.
 
 Play refuses any upload whose `versionCode` is not strictly greater than every code
 already uploaded to any track — including one that was uploaded and then discarded. Bump
 `+N` for every single upload attempt, not for every user-visible release.
 
-The first upload goes out as `1.0.0+1`.
+The first upload went out as `1.0.0` at versionCode **2002** — the `+N` was raised into
+the 2000s for that upload and cannot come back down. Every later build continues from
+there: `1.0.1+2003` is the second upload.
 
 ---
 
@@ -68,7 +70,7 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 
 flutter build appbundle --release \
-  --obfuscate --split-debug-info=build/symbols/1.0.0+1
+  --obfuscate --split-debug-info=build/symbols/1.0.1+2003
 ```
 
 The obfuscation flags are not optional — see README "Obfuscation and symbols". The
@@ -91,7 +93,7 @@ cd android && ./gradlew verifyReleaseSigning && cd ..
 # ships to a track as an app nobody can ever update with the real key.
 
 flutter build apk --release --target-platform android-arm64 \
-  --obfuscate --split-debug-info=build/symbols/1.0.0+1
+  --obfuscate --split-debug-info=build/symbols/1.0.1+2003
 tool/check_native_alignment.sh
 # 16 KB page-size compliance, required for targetSdk 35+. Checks the APK because the
 # bundle's libraries are the same files.
@@ -120,7 +122,7 @@ durable storage:
 |---|---|
 | `build/app/outputs/bundle/release/app-release.aab` | the artifact that shipped |
 | `build/app/outputs/mapping/release/mapping.txt` | reads Java/Kotlin frames |
-| `build/symbols/1.0.0+1/` | reads Dart frames (`flutter symbolize`) |
+| `build/symbols/1.0.1+2003/` | reads Dart frames (`flutter symbolize`) |
 
 Upload `mapping.txt` to Play Console (App bundle explorer → Downloads) as well. The
 Crashlytics Gradle plugin uploads its own copy automatically; Play's copy is what makes

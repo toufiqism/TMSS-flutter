@@ -10,6 +10,16 @@ numbers, refactors and dependency bumps belong in the internal changelog below, 
 
 ---
 
+## 1.0.1 (versionCode 2003) — en-US
+
+```
+Password fixes.
+
+• A new password now needs 6 characters, not 8 — the rule the server actually enforces
+```
+
+---
+
 ## 1.0.0 (versionCode 2002) — en-US
 
 ```
@@ -44,7 +54,27 @@ push notifications or in-app account creation, none of which ship in 1.0.0.
 
 Kept here so the release record sits beside the artifact it describes.
 
-**Artifact**
+**1.0.1 (versionCode 2003)**
+
+- `app-release.aab`, versionCode 2003, versionName 1.0.1, 52.3 MB
+  (`build/app/outputs/bundle/release/`)
+- Signature verified on the arm64 release APK: B-Trac upload key, SHA-256
+  `1B:DE:67:…:AA:A2` — the same key as 1.0.0
+- 16 KB page-size check passed, 8 native libraries
+- Symbols in `build/symbols/1.0.1+2003/` (arm, arm64, x64) and `mapping.txt` in
+  `build/app/outputs/mapping/release/` — archive both before the next build overwrites them
+- Password reset: the client-side minimum length dropped from 8 to 6
+  (`PasswordResetUiState.minPasswordLength`). The contract documents no password policy,
+  so this floor was always the client's own; 8 was rejecting passwords the server takes.
+- `TracGoStrings.resetErrorPasswordTooShort` became `resetErrorPasswordTooShort(int
+  minimum)` so the message cannot drift from the constant that gates submit again.
+- `TracGoStrings.appVersionLabel` → `v1.0.1`. The drawer caption is a hand-kept constant;
+  `test/presentation/app_version_label_test.dart` is what catches it when a release bump
+  forgets it.
+- Everything else — signing key, ABIs, R8, obfuscation, archived symbols — is unchanged
+  from 1.0.0 below.
+
+**Artifact (1.0.0)**
 
 - `app-release.aab`, versionCode 2002, versionName 1.0.0, 52.3 MB
 - `applicationId` / bundle id `com.btracsl.tracgo`; minSdk 30, targetSdk 36

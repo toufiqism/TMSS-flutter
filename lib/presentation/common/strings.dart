@@ -9,7 +9,7 @@ class TracGoStrings {
   /// Shown in the drawer footer. Hand-kept in step with `version:` in pubspec.yaml —
   /// there is no package_info dependency here, and adding one for a single caption
   /// would pull a platform channel into a screen that renders offline.
-  static const appVersionLabel = 'v1.0.0';
+  static const appVersionLabel = 'v1.0.1';
 
   static const loginHeading = 'Welcome back.';
   static const loginSubheading =

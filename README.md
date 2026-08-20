@@ -54,7 +54,7 @@ flutter build ios --release            # requires macOS + Xcode
 # Play delivery — per-device ~20MB. Never build the upload artifact without the
 # obfuscation flags; see "Obfuscation and symbols" below and docs/play/README.md.
 flutter build appbundle --release \
-  --obfuscate --split-debug-info=build/symbols/1.0.0+1
+  --obfuscate --split-debug-info=build/symbols/1.0.1+2003
 ```
 
 **Uploading to Google Play?** Follow `docs/play/README.md` — it is the ordered
@@ -135,7 +135,7 @@ The cost is that Dart stack traces stop being readable — including the ones Cr
 shows. The symbol files are the only way back:
 
 ```bash
-flutter symbolize -i crash.txt -d build/symbols/1.0.0+1/app.android-arm64.symbols
+flutter symbolize -i crash.txt -d build/symbols/1.0.1+2003/app.android-arm64.symbols
 ```
 
 ⚠️ **`build/` is gitignored and `flutter clean` deletes it.** Copy the symbol directory

@@ -426,5 +426,8 @@ and Remote Config".
 
 ## Version & Release
 
-- **Starting version:** `1.0.0+1` (`pubspec.yaml`) — update this line when it changes.
+- **Current version:** `1.0.1+2003` (`pubspec.yaml`) — update this line when it changes.
+  Started at `1.0.0+1`; the build number jumped to the 2000s because `1.0.0` shipped to
+  Play as versionCode 2002, and Play refuses any code not strictly greater than one it
+  has already seen on any track.
 - **Android minSdk / iOS deployment target:** 30 / 15.0.
