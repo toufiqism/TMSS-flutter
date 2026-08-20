@@ -63,7 +63,14 @@ Use `AskUserQuestion`, batched into one round when possible. Skip questions whos
 
 Goal: pixel-match the Android app's forest-green redesign (colors, Manrope/Inter fonts, pill UI, grouped forms, unified stat panel) across **Android + iOS**, backed by fake repositories behind real domain interfaces, ready to swap in real backend APIs later — same approach the Android app used, since real API endpoints aren't available yet.
 
-**App identity:** applicationId / bundle id `com.btracsl.tracgo`, display name **"TracGo"**.
+**App identity:** Android applicationId `com.btracsl.tracgo`, **iOS bundle id `com.btracsl.tracgo.ios`**, display name **"TracGo"**.
+> The two ids deliberately differ. `com.btracsl.tracgo` could not be registered on the
+> Apple Developer portal, so iOS took the `.ios` suffix; Android keeps the unsuffixed id
+> because it is already live on Play as versionCode 2002. Do not "tidy" them back into
+> matching — changing either one starts a new store listing that existing installs will
+> not update to. The iOS id is set in all six `PRODUCT_BUNDLE_IDENTIFIER` lines of
+> `ios/Runner.xcodeproj/project.pbxproj` (three Runner configs + three RunnerTests, the
+> latter as `com.btracsl.tracgo.ios.RunnerTests`).
 > Rebranded from `com.banglatrac.tmss` / "TMS". The id now differs from the native Android app's, so the two **can** be installed side by side — the earlier "uninstall one first" constraint no longer applies. Note that changing applicationId makes this a new listing on Play: existing installs of the old id will not update to it.
 
 **Feature scope (build all at once, matching what's verified on the Android side):**

@@ -59,10 +59,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBfR4lTSshJXfJxPvoEsG8CSM_3oq52CgA',
-    appId: '1:313133964847:ios:bd45970b8f04cb90aa30da',
+    appId: '1:313133964847:ios:c3aff15d92e18cc0aa30da',
     messagingSenderId: '313133964847',
     projectId: 'tracgo-631b7',
     storageBucket: 'tracgo-631b7.firebasestorage.app',
-    iosBundleId: 'com.btracsl.tracgo',
+    iosBundleId: 'com.btracsl.tracgo.ios',
   );
+
 }

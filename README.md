@@ -280,9 +280,18 @@ flutter_secure_storage 11 already defaults to AES-GCM under an RSA-OAEP Keystore
 
 ## Firebase, Crashlytics and Remote Config
 
-Firebase project **`tracgo-631b7`**, one app per platform, both under the bundle id
-`com.btracsl.tracgo` (app ids `...:android:717e99075de2620daa30da` and
-`...:ios:bd45970b8f04cb90aa30da`). The two apps registered under the pre-rebrand id
+Firebase project **`tracgo-631b7`**, one app per platform: Android under
+`com.btracsl.tracgo` (app id `...:android:717e99075de2620daa30da`) and iOS under
+`com.btracsl.tracgo.ios` (app id `...:ios:bd45970b8f04cb90aa30da`).
+
+> ⚠️ **The iOS app must be re-registered in Firebase.** The iOS bundle id moved from
+> `com.btracsl.tracgo` to `com.btracsl.tracgo.ios` (the unsuffixed id could not be
+> registered on the Apple Developer portal). `BUNDLE_ID` in `GoogleService-Info.plist`
+> and `iosBundleId` in `firebase_options.dart` were updated by hand so the SDK stops
+> warning about a bundle-id mismatch, but `GOOGLE_APP_ID` / `appId` still point at the
+> **old** iOS app — Crashlytics and Remote Config will report against the wrong app
+> until a new iOS app is registered in the console and
+> `flutterfire configure --project=tracgo-631b7` regenerates all three files. The two apps registered under the pre-rebrand id
 `com.banglatrac.tmss` still exist in the project, unused — `google-services.json` carries
 both Android clients, which is harmless because the plugin matches on package name.
 Config lives in three generated files, all committed: 
