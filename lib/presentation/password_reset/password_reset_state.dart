@@ -66,7 +66,7 @@ abstract class PasswordResetUiState with _$PasswordResetUiState {
   /// The contract documents no password policy at all — only a `NewPass123` example —
   /// so this is a floor the client applies, not a mirror of a server rule. A server
   /// that disagrees answers 422 and its message wins.
-  static const minPasswordLength = 8;
+  static const minPasswordLength = 6;
 
   /// Kept under the server's own 5/min throttle with room to spare.
   static const resendCooldownSeconds = 60;

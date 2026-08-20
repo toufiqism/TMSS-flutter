@@ -93,15 +93,15 @@ Two notes on this copy, deliberately:
 
 | Asset | Spec | Status |
 |---|---|---|
-| App icon | 512×512 PNG, 32-bit, ≤1 MB, no transparency, no rounded corners | **TODO(owner)** — export from `assets/images/tracgo_logo.svg` on a solid background. `tool/brand/generate_brand_assets.py` produces launcher assets, not this one |
-| Feature graphic | 1024×500 PNG or JPG, no transparency, no text near the edges | **TODO(owner)** — required for the listing to publish |
-| Phone screenshots | 2–8 images, PNG/JPG, 16:9 or 9:16, each side 320–3840 px | **TODO(owner)** — see below |
+| App icon | 512×512 PNG, 32-bit, ≤1 MB, no transparency, no rounded corners | **Ready** — `graphics/play-icon-512.png` (43 KB, opaque, square corners). Regenerate with `tool/store/generate_store_graphics.py` |
+| Feature graphic | 1024×500 PNG or JPG, no transparency, no text near the edges | **Ready** — `graphics/play-feature-1024x500.png`. Text is held inside a 100 px safe margin, measured at generation time |
+| Phone screenshots | 2–8 images, PNG/JPG, 16:9 or 9:16, each side 320–3840 px | **Ready** — six 1440×2560 frames in `graphics/screenshots/`. See below |
 | 7" and 10" tablet screenshots | optional | skip unless tablets are supported officially |
-| Promo video | optional YouTube URL | skip |
+| Promo video | optional YouTube URL | **Rendered** — `graphics/tracgo-promo-1080p.mp4` (1920×1080, 32 s). Still has to be uploaded to a company YouTube account and the watch URL pasted here; see `youtube.md` |
 
-### The screenshots in `screenshots/` cannot be used
+### The screenshots in `screenshots/` (repo root) still cannot be used
 
-Two independent reasons, both blocking:
+Two independent reasons, both blocking, and both are why the store set lives elsewhere:
 
 1. **They contain real production data** — a real employee's name, email, phone number
    and employee ID, and real requisition records. Uploading them publishes that
@@ -110,23 +110,25 @@ Two independent reasons, both blocking:
    detail screen). Play requires each side between 320 and 3840 px and a ratio no more
    extreme than 2:1 — a 1:3.5 image is rejected at upload.
 
-Capture new ones from the **reviewer account** created in `app-access.md`, which holds
-only synthetic data, at device-viewport size:
+The uploadable set is `docs/play/graphics/screenshots/`, six frames in listing order:
 
-```bash
-adb exec-out screencap -p > 01-dashboard.png
-```
+| File | Screen | Caption |
+|---|---|---|
+| `01-dashboard.png` | Dashboard | Every requisition at a glance |
+| `02-new-passenger.png` | New Requisition — Passenger | Raise a trip request in seconds |
+| `03-detail-assigned.png` | Requisition Detail — assigned trip | Know your vehicle and driver |
+| `04-list.png` | My Requisitions | Follow every request to the trip |
+| `05-logistics.png` | New Requisition — Logistics | Cargo runs, not just passengers |
+| `06-login.png` | Sign In | Sign in with your work account |
 
-Suggested set of five, in this order — the first two are what most users actually look
-at:
+**Every name, address, plate and phone number in them is invented.** They were captured
+from a profile build pointed at `tool/store/mock_api_server.py` rather than from the live
+TMS, so there is no production data to scrub and no reviewer account to provision first.
+`docs/play/graphics/README.md` has the full regeneration procedure.
 
-1. Dashboard — counts and recent requisitions
-2. New Requisition (Passenger) — the form, part-filled
-3. Requisition Detail — an Assigned trip showing vehicle and driver
-4. My Requisitions — the list with statuses visible
-5. New Requisition (Logistics) — the goods variant
-
-Check every one for real names, phone numbers and email addresses before uploading.
+A raw Pixel 9 Pro XL viewport is 1344×2992 — 1:2.23, which Play rejects. Each frame is
+composed onto a 1440×2560 (9:16) canvas by `tool/store/generate_store_screenshots.py`,
+which prints the ratio check for every file it writes.
 
 ---
 
@@ -134,10 +136,10 @@ Check every one for real names, phone numbers and email addresses before uploadi
 
 | Field | Value |
 |---|---|
-| Email | **TODO(owner)** — shown publicly on the listing; use a monitored support alias, not a personal address |
+| Email | `psd.btraccl@gmail.com` — same address the privacy policy publishes. It is a personal Gmail rather than a company alias; swapping both to something on `btracsolutions.com` later means editing the listing **and** re-publishing the policy |
 | Phone | optional, **TODO(owner)** |
-| Website | **TODO(owner)** — e.g. `https://btracsl.com` |
-| Privacy policy URL | **TODO(owner)** — the published `privacy-policy.md`; required |
+| Website | `https://www.btracsolutions.com/` |
+| Privacy policy URL | **TODO(owner)** — `privacy-policy.md` is final text with no placeholders left; publish it under `btracsolutions.com` and paste the URL here. Required |
 
 ---
 

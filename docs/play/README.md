@@ -8,7 +8,7 @@ B-Trac holds, marked **TODO(owner)** throughout these files.
 |---|---|
 | `README.md` (this file) | build, verify, archive, upload — the ordered procedure |
 | `data-safety.md` | question-by-question answers for the Data Safety form |
-| `privacy-policy.md` | draft policy text to publish at a public URL |
+| `privacy-policy.md` | final policy text — no placeholders; publish as-is at a public URL |
 | `app-access.md` | reviewer credentials and navigation steps — **without this, review fails** |
 | `store-listing.md` | title, descriptions, graphics spec, content rating answers |
 
