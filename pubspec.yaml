@@ -53,6 +53,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Drives the real app on a real device/simulator. Present for one job: capturing the
+  # App Store screenshots at native 6.9" resolution. This Mac cannot inject taps into
+  # the iOS Simulator (no idb, no assistive access, `simctl` has no input verbs), so the
+  # Android trick of `adb shell input tap` has no iOS counterpart — the app has to drive
+  # itself from inside. See tool/store/README-ios-screenshots section in
+  # docs/appstore/graphics/README.md.
+  integration_test:
+    sdk: flutter
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

@@ -16,8 +16,10 @@ details below.
 
 **Name of the flow:** `Sign in — all functionality`
 
-**Username / Email:** TODO(owner)
-**Password:** TODO(owner)
+**Username / Email:** `tofiq.akbar@btracsl.com`
+**Password:** **not recorded here — type it straight into the Console.** It is a live
+account password; a tracked file would put it in git history permanently, where rotating
+it does not remove it.
 
 **Any other instructions:**
 
@@ -42,8 +44,25 @@ details below.
 
 ## Requirements for the reviewer account — read before creating it
 
-**TODO(owner): create a dedicated account for this.** Do not paste a real employee's
-credentials into Play Console. Requirements:
+**Status: the owner's own live account is being used instead, by explicit decision
+(2026-08-21).** The requirements below were not met, and the consequences are known and
+accepted rather than overlooked:
+
+- A reviewer signing in sees **real business records** — the owner's own requisitions,
+  routes and purposes — and the Profile screen's real name, staff ID and phone.
+- The create form's *Required For* picker searches the **real employee directory**: 537
+  rows of real names, staff numbers, designations and departments
+  (see `lib/domain/usecase/logout_use_case.dart`).
+- The listing also shows whatever `Probe Test` rows remain from API contract probing,
+  which read as a broken app.
+- **A password rotation breaks the next review**, in both stores, with no warning. Both
+  stores re-review on every update and re-check between updates, so the Console entry and
+  the App Store Connect entry have to be updated the same day the password changes.
+
+Superseding this means creating a dedicated account to the requirements below and
+replacing the credentials in both consoles; nothing in the app has to change.
+
+Requirements, kept as the standing recommendation:
 
 1. **Permanent.** Play re-reviews on every update, and re-checks periodically between
    updates. An account that expires, or a password rotated out of the Console, takes the

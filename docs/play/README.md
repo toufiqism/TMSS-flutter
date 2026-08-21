@@ -141,7 +141,9 @@ Fill these in from the companion files:
   reject it without working reviewer credentials. This is the single most common
   rejection reason for apps like this one.
 - **Data safety** → `data-safety.md`.
-- **Privacy policy URL** → publish `privacy-policy.md` at a public, stable URL first.
+- **Privacy policy URL** → published, and verified live on 2026-08-21:
+  `https://toufiqism.github.io/tracgo-privacy-policy/`. `privacy-policy.md` remains the
+  source text; edit it there and republish, so the two do not drift.
 - **Content rating** questionnaire, **Target audience** (18+), **Ads: no**,
   **Government app: no**, **Financial features: none**, **Health: no**, **News: no** →
   `store-listing.md` has the full answer set.
